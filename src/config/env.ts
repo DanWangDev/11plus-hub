@@ -15,6 +15,10 @@ export const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   SESSION_SECRET: z.string().min(32).default('dev-session-secret-minimum-32-characters-long!!'),
 
+  OIDC_ISSUER: z.string().url().default('http://localhost:3000'),
+  OIDC_SIGNING_KEY: z.string().optional(),
+  OIDC_COOKIE_KEYS: z.string().default('dev-oidc-cookie-key-minimum-32-characters!!'),
+
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 })
 

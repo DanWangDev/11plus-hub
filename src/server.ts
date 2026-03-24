@@ -1,11 +1,45 @@
 import { createApp } from './app.js'
 import { env } from './config/env.js'
+import { createDb } from './db/connection.js'
+import { createOidcProvider } from './oidc/provider.js'
+import { createAccountFinder } from './oidc/account.js'
+import { generateDevSigningKey } from './oidc/dev-keys.js'
+import { createLogger } from './lib/logger.js'
 
-const app = createApp()
+const logger = createLogger({ service: 'server' })
 
-app.listen(env.PORT, env.HOST, () => {
-  if (env.NODE_ENV !== 'test') {
-    process.stdout.write(`Hub server running on http://${env.HOST}:${env.PORT}\n`)
-    process.stdout.write(`Environment: ${env.NODE_ENV}\n`)
-  }
+async function main(): Promise<void> {
+  const sql = createDb()
+
+  const signingKey = env.OIDC_SIGNING_KEY ?? (await generateDevSigningKey())
+  const cookieKeys = env.OIDC_COOKIE_KEYS.split(',')
+
+  const oidcProvider = createOidcProvider({
+    issuer: env.OIDC_ISSUER,
+    sql,
+    signingKey,
+    cookieKeys,
+    findAccount: createAccountFinder(sql),
+  })
+
+  const app = createApp({
+    sql,
+    oidcProvider,
+  })
+
+  app.listen(env.PORT, env.HOST, () => {
+    logger.info('hub server started', {
+      host: env.HOST,
+      port: env.PORT,
+      env: env.NODE_ENV,
+      issuer: env.OIDC_ISSUER,
+    })
+  })
+}
+
+main().catch((err) => {
+  logger.error('server startup failed', {
+    error: err instanceof Error ? err.message : String(err),
+  })
+  process.exit(1)
 })

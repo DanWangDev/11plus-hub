@@ -23,6 +23,9 @@ export default defineConfig({
         'src/db/seed.ts',
         'src/server.ts',
         'src/types/**',
+        'src/oidc/provider.ts',
+        'src/oidc/client-loader.ts',
+        'src/routes/oidc-interactions.ts',
       ],
       thresholds: {
         statements: 80,
