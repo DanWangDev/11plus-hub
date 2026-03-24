@@ -11,10 +11,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
-  url: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
@@ -24,7 +21,7 @@ async function request<T>(
   })
 
   if (!response.ok) {
-    const body = await response.json().catch(() => ({})) as ApiResponse
+    const body = (await response.json().catch(() => ({}))) as ApiResponse
     throw new ApiError(
       body.error ?? `Request failed with status ${response.status}`,
       response.status,
@@ -36,8 +33,7 @@ async function request<T>(
 }
 
 export const apiClient = {
-  get: <T>(url: string, options?: RequestInit) =>
-    request<T>(url, { ...options, method: 'GET' }),
+  get: <T>(url: string, options?: RequestInit) => request<T>(url, { ...options, method: 'GET' }),
 
   post: <T>(url: string, body?: unknown, options?: RequestInit) =>
     request<T>(url, {

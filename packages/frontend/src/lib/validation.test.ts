@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  loginSchema,
-  signupSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
-} from './validation'
+import { loginSchema, signupSchema, forgotPasswordSchema, resetPasswordSchema } from './validation'
 
 describe('loginSchema', () => {
   it('accepts valid data', () => {

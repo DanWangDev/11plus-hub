@@ -38,14 +38,9 @@ export function SignupPage() {
   if (success) {
     return (
       <AuthLayout title="Account Created" subtitle="You can now sign in">
-        <Alert variant="success">
-          Your account has been created. Redirecting to sign in...
-        </Alert>
+        <Alert variant="success">Your account has been created. Redirecting to sign in...</Alert>
         <div className="mt-4 text-center">
-          <Link
-            to="/login"
-            className="text-sm text-primary-600 hover:text-primary-700"
-          >
+          <Link to="/login" className="text-sm text-primary-600 hover:text-primary-700">
             Go to sign in
           </Link>
         </div>
@@ -107,21 +102,14 @@ export function SignupPage() {
           error={form.errors.password}
         />
 
-        <Button
-          type="submit"
-          loading={form.isSubmitting}
-          className="mt-2 w-full"
-        >
+        <Button type="submit" loading={form.isSubmitting} className="mt-2 w-full">
           Create account
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">
         Already have an account?{' '}
-        <Link
-          to="/login"
-          className="text-primary-600 hover:text-primary-700"
-        >
+        <Link to="/login" className="text-primary-600 hover:text-primary-700">
           Sign in
         </Link>
       </p>

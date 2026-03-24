@@ -5,21 +5,12 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string
 }
 
-export function Input({
-  label,
-  error,
-  id,
-  className = '',
-  ...props
-}: InputProps) {
+export function Input({ label, error, id, className = '', ...props }: InputProps) {
   const inputId = id ?? label.toLowerCase().replace(/\s+/g, '-')
 
   return (
     <div className="mb-4">
-      <label
-        htmlFor={inputId}
-        className="mb-1 block text-sm font-medium text-slate-700"
-      >
+      <label htmlFor={inputId} className="mb-1 block text-sm font-medium text-slate-700">
         {label}
       </label>
       <input
@@ -41,11 +32,7 @@ export function Input({
         {...props}
       />
       {error && (
-        <p
-          id={`${inputId}-error`}
-          role="alert"
-          className="mt-1 text-xs text-red-600"
-        >
+        <p id={`${inputId}-error`} role="alert" className="mt-1 text-xs text-red-600">
           {error}
         </p>
       )}

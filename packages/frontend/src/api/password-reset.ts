@@ -17,8 +17,6 @@ export function forgotPassword(
   return apiClient.post('/api/auth/forgot-password', data)
 }
 
-export function resetPassword(
-  data: ResetPasswordInput,
-): Promise<ApiResponse<{ message: string }>> {
+export function resetPassword(data: ResetPasswordInput): Promise<ApiResponse<{ message: string }>> {
   return apiClient.post('/api/auth/reset-password', data)
 }

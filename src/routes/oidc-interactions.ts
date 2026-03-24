@@ -189,8 +189,9 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           grant.addOIDCClaims(missingClaims)
         }
 
-        const missingResourceScopes = (details as Record<string, unknown>)
-          .missingResourceScopes as Record<string, string[]> | undefined
+        const missingResourceScopes = (details as Record<string, unknown>).missingResourceScopes as
+          | Record<string, string[]>
+          | undefined
         if (missingResourceScopes) {
           for (const [indicator, scopes] of Object.entries(missingResourceScopes)) {
             grant.addResourceScope(indicator, scopes.join(' '))

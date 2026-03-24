@@ -24,7 +24,11 @@ describe('Alert', () => {
   })
 
   it('applies custom className', () => {
-    render(<Alert variant="info" className="mt-4">Info</Alert>)
+    render(
+      <Alert variant="info" className="mt-4">
+        Info
+      </Alert>,
+    )
     expect(screen.getByRole('alert').className).toContain('mt-4')
   })
 })

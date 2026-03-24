@@ -41,9 +41,7 @@ describe('ResetPasswordPage', () => {
     mockSearchParams = new URLSearchParams()
     render(<ResetPasswordPage />)
     expect(screen.getByText('Invalid Link')).toBeInTheDocument()
-    expect(
-      screen.getByText(/password reset link is invalid/i),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/password reset link is invalid/i)).toBeInTheDocument()
   })
 
   it('validates password minimum length', async () => {

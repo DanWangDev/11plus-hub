@@ -6,10 +6,7 @@ function TestWrapper({ children }: { children: ReactNode }) {
   return <BrowserRouter>{children}</BrowserRouter>
 }
 
-function customRender(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>,
-) {
+function customRender(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
   return render(ui, { wrapper: TestWrapper, ...options })
 }
 

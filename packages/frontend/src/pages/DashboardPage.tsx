@@ -31,10 +31,7 @@ export function DashboardPage() {
         if (cancelled) return
         setState({
           kind: 'error',
-          message:
-            error instanceof Error
-              ? error.message
-              : 'Failed to load applications',
+          message: error instanceof Error ? error.message : 'Failed to load applications',
         })
       }
     }
@@ -54,10 +51,7 @@ export function DashboardPage() {
       .catch((error) => {
         setState({
           kind: 'error',
-          message:
-            error instanceof Error
-              ? error.message
-              : 'Failed to load applications',
+          message: error instanceof Error ? error.message : 'Failed to load applications',
         })
       })
   }
@@ -65,12 +59,8 @@ export function DashboardPage() {
   return (
     <DashboardLayout userName="Student">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-slate-900">
-          Good morning!
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Choose an app to get started
-        </p>
+        <h1 className="text-2xl font-semibold text-slate-900">Good morning!</h1>
+        <p className="mt-1 text-sm text-slate-500">Choose an app to get started</p>
       </div>
 
       {state.kind === 'loading' && (
@@ -91,9 +81,7 @@ export function DashboardPage() {
 
       {state.kind === 'loaded' && state.apps.length === 0 && (
         <Card className="p-8 text-center">
-          <p className="text-slate-500">
-            Welcome! Your apps are ready.
-          </p>
+          <p className="text-slate-500">Welcome! Your apps are ready.</p>
         </Card>
       )}
 
@@ -110,29 +98,18 @@ export function DashboardPage() {
 
 function AppCard({ app }: { app: Application }) {
   return (
-    <a
-      href={app.url}
-      className="group block"
-      aria-label={`Open ${app.name}`}
-    >
+    <a href={app.url} className="group block" aria-label={`Open ${app.name}`}>
       <Card className="p-6 transition-shadow duration-150 group-hover:shadow-md">
         <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-500">
           {app.icon_url ? (
-            <img
-              src={app.icon_url}
-              alt=""
-              className="h-6 w-6"
-              aria-hidden="true"
-            />
+            <img src={app.icon_url} alt="" className="h-6 w-6" aria-hidden="true" />
           ) : (
             <span className="text-lg font-semibold" aria-hidden="true">
               {app.name.charAt(0)}
             </span>
           )}
         </div>
-        <h2 className="text-base font-semibold text-slate-900">
-          {app.name}
-        </h2>
+        <h2 className="text-base font-semibold text-slate-900">{app.name}</h2>
         <div className="mt-2 flex items-center gap-1 text-xs text-primary-600 group-hover:text-primary-700">
           <span>Open app</span>
           <ExternalLink size={12} aria-hidden="true" />

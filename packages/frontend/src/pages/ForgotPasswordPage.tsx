@@ -5,10 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
 import { useForm } from '@/hooks/use-form'
-import {
-  forgotPasswordSchema,
-  type ForgotPasswordFormData,
-} from '@/lib/validation'
+import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/lib/validation'
 import { forgotPassword } from '@/api/password-reset'
 
 export function ForgotPasswordPage() {
@@ -24,19 +21,13 @@ export function ForgotPasswordPage() {
 
   if (submitted) {
     return (
-      <AuthLayout
-        title="Check your email"
-        subtitle="We've sent you a password reset link"
-      >
+      <AuthLayout title="Check your email" subtitle="We've sent you a password reset link">
         <Alert variant="info">
-          If an account exists with that email, a reset link has been sent.
-          Check your inbox and follow the instructions.
+          If an account exists with that email, a reset link has been sent. Check your inbox and
+          follow the instructions.
         </Alert>
         <div className="mt-6 text-center">
-          <Link
-            to="/login"
-            className="text-sm text-primary-600 hover:text-primary-700"
-          >
+          <Link to="/login" className="text-sm text-primary-600 hover:text-primary-700">
             Back to sign in
           </Link>
         </div>
@@ -68,20 +59,13 @@ export function ForgotPasswordPage() {
           error={form.errors.email}
         />
 
-        <Button
-          type="submit"
-          loading={form.isSubmitting}
-          className="mt-2 w-full"
-        >
+        <Button type="submit" loading={form.isSubmitting} className="mt-2 w-full">
           Send reset link
         </Button>
       </form>
 
       <div className="mt-6 text-center">
-        <Link
-          to="/login"
-          className="text-sm text-primary-600 hover:text-primary-700"
-        >
+        <Link to="/login" className="text-sm text-primary-600 hover:text-primary-700">
           Back to sign in
         </Link>
       </div>

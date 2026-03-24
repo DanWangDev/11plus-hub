@@ -1,10 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type {
-  ApiResponse,
-  LoginResponse,
-  User,
-  InteractionDetails,
-} from '@/types/api'
+import type { ApiResponse, LoginResponse, User, InteractionDetails } from '@/types/api'
 
 export interface RegisterInput {
   username: string
@@ -31,10 +26,7 @@ export function getInteractionDetails(uid: string): Promise<InteractionDetails> 
   return apiClient.get(`/api/auth/interaction/${uid}`)
 }
 
-export function submitInteractionLogin(
-  uid: string,
-  data: LoginInput,
-): Promise<ApiResponse> {
+export function submitInteractionLogin(uid: string, data: LoginInput): Promise<ApiResponse> {
   return apiClient.post(`/api/auth/interaction/${uid}/login`, data)
 }
 

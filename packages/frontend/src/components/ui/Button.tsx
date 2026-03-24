@@ -8,12 +8,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<string, string> = {
-  primary:
-    'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-300',
-  secondary:
-    'bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-slate-300',
-  danger:
-    'bg-red-500 text-white hover:bg-red-600 focus:ring-red-300',
+  primary: 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-300',
+  secondary: 'bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-slate-300',
+  danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-300',
 }
 
 export function Button({
@@ -41,13 +38,7 @@ export function Button({
       disabled={isDisabled}
       {...props}
     >
-      {loading && (
-        <Loader2
-          className="animate-spin"
-          size={16}
-          aria-hidden="true"
-        />
-      )}
+      {loading && <Loader2 className="animate-spin" size={16} aria-hidden="true" />}
       {children}
     </button>
   )

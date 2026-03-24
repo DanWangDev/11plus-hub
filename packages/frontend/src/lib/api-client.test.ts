@@ -87,10 +87,7 @@ describe('apiClient', () => {
     })
 
     await apiClient.patch('/api/test', { name: 'updated' })
-    expect(fetch).toHaveBeenCalledWith(
-      '/api/test',
-      expect.objectContaining({ method: 'PATCH' }),
-    )
+    expect(fetch).toHaveBeenCalledWith('/api/test', expect.objectContaining({ method: 'PATCH' }))
   })
 
   it('makes DELETE request', async () => {
@@ -100,9 +97,6 @@ describe('apiClient', () => {
     })
 
     await apiClient.delete('/api/test')
-    expect(fetch).toHaveBeenCalledWith(
-      '/api/test',
-      expect.objectContaining({ method: 'DELETE' }),
-    )
+    expect(fetch).toHaveBeenCalledWith('/api/test', expect.objectContaining({ method: 'DELETE' }))
   })
 })

@@ -5,10 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
 import { useForm } from '@/hooks/use-form'
-import {
-  resetPasswordSchema,
-  type ResetPasswordFormData,
-} from '@/lib/validation'
+import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validation'
 import { resetPassword } from '@/api/password-reset'
 
 export function ResetPasswordPage() {
@@ -41,14 +38,9 @@ export function ResetPasswordPage() {
   if (!tokenParams.selector || !tokenParams.validator) {
     return (
       <AuthLayout title="Invalid Link">
-        <Alert variant="error">
-          This password reset link is invalid or has expired.
-        </Alert>
+        <Alert variant="error">This password reset link is invalid or has expired.</Alert>
         <div className="mt-4 text-center">
-          <Link
-            to="/forgot-password"
-            className="text-sm text-primary-600 hover:text-primary-700"
-          >
+          <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700">
             Request a new reset link
           </Link>
         </div>
@@ -60,14 +52,10 @@ export function ResetPasswordPage() {
     return (
       <AuthLayout title="Password Reset" subtitle="Your password has been updated">
         <Alert variant="success">
-          Your password has been reset successfully. You can now sign in with
-          your new password.
+          Your password has been reset successfully. You can now sign in with your new password.
         </Alert>
         <div className="mt-4 text-center">
-          <Link
-            to="/login"
-            className="text-sm text-primary-600 hover:text-primary-700"
-          >
+          <Link to="/login" className="text-sm text-primary-600 hover:text-primary-700">
             Go to sign in
           </Link>
         </div>
@@ -107,11 +95,7 @@ export function ResetPasswordPage() {
           error={form.errors.confirmPassword}
         />
 
-        <Button
-          type="submit"
-          loading={form.isSubmitting}
-          className="mt-2 w-full"
-        >
+        <Button type="submit" loading={form.isSubmitting} className="mt-2 w-full">
           Reset password
         </Button>
       </form>

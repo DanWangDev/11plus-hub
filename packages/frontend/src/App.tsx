@@ -17,10 +17,7 @@ export function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route
-          path="/auth/interaction/:uid"
-          element={<InteractionPage />}
-        />
+        <Route path="/auth/interaction/:uid" element={<InteractionPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>

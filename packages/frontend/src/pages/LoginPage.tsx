@@ -21,11 +21,7 @@ export function LoginPage() {
         }
       } catch (error) {
         if (error instanceof ApiError) {
-          throw new Error(
-            error.status === 401
-              ? 'Invalid email or password'
-              : error.message,
-          )
+          throw new Error(error.status === 401 ? 'Invalid email or password' : error.message)
         }
         throw error
       }
@@ -64,26 +60,16 @@ export function LoginPage() {
           error={form.errors.password}
         />
 
-        <Button
-          type="submit"
-          loading={form.isSubmitting}
-          className="mt-2 w-full"
-        >
+        <Button type="submit" loading={form.isSubmitting} className="mt-2 w-full">
           Sign in
         </Button>
       </form>
 
       <div className="mt-6 flex items-center justify-between text-sm">
-        <Link
-          to="/forgot-password"
-          className="text-primary-600 hover:text-primary-700"
-        >
+        <Link to="/forgot-password" className="text-primary-600 hover:text-primary-700">
           Forgot password?
         </Link>
-        <Link
-          to="/signup"
-          className="text-primary-600 hover:text-primary-700"
-        >
+        <Link to="/signup" className="text-primary-600 hover:text-primary-700">
           Create account
         </Link>
       </div>

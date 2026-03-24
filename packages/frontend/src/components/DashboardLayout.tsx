@@ -8,10 +8,7 @@ interface DashboardLayoutProps {
   userName?: string
 }
 
-export function DashboardLayout({
-  children,
-  userName = 'User',
-}: DashboardLayoutProps) {
+export function DashboardLayout({ children, userName = 'User' }: DashboardLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const toggleMenu = useCallback(() => {
@@ -56,10 +53,7 @@ export function DashboardLayout({
         </nav>
 
         {menuOpen && (
-          <div
-            id="mobile-menu"
-            className="border-t border-slate-100 px-4 py-3 sm:hidden"
-          >
+          <div id="mobile-menu" className="border-t border-slate-100 px-4 py-3 sm:hidden">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">{userName}</span>
               <button className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100">

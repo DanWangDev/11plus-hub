@@ -63,9 +63,7 @@ describe('SignupPage', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          'Username can only contain letters, numbers, hyphens, and underscores',
-        ),
+        screen.getByText('Username can only contain letters, numbers, hyphens, and underscores'),
       ).toBeInTheDocument()
     })
   })

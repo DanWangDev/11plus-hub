@@ -60,10 +60,7 @@ export function InteractionPage() {
         if (cancelled) return
         setState({
           kind: 'error',
-          message:
-            error instanceof Error
-              ? error.message
-              : 'Failed to load interaction',
+          message: error instanceof Error ? error.message : 'Failed to load interaction',
         })
       }
     }
@@ -95,9 +92,7 @@ export function InteractionPage() {
   if (state.kind === 'done') {
     return (
       <AuthLayout title="Redirecting...">
-        <p className="text-center text-sm text-slate-500">
-          Please wait while we redirect you...
-        </p>
+        <p className="text-center text-sm text-slate-500">Please wait while we redirect you...</p>
       </AuthLayout>
     )
   }
@@ -139,11 +134,7 @@ function InteractionLoginView({
         onComplete()
       } catch (error) {
         if (error instanceof ApiError) {
-          throw new Error(
-            error.status === 401
-              ? 'Invalid email or password'
-              : error.message,
-          )
+          throw new Error(error.status === 401 ? 'Invalid email or password' : error.message)
         }
         throw error
       }
@@ -182,19 +173,13 @@ function InteractionLoginView({
           error={form.errors.password}
         />
 
-        <Button
-          type="submit"
-          loading={form.isSubmitting}
-          className="mt-2 w-full"
-        >
+        <Button type="submit" loading={form.isSubmitting} className="mt-2 w-full">
           Sign in
         </Button>
       </form>
 
       {clientId && (
-        <p className="mt-4 text-center text-xs text-slate-400">
-          Signing in to {clientId}
-        </p>
+        <p className="mt-4 text-center text-xs text-slate-400">Signing in to {clientId}</p>
       )}
     </AuthLayout>
   )
@@ -249,8 +234,7 @@ function ConsentView({
       )}
 
       <p className="mb-4 text-center text-sm text-slate-500">
-        <strong className="text-slate-700">{clientName}</strong> is requesting
-        access to:
+        <strong className="text-slate-700">{clientName}</strong> is requesting access to:
       </p>
 
       {scopes.length > 0 && (
@@ -265,19 +249,10 @@ function ConsentView({
       )}
 
       <div className="flex gap-3">
-        <Button
-          variant="secondary"
-          onClick={handleDeny}
-          disabled={isSubmitting}
-          className="flex-1"
-        >
+        <Button variant="secondary" onClick={handleDeny} disabled={isSubmitting} className="flex-1">
           Deny
         </Button>
-        <Button
-          onClick={handleAllow}
-          loading={isSubmitting}
-          className="flex-1"
-        >
+        <Button onClick={handleAllow} loading={isSubmitting} className="flex-1">
           Allow
         </Button>
       </div>
