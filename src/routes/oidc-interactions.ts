@@ -17,7 +17,228 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
   const { provider, sql } = options
   const router = Router()
 
-  // GET /auth/interaction/:uid — render login/consent page
+  // GET /api/auth/interaction/:uid — JSON API for SPA
+  router.get(
+    '/api/auth/interaction/:uid',
+    async (req: Request, res: Response, next: NextFunction) => {
+      const start = Date.now()
+      try {
+        const interactionDetails = await provider.interactionDetails(req, res)
+        const { prompt, params } = interactionDetails
+        const clientId = String((params as Record<string, unknown>).client_id ?? '')
+
+        logger.info('interaction details requested (JSON)', {
+          operation: 'interactionDetailsJson',
+          promptName: prompt.name,
+          clientId,
+          duration: Date.now() - start,
+        })
+
+        let clientName = clientId
+        if (prompt.name === 'consent') {
+          const client = await provider.Client.find(clientId)
+          clientName = client?.metadata().client_name ?? clientId
+        }
+
+        res.json({
+          prompt: {
+            name: prompt.name,
+            details: prompt.details,
+          },
+          params: {
+            client_id: clientId,
+            scope: String((params as Record<string, unknown>).scope ?? ''),
+            redirect_uri: String((params as Record<string, unknown>).redirect_uri ?? ''),
+          },
+          session: interactionDetails.session
+            ? { accountId: interactionDetails.session.accountId }
+            : undefined,
+          uid: String(req.params.uid),
+          client: { name: clientName },
+        })
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  // POST /api/auth/interaction/:uid/login — JSON API login for SPA
+  router.post(
+    '/api/auth/interaction/:uid/login',
+    async (req: Request, res: Response, next: NextFunction) => {
+      const start = Date.now()
+      try {
+        const { email, password } = req.body as {
+          email?: string
+          password?: string
+        }
+
+        if (!email || !password) {
+          res.status(400).json({
+            success: false,
+            error: 'Email and password are required',
+          })
+          return
+        }
+
+        const user = await findUserByEmail(sql, email)
+        if (!user || !user.password_hash) {
+          logger.warn('oidc api login failed - user not found', {
+            operation: 'login',
+            duration: Date.now() - start,
+          })
+          res.status(401).json({
+            success: false,
+            error: 'Invalid credentials',
+          })
+          return
+        }
+
+        const valid = await verifyPassword(password, user.password_hash)
+        if (!valid) {
+          logger.warn('oidc api login failed - wrong password', {
+            operation: 'login',
+            userId: user.id,
+            duration: Date.now() - start,
+          })
+
+          await logAction(sql, {
+            actorId: user.id,
+            action: AuditActions.LOGIN_FAILED,
+            ipAddress: req.ip,
+          }).catch(() => {})
+
+          res.status(401).json({
+            success: false,
+            error: 'Invalid credentials',
+          })
+          return
+        }
+
+        logger.info('oidc api login success', {
+          operation: 'login',
+          userId: user.id,
+          duration: Date.now() - start,
+        })
+
+        await logAction(sql, {
+          actorId: user.id,
+          action: AuditActions.LOGIN,
+          ipAddress: req.ip,
+        }).catch(() => {})
+
+        const result = {
+          login: {
+            accountId: String(user.id),
+          },
+        }
+
+        await provider.interactionFinished(req, res, result, {
+          mergeWithLastSubmission: false,
+        })
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  // POST /api/auth/interaction/:uid/confirm — JSON API consent for SPA
+  router.post(
+    '/api/auth/interaction/:uid/confirm',
+    async (req: Request, res: Response, next: NextFunction) => {
+      const start = Date.now()
+      try {
+        const interactionDetails = await provider.interactionDetails(req, res)
+        const {
+          prompt: { details },
+          params,
+          session,
+        } = interactionDetails
+
+        const accountId = session?.accountId
+
+        logger.info('oidc api consent granted', {
+          operation: 'consent',
+          accountId,
+          clientId: (params as Record<string, unknown>).client_id,
+          duration: Date.now() - start,
+        })
+
+        let grant = interactionDetails.grantId
+          ? await provider.Grant.find(interactionDetails.grantId)
+          : undefined
+
+        if (!grant) {
+          grant = new provider.Grant({
+            accountId: accountId ?? '',
+            clientId: (params as Record<string, unknown>).client_id as string,
+          })
+        }
+
+        const missingScopes = (details as Record<string, unknown>).missingOIDCScope as
+          | string[]
+          | undefined
+        if (missingScopes) {
+          grant.addOIDCScope(missingScopes.join(' '))
+        }
+
+        const missingClaims = (details as Record<string, unknown>).missingOIDCClaims as
+          | string[]
+          | undefined
+        if (missingClaims) {
+          grant.addOIDCClaims(missingClaims)
+        }
+
+        const missingResourceScopes = (details as Record<string, unknown>)
+          .missingResourceScopes as Record<string, string[]> | undefined
+        if (missingResourceScopes) {
+          for (const [indicator, scopes] of Object.entries(missingResourceScopes)) {
+            grant.addResourceScope(indicator, scopes.join(' '))
+          }
+        }
+
+        const grantId = await grant.save()
+
+        const consent: Record<string, unknown> = {}
+        if (!interactionDetails.grantId) {
+          consent.grantId = grantId
+        }
+
+        const result = { consent }
+        await provider.interactionFinished(req, res, result, {
+          mergeWithLastSubmission: true,
+        })
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  // POST /api/auth/interaction/:uid/abort — JSON API abort for SPA
+  router.post(
+    '/api/auth/interaction/:uid/abort',
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        logger.info('oidc api interaction aborted', {
+          operation: 'abort',
+          uid: String(req.params.uid),
+        })
+
+        const result = {
+          error: 'access_denied',
+          error_description: 'User aborted the interaction',
+        }
+
+        await provider.interactionFinished(req, res, result, {
+          mergeWithLastSubmission: false,
+        })
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  // GET /auth/interaction/:uid — render login/consent page (HTML fallback)
   router.get('/auth/interaction/:uid', async (req: Request, res: Response, next: NextFunction) => {
     const start = Date.now()
     try {

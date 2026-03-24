@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -21,6 +22,7 @@ export interface AppOptions {
   skipDbCheck?: boolean
   sql?: postgres.Sql
   oidcProvider?: Provider
+  frontendDir?: string
 }
 
 export function createApp(options: AppOptions = {}): express.Express {
@@ -58,6 +60,25 @@ export function createApp(options: AppOptions = {}): express.Express {
       }),
     )
     app.use('/oidc', options.oidcProvider.callback())
+  }
+
+  // Serve frontend SPA in production
+  if (options.frontendDir) {
+    app.use(express.static(options.frontendDir))
+    // SPA fallback: serve index.html for non-API, non-OIDC routes
+    app.get('*', (req, res, next) => {
+      if (
+        req.path.startsWith('/api/') ||
+        req.path.startsWith('/oidc/') ||
+        req.path.startsWith('/health') ||
+        req.path.startsWith('/ready') ||
+        req.path.startsWith('/auth/interaction/')
+      ) {
+        next()
+        return
+      }
+      res.sendFile(join(options.frontendDir!, 'index.html'))
+    })
   }
 
   // Error handling

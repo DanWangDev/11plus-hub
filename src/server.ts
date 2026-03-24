@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createApp } from './app.js'
 import { env } from './config/env.js'
 import { createDb } from './db/connection.js'
@@ -22,9 +25,14 @@ async function main(): Promise<void> {
     findAccount: createAccountFinder(sql),
   })
 
+  const __dirname = fileURLToPath(new URL('.', import.meta.url))
+  const frontendDist = resolve(__dirname, '..', 'packages', 'frontend', 'dist')
+  const frontendDir = existsSync(frontendDist) ? frontendDist : undefined
+
   const app = createApp({
     sql,
     oidcProvider,
+    frontendDir,
   })
 
   app.listen(env.PORT, env.HOST, () => {
