@@ -3,7 +3,7 @@ import request from 'supertest'
 import { createApp } from './app.js'
 
 describe('createApp', () => {
-  const app = createApp()
+  const app = createApp({ skipDbCheck: true })
 
   it('returns an express application', () => {
     expect(app).toBeDefined()
