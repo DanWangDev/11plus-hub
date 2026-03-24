@@ -542,7 +542,7 @@ Options:
 
 Examples:
   npx tsx src/db/migrate-users.ts --vocab-master ../vocab-master/packages/backend/data/vocab-master.db --dry-run
-  npx tsx src/db/migrate-users.ts --writing-buddy ../writting-buddy/packages/backend/data/writing-buddy.db
+  npx tsx src/db/migrate-users.ts --writing-buddy ../writing-buddy/packages/backend/data/writing-buddy.db
   npx tsx src/db/migrate-users.ts --vocab-master /path/to/vm.db --writing-buddy /path/to/wb.db
 `)
       process.exit(0)
