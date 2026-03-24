@@ -5,6 +5,7 @@ import compression from 'compression'
 import { requestId } from './middleware/request-id.js'
 import { notFoundHandler, errorHandler } from './middleware/error-handler.js'
 import { createHealthRouter } from './routes/health.js'
+import { createApplicationsRouter } from './routes/applications.js'
 
 export interface AppOptions {
   skipDbCheck?: boolean
@@ -25,6 +26,7 @@ export function createApp(options: AppOptions = {}): express.Express {
 
   // Routes
   app.use(createHealthRouter({ skipDbCheck: options.skipDbCheck }))
+  app.use(createApplicationsRouter())
 
   // Error handling
   app.use(notFoundHandler)
