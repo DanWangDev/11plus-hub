@@ -20,6 +20,7 @@ export default defineConfig({
         'src/**/*.spec.ts',
         'src/test/**',
         'src/db/migrate.ts',
+        'src/db/migrate-users.ts',
         'src/db/seed.ts',
         'src/server.ts',
         'src/types/**',
