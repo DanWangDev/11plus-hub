@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+pgdata
+.git
+.github
+.env*
+*.md
