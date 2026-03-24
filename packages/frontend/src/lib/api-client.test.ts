@@ -48,7 +48,7 @@ describe('apiClient', () => {
 
     try {
       await apiClient.get('/api/test')
-    } catch (error) {
+    } catch {
       // fetch called again above, need separate assertion
     }
   })
