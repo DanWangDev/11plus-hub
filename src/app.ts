@@ -9,6 +9,8 @@ import { createHealthRouter } from './routes/health.js'
 import { createAuthRouter } from './routes/auth.js'
 import { createUsersRouter } from './routes/users.js'
 import { createApplicationsRouter } from './routes/applications.js'
+import { createAuditRouter } from './routes/audit.js'
+import { createSubscriptionsRouter } from './routes/subscriptions.js'
 
 export interface AppOptions {
   skipDbCheck?: boolean
@@ -33,6 +35,8 @@ export function createApp(options: AppOptions = {}): express.Express {
   app.use(createAuthRouter({ sql: options.sql }))
   app.use(createUsersRouter({ sql: options.sql }))
   app.use(createApplicationsRouter())
+  app.use(createAuditRouter({ sql: options.sql }))
+  app.use(createSubscriptionsRouter({ sql: options.sql }))
 
   // Error handling
   app.use(notFoundHandler)
