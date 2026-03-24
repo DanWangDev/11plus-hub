@@ -10,6 +10,7 @@ import {
   verifyPassword,
 } from '../services/user-service.js'
 import type postgres from 'postgres'
+import { loginLimiter, registerLimiter } from '../middleware/rate-limit.js'
 
 interface AuthRouterOptions {
   sql?: postgres.Sql
@@ -20,7 +21,7 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
   const sql = options.sql ?? db
   const logger = createLogger({ route: 'auth' })
 
-  router.post('/api/auth/register', async (req: Request, res: Response) => {
+  router.post('/api/auth/register', registerLimiter, async (req: Request, res: Response) => {
     const start = Date.now()
     try {
       const data = createUserSchema.parse(req.body)
@@ -74,7 +75,7 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
     }
   })
 
-  router.post('/api/auth/login', async (req: Request, res: Response) => {
+  router.post('/api/auth/login', loginLimiter, async (req: Request, res: Response) => {
     const start = Date.now()
     try {
       const { email, password } = req.body as {
