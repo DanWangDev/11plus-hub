@@ -12,6 +12,7 @@ import {
 } from '../services/password-reset-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
 import type postgres from 'postgres'
+import { passwordResetLimiter } from '../middleware/rate-limit.js'
 
 interface PasswordResetRouterOptions {
   sql?: postgres.Sql
@@ -25,6 +26,7 @@ export function createPasswordResetRouter(options: PasswordResetRouterOptions = 
   // POST /api/auth/forgot-password — request a password reset
   router.post(
     '/api/auth/forgot-password',
+    passwordResetLimiter,
     async (req: Request, res: Response, next: NextFunction) => {
       const start = Date.now()
       try {

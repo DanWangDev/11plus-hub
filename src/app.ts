@@ -15,6 +15,7 @@ import { createAuditRouter } from './routes/audit.js'
 import { createSubscriptionsRouter } from './routes/subscriptions.js'
 import { createInteractionRouter } from './routes/oidc-interactions.js'
 import { createPasswordResetRouter } from './routes/password-reset.js'
+import { apiLimiter } from './middleware/rate-limit.js'
 
 export interface AppOptions {
   skipDbCheck?: boolean
@@ -35,6 +36,9 @@ export function createApp(options: AppOptions = {}): express.Express {
 
   // Request ID tracking
   app.use(requestId)
+
+  // Rate limiting
+  app.use('/api', apiLimiter)
 
   // Routes
   app.use(createHealthRouter({ skipDbCheck: options.skipDbCheck }))
