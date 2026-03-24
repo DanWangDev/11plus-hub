@@ -4,9 +4,13 @@ import helmet from 'helmet'
 import compression from 'compression'
 import { requestId } from './middleware/request-id.js'
 import { notFoundHandler, errorHandler } from './middleware/error-handler.js'
-import { healthRouter } from './routes/health.js'
+import { createHealthRouter } from './routes/health.js'
 
-export function createApp(): express.Express {
+export interface AppOptions {
+  skipDbCheck?: boolean
+}
+
+export function createApp(options: AppOptions = {}): express.Express {
   const app = express()
 
   // Security & parsing
@@ -20,7 +24,7 @@ export function createApp(): express.Express {
   app.use(requestId)
 
   // Routes
-  app.use(healthRouter)
+  app.use(createHealthRouter({ skipDbCheck: options.skipDbCheck }))
 
   // Error handling
   app.use(notFoundHandler)

@@ -25,6 +25,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/db/migrate.ts', 'src/db/seed.ts'],
+    rules: {
+      'n/no-process-exit': 'off',
+    },
+  },
+  {
     ignores: ['dist/', 'node_modules/', 'coverage/', '*.config.js', '*.config.ts', '**/*.d.ts'],
   },
 )
