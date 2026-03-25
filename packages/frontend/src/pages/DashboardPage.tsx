@@ -57,7 +57,7 @@ export function DashboardPage() {
   }
 
   return (
-    <DashboardLayout userName="Student">
+    <DashboardLayout>
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-slate-900">Good morning!</h1>
         <p className="mt-1 text-sm text-slate-500">Choose an app to get started</p>

@@ -7,6 +7,7 @@ import {
   createUser,
   createUserSchema,
   findUserByEmail,
+  findUserByUsername,
   verifyPassword,
 } from '../services/user-service.js'
 import type postgres from 'postgres'
@@ -78,24 +79,28 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
   router.post('/api/auth/login', loginLimiter, async (req: Request, res: Response) => {
     const start = Date.now()
     try {
-      const { email, password } = req.body as {
+      const { email, username, password } = req.body as {
         email?: string
+        username?: string
         password?: string
       }
 
-      if (!email || !password) {
+      const identifier = email ?? username
+      if (!identifier || !password) {
         logger.warn('login missing credentials', {
           operation: 'login',
           duration: Date.now() - start,
         })
         res.status(400).json({
           success: false,
-          error: 'Email and password are required',
+          error: 'Email or username, and password are required',
         })
         return
       }
 
-      const user = await findUserByEmail(sql, email)
+      const user = identifier.includes('@')
+        ? await findUserByEmail(sql, identifier)
+        : await findUserByUsername(sql, identifier)
 
       if (!user || !user.password_hash) {
         logger.warn('login failed - user not found or no password', {

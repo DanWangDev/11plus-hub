@@ -10,7 +10,7 @@ export interface RegisterInput {
 }
 
 export interface LoginInput {
-  email: string
+  identifier: string
   password: string
 }
 
@@ -19,7 +19,10 @@ export function register(data: RegisterInput): Promise<ApiResponse<User>> {
 }
 
 export function login(data: LoginInput): Promise<ApiResponse<LoginResponse>> {
-  return apiClient.post('/api/auth/login', data)
+  const body = data.identifier.includes('@')
+    ? { email: data.identifier, password: data.password }
+    : { username: data.identifier, password: data.password }
+  return apiClient.post('/api/auth/login', body)
 }
 
 export function getInteractionDetails(uid: string): Promise<InteractionDetails> {
