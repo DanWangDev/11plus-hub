@@ -25,7 +25,7 @@ export const updateAppSchema = z.object({
   redirectUris: z.array(z.string().url()).min(1).optional(),
   iconUrl: z.string().url().nullable().optional(),
   statsApiUrl: z.string().url().nullable().optional(),
-  status: z.enum(['active', 'inactive', 'archived']).optional(),
+  status: z.enum(['active', 'inactive', 'archived', 'deleted']).optional(),
 })
 
 export const listAppsSchema = z.object({
@@ -176,6 +176,15 @@ export async function updateApplication(
   return (rows[0] as Application) ?? null
 }
 
+export async function softDeleteApplication(sql: Sql, id: number): Promise<Application | null> {
+  const rows = await sql`
+    UPDATE applications SET status = 'deleted'
+    WHERE id = ${id} AND status != 'deleted'
+    RETURNING *
+  `
+  return (rows[0] as Application) ?? null
+}
+
 export async function listApplications(
   sql: Sql,
   filters: unknown,
@@ -201,13 +210,14 @@ export async function listApplications(
   } else {
     applications = (await sql`
       SELECT * FROM applications
+      WHERE status != 'deleted'
       ORDER BY created_at DESC
       LIMIT ${validated.limit}
       OFFSET ${offset}
     `) as Application[]
 
     countRows = (await sql`
-      SELECT COUNT(*)::int AS count FROM applications
+      SELECT COUNT(*)::int AS count FROM applications WHERE status != 'deleted'
     `) as Array<{ count: number }>
   }
 

@@ -21,11 +21,25 @@ export function getUser(id: number): Promise<ApiResponse<User>> {
   return apiClient.get(`/api/users/${id}`)
 }
 
+export function createUser(data: {
+  username: string
+  email: string
+  password?: string
+  displayName: string
+  role?: string
+}): Promise<ApiResponse<User>> {
+  return apiClient.post('/api/users', data)
+}
+
 export function updateUser(
   id: number,
   data: Partial<Pick<User, 'display_name' | 'email' | 'role'>>,
 ): Promise<ApiResponse<User>> {
   return apiClient.patch(`/api/users/${id}`, data)
+}
+
+export function deleteUser(id: number): Promise<ApiResponse<User>> {
+  return apiClient.delete(`/api/users/${id}`)
 }
 
 // Applications
@@ -49,6 +63,10 @@ export function updateApplication(
   return apiClient.patch(`/api/apps/${id}`, data)
 }
 
+export function deleteApplication(id: number): Promise<ApiResponse<Application>> {
+  return apiClient.delete(`/api/apps/${id}`)
+}
+
 export function rotateClientSecret(
   id: number,
 ): Promise<ApiResponse<Application & { client_secret: string }>> {
@@ -65,6 +83,8 @@ export interface Subscription {
   expires_at: string | null
   assigned_by: number | null
   created_at: string
+  username?: string
+  email?: string
 }
 
 export function listSubscriptions(params?: {
@@ -83,10 +103,9 @@ export function listSubscriptions(params?: {
 }
 
 export function createSubscription(data: {
-  user_id: number
+  userId: number
   plan: string
   status?: string
-  features?: string[]
 }): Promise<ApiResponse<Subscription>> {
   return apiClient.post('/api/subscriptions', data)
 }
@@ -98,6 +117,10 @@ export function updateSubscription(
   return apiClient.patch(`/api/subscriptions/${id}`, data)
 }
 
+export function cancelSubscription(id: number): Promise<ApiResponse<Subscription>> {
+  return apiClient.delete(`/api/subscriptions/${id}`)
+}
+
 // Audit Log
 export interface AuditEntry {
   id: number
@@ -107,6 +130,7 @@ export interface AuditEntry {
   details: Record<string, unknown>
   ip_address: string | null
   created_at: string
+  actor_username?: string | null
 }
 
 export function listAuditLog(params?: {

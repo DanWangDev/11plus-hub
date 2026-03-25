@@ -22,6 +22,7 @@ export const AuditActions = {
   APP_ACCESS_REVOKE: 'app_access_revoke',
   APP_REGISTER: 'app_register',
   APP_UPDATE: 'app_update',
+  APP_DELETE: 'app_delete',
   IMPERSONATE_START: 'impersonate_start',
   IMPERSONATE_END: 'impersonate_end',
 } as const
@@ -61,6 +62,7 @@ export interface AuditLog {
   details: Record<string, unknown>
   ip_address: string | null
   created_at: Date
+  actor_username?: string | null
 }
 
 type Sql = postgres.Sql
@@ -101,23 +103,23 @@ export async function getAuditLogs(sql: Sql, filters: unknown): Promise<AuditLog
   const validated = listAuditLogsSchema.parse(filters)
   const offset = (validated.page - 1) * validated.limit
 
-  const conditions = buildFilterConditions(validated)
-
-  if (conditions.length === 0) {
-    return sql<AuditLog[]>`
-      SELECT * FROM audit_log
-      ORDER BY created_at DESC
-      LIMIT ${validated.limit}
-      OFFSET ${offset}
-    `
-  }
-
-  const where = conditions.map((c) => c.clause).join(' AND ')
+  const hasAction = validated.action !== undefined
+  const hasActor = validated.actorId !== undefined
+  const hasTarget = validated.targetId !== undefined
+  const hasStart = validated.startDate !== undefined
+  const hasEnd = validated.endDate !== undefined
 
   return sql<AuditLog[]>`
-    SELECT * FROM audit_log
-    WHERE ${sql.unsafe(where)}
-    ORDER BY created_at DESC
+    SELECT a.*, u.username AS actor_username
+    FROM audit_log a
+    LEFT JOIN users u ON u.id = a.actor_id
+    WHERE 1=1
+      ${hasAction ? sql`AND a.action = ${validated.action!}` : sql``}
+      ${hasActor ? sql`AND a.actor_id = ${validated.actorId!}` : sql``}
+      ${hasTarget ? sql`AND a.target_id = ${validated.targetId!}` : sql``}
+      ${hasStart ? sql`AND a.created_at >= ${validated.startDate!}` : sql``}
+      ${hasEnd ? sql`AND a.created_at <= ${validated.endDate!}` : sql``}
+    ORDER BY a.created_at DESC
     LIMIT ${validated.limit}
     OFFSET ${offset}
   `
@@ -126,21 +128,21 @@ export async function getAuditLogs(sql: Sql, filters: unknown): Promise<AuditLog
 export async function countAuditLogs(sql: Sql, filters: unknown): Promise<number> {
   const validated = listAuditLogsSchema.parse(filters)
 
-  const conditions = buildFilterConditions(validated)
+  const hasAction = validated.action !== undefined
+  const hasActor = validated.actorId !== undefined
+  const hasTarget = validated.targetId !== undefined
+  const hasStart = validated.startDate !== undefined
+  const hasEnd = validated.endDate !== undefined
 
-  let rows: Array<{ count: string }>
-
-  if (conditions.length === 0) {
-    rows = await sql<Array<{ count: string }>>`
-      SELECT COUNT(*)::text AS count FROM audit_log
-    `
-  } else {
-    const where = conditions.map((c) => c.clause).join(' AND ')
-    rows = await sql<Array<{ count: string }>>`
-      SELECT COUNT(*)::text AS count FROM audit_log
-      WHERE ${sql.unsafe(where)}
-    `
-  }
+  const rows = await sql<Array<{ count: string }>>`
+    SELECT COUNT(*)::text AS count FROM audit_log a
+    WHERE 1=1
+      ${hasAction ? sql`AND a.action = ${validated.action!}` : sql``}
+      ${hasActor ? sql`AND a.actor_id = ${validated.actorId!}` : sql``}
+      ${hasTarget ? sql`AND a.target_id = ${validated.targetId!}` : sql``}
+      ${hasStart ? sql`AND a.created_at >= ${validated.startDate!}` : sql``}
+      ${hasEnd ? sql`AND a.created_at <= ${validated.endDate!}` : sql``}
+  `
 
   return Number(rows[0]?.count ?? 0)
 }
@@ -168,36 +170,4 @@ export async function getActorHistory(
     LIMIT ${validated.limit}
     OFFSET ${offset}
   `
-}
-
-// --- Helpers ---
-
-interface FilterCondition {
-  clause: string
-}
-
-function buildFilterConditions(validated: ListAuditLogsInput): FilterCondition[] {
-  const conditions: FilterCondition[] = []
-
-  if (validated.actorId !== undefined) {
-    conditions.push({ clause: `actor_id = ${validated.actorId}` })
-  }
-  if (validated.action !== undefined) {
-    conditions.push({ clause: `action = '${validated.action}'` })
-  }
-  if (validated.targetId !== undefined) {
-    conditions.push({ clause: `target_id = ${validated.targetId}` })
-  }
-  if (validated.startDate !== undefined) {
-    conditions.push({
-      clause: `created_at >= '${validated.startDate}'`,
-    })
-  }
-  if (validated.endDate !== undefined) {
-    conditions.push({
-      clause: `created_at <= '${validated.endDate}'`,
-    })
-  }
-
-  return conditions
 }

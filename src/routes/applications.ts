@@ -7,13 +7,21 @@ import {
   createApplication,
   findApplicationById,
   updateApplication,
+  softDeleteApplication,
   listApplications,
   rotateClientSecret,
   createServiceToken,
   revokeServiceToken,
 } from '../services/app-service.js'
+import { logAction, AuditActions } from '../services/audit-service.js'
 
 const logger = createLogger({ service: 'applications-route' })
+
+function getActorId(req: Request): number | null {
+  const header = req.headers['x-user-id']
+  const id = Number(header)
+  return Number.isFinite(id) && id > 0 ? id : null
+}
 
 function omitSecretHash<T extends { client_secret_hash?: string }>(
   app: T,
@@ -38,6 +46,14 @@ export function createApplicationsRouter(): Router {
         appId: result.application.id,
         duration: Date.now() - start,
       })
+
+      await logAction(db, {
+        actorId: getActorId(req),
+        action: AuditActions.APP_REGISTER,
+        targetId: result.application.id,
+        details: { name: result.application.name, slug: result.application.slug },
+        ipAddress: req.ip,
+      }).catch(() => {})
 
       res.status(201).json({
         success: true,
@@ -137,6 +153,53 @@ export function createApplicationsRouter(): Router {
         appId: id,
         duration: Date.now() - start,
       })
+
+      await logAction(db, {
+        actorId: getActorId(req),
+        action: AuditActions.APP_UPDATE,
+        targetId: id,
+        details: { fields: Object.keys(req.body) },
+        ipAddress: req.ip,
+      }).catch(() => {})
+
+      res.json({
+        success: true,
+        data: omitSecretHash(application),
+      })
+    } catch (err) {
+      next(err)
+    }
+  })
+
+  // DELETE /api/apps/:id — soft delete application
+  router.delete('/api/apps/:id', async (req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now()
+    try {
+      const id = Number(req.params.id)
+      if (Number.isNaN(id)) {
+        throw new AppError(400, 'Invalid application ID')
+      }
+
+      logger.info('Deleting application', { operation: 'softDeleteApplication', appId: id })
+
+      const application = await softDeleteApplication(db, id)
+      if (!application) {
+        throw new AppError(404, 'Application not found')
+      }
+
+      logger.info('Application deleted', {
+        operation: 'softDeleteApplication',
+        appId: id,
+        duration: Date.now() - start,
+      })
+
+      await logAction(db, {
+        actorId: getActorId(req),
+        action: AuditActions.APP_DELETE,
+        targetId: id,
+        details: { name: application.name, slug: application.slug },
+        ipAddress: req.ip,
+      }).catch(() => {})
 
       res.json({
         success: true,

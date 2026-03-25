@@ -14,6 +14,7 @@ import {
 } from '../services/user-service.js'
 import { verifyGoogleToken, isGoogleConfigured } from '../services/google-auth-service.js'
 import { verifyTurnstileToken } from '../services/turnstile-service.js'
+import { logAction, AuditActions } from '../services/audit-service.js'
 import type postgres from 'postgres'
 import { loginLimiter, registerLimiter } from '../middleware/rate-limit.js'
 
@@ -54,6 +55,13 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
         userId: user.id,
         duration: Date.now() - start,
       })
+
+      await logAction(sql, {
+        actorId: user.id,
+        action: AuditActions.REGISTER,
+        details: { username: user.username },
+        ipAddress: req.ip,
+      }).catch(() => {})
 
       res.status(201).json({
         success: true,
@@ -142,6 +150,13 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
           operation: 'login',
           duration: Date.now() - start,
         })
+
+        await logAction(sql, {
+          action: AuditActions.LOGIN_FAILED,
+          details: { reason: 'user_not_found', identifier },
+          ipAddress: req.ip,
+        }).catch(() => {})
+
         res.status(401).json({
           success: false,
           error: 'Invalid credentials',
@@ -157,6 +172,14 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
           userId: user.id,
           duration: Date.now() - start,
         })
+
+        await logAction(sql, {
+          actorId: user.id,
+          action: AuditActions.LOGIN_FAILED,
+          details: { reason: 'wrong_password' },
+          ipAddress: req.ip,
+        }).catch(() => {})
+
         res.status(401).json({
           success: false,
           error: 'Invalid credentials',
@@ -171,6 +194,12 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
         userId: user.id,
         duration: Date.now() - start,
       })
+
+      await logAction(sql, {
+        actorId: user.id,
+        action: AuditActions.LOGIN,
+        ipAddress: req.ip,
+      }).catch(() => {})
 
       res.json({
         success: true,
@@ -247,12 +276,13 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
               email_verified: boolean
               created_at: Date
               updated_at: Date
+              deleted_at: Date | null
             }[]
           >`
             UPDATE users
             SET google_id = ${googleUser.googleId}, email_verified = true, updated_at = now()
             WHERE id = ${existingByEmail.id}
-            RETURNING id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at
+            RETURNING id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
           `
           user = rows[0] ?? null
           logger.info('linked google account to existing user', {
@@ -295,6 +325,13 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
         res.status(500).json({ success: false, error: 'Failed to authenticate with Google' })
         return
       }
+
+      await logAction(sql, {
+        actorId: user.id,
+        action: isNewUser ? AuditActions.REGISTER : AuditActions.LOGIN,
+        details: { source: 'google' },
+        ipAddress: req.ip,
+      }).catch(() => {})
 
       res.status(isNewUser ? 201 : 200).json({
         success: true,

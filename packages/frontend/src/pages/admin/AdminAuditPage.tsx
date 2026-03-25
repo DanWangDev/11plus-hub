@@ -5,6 +5,25 @@ import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { listAuditLog, type AuditEntry } from '@/api/admin'
 
+const ACTION_BADGES: Record<string, string> = {
+  login: 'bg-green-100 text-green-700',
+  login_failed: 'bg-red-100 text-red-700',
+  register: 'bg-blue-100 text-blue-700',
+  logout: 'bg-slate-100 text-slate-600',
+  password_reset_request: 'bg-amber-100 text-amber-700',
+  password_reset_complete: 'bg-amber-100 text-amber-700',
+  user_update: 'bg-purple-100 text-purple-700',
+  user_delete: 'bg-red-100 text-red-700',
+  subscription_create: 'bg-blue-100 text-blue-700',
+  subscription_update: 'bg-purple-100 text-purple-700',
+  subscription_cancel: 'bg-red-100 text-red-700',
+  app_access_grant: 'bg-green-100 text-green-700',
+  app_access_revoke: 'bg-red-100 text-red-700',
+  app_register: 'bg-blue-100 text-blue-700',
+  app_update: 'bg-purple-100 text-purple-700',
+  app_delete: 'bg-red-100 text-red-700',
+}
+
 type PageState =
   | { kind: 'loading' }
   | { kind: 'loaded'; entries: AuditEntry[]; total: number }
@@ -60,11 +79,32 @@ export function AdminAuditPage() {
             aria-label="Filter by action"
           >
             <option value="">All actions</option>
-            <option value="login">Login</option>
-            <option value="register">Register</option>
-            <option value="password_reset">Password Reset</option>
-            <option value="subscription_change">Subscription Change</option>
-            <option value="impersonate">Impersonate</option>
+            <optgroup label="Authentication">
+              <option value="login">Login</option>
+              <option value="login_failed">Login Failed</option>
+              <option value="register">Register</option>
+              <option value="logout">Logout</option>
+            </optgroup>
+            <optgroup label="Password">
+              <option value="password_reset_request">Password Reset Request</option>
+              <option value="password_reset_complete">Password Reset Complete</option>
+            </optgroup>
+            <optgroup label="Users">
+              <option value="user_update">User Update</option>
+              <option value="user_delete">User Delete</option>
+            </optgroup>
+            <optgroup label="Subscriptions">
+              <option value="subscription_create">Subscription Create</option>
+              <option value="subscription_update">Subscription Update</option>
+              <option value="subscription_cancel">Subscription Cancel</option>
+            </optgroup>
+            <optgroup label="Applications">
+              <option value="app_register">App Register</option>
+              <option value="app_update">App Update</option>
+              <option value="app_delete">App Delete</option>
+              <option value="app_access_grant">App Access Grant</option>
+              <option value="app_access_revoke">App Access Revoke</option>
+            </optgroup>
           </select>
         </div>
       </Card>
@@ -93,7 +133,7 @@ export function AdminAuditPage() {
                       Action
                     </th>
                     <th scope="col" className="px-4 py-3 font-medium text-slate-700">
-                      Actor ID
+                      Actor
                     </th>
                     <th scope="col" className="px-4 py-3 font-medium text-slate-700">
                       Target ID
@@ -113,11 +153,15 @@ export function AdminAuditPage() {
                         {new Date(entry.created_at).toLocaleString()}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${ACTION_BADGES[entry.action] ?? 'bg-slate-100 text-slate-700'}`}
+                        >
                           {entry.action}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{entry.actor_id ?? '—'}</td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {entry.actor_username ?? (entry.actor_id ? `#${entry.actor_id}` : '—')}
+                      </td>
                       <td className="px-4 py-3 text-slate-600">{entry.target_id ?? '—'}</td>
                       <td className="px-4 py-3 font-mono text-xs text-slate-500">
                         {entry.ip_address ?? '—'}
