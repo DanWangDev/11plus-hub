@@ -4,9 +4,9 @@ import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
-import { listUsers, updateUser } from '@/api/admin'
+import { listUsers, createUser, updateUser, deleteUser } from '@/api/admin'
 import type { User } from '@/types/api'
-import { Pencil, X, Check } from 'lucide-react'
+import { Pencil, X, Check, Plus, Trash2 } from 'lucide-react'
 
 const ROLE_BADGES: Record<string, string> = {
   admin: 'bg-red-100 text-red-700',
@@ -34,7 +34,15 @@ export function AdminUsersPage() {
   const [editing, setEditing] = useState<EditingUser | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
   const limit = 20
+
+  // Create form
+  const [newUsername, setNewUsername] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [newDisplayName, setNewDisplayName] = useState('')
+  const [newRole, setNewRole] = useState('student')
 
   const fetchUsers = useCallback(async () => {
     setState({ kind: 'loading' })
@@ -68,6 +76,32 @@ export function AdminUsersPage() {
     void fetchUsers()
   }
 
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      await createUser({
+        username: newUsername,
+        email: newEmail,
+        password: newPassword || undefined,
+        displayName: newDisplayName,
+        role: newRole,
+      })
+      setShowCreate(false)
+      setNewUsername('')
+      setNewEmail('')
+      setNewPassword('')
+      setNewDisplayName('')
+      setNewRole('student')
+      void fetchUsers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create user')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleEdit = (user: User) => {
     setEditing({
       id: user.id,
@@ -96,17 +130,93 @@ export function AdminUsersPage() {
     }
   }
 
+  const handleDelete = async (user: User) => {
+    if (!confirm(`Delete user "${user.username}"? This action can be reversed.`)) return
+    setSaving(true)
+    setError('')
+    try {
+      await deleteUser(user.id)
+      void fetchUsers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <AdminLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">Users</h1>
-        <p className="mt-1 text-sm text-slate-500">Manage registered users</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Users</h1>
+          <p className="mt-1 text-sm text-slate-500">Manage registered users</p>
+        </div>
+        <Button onClick={() => setShowCreate(!showCreate)}>
+          {showCreate ? <X size={16} /> : <Plus size={16} />}
+          <span className="ml-1">{showCreate ? 'Cancel' : 'Add User'}</span>
+        </Button>
       </div>
 
       {error && (
         <Alert variant="error" className="mb-4">
           {error}
         </Alert>
+      )}
+
+      {showCreate && (
+        <Card className="mb-6 p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">Create New User</h2>
+          <form onSubmit={handleCreate} className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                label="Username"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="johndoe"
+                required
+              />
+              <Input
+                label="Email"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="john@example.com"
+                required
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Input
+                label="Display Name"
+                value={newDisplayName}
+                onChange={(e) => setNewDisplayName(e.target.value)}
+                placeholder="John Doe"
+                required
+              />
+              <Input
+                label="Password (optional for Google users)"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Min 8 characters"
+              />
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Role</label>
+                <select
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                >
+                  <option value="student">Student</option>
+                  <option value="parent">Parent</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+            </div>
+            <Button type="submit" loading={saving}>
+              Create User
+            </Button>
+          </form>
+        </Card>
       )}
 
       <Card className="mb-6 p-4">
@@ -254,13 +364,23 @@ export function AdminUsersPage() {
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleEdit(user)}
-                            className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                            title="Edit user"
-                          >
-                            <Pencil size={14} />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleEdit(user)}
+                              className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                              title="Edit user"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(user)}
+                              disabled={saving}
+                              className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                              title="Delete user"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

@@ -64,6 +64,8 @@ export interface Subscription {
   expires_at: Date | null
   assigned_by: number | null
   created_at: Date
+  username?: string
+  email?: string
 }
 
 export interface UserAppAccess {
@@ -203,79 +205,19 @@ export async function listSubscriptions(
   const validated = listSubscriptionsSchema.parse(filters)
   const offset = (validated.page - 1) * validated.limit
 
-  if (validated.plan && validated.status && validated.userId) {
-    return sql<Subscription[]>`
-      SELECT * FROM subscriptions
-      WHERE plan = ${validated.plan} AND status = ${validated.status} AND user_id = ${validated.userId}
-      ORDER BY created_at DESC
-      LIMIT ${validated.limit}
-      OFFSET ${offset}
-    `
-  }
-
-  if (validated.plan && validated.status) {
-    return sql<Subscription[]>`
-      SELECT * FROM subscriptions
-      WHERE plan = ${validated.plan} AND status = ${validated.status}
-      ORDER BY created_at DESC
-      LIMIT ${validated.limit}
-      OFFSET ${offset}
-    `
-  }
-
-  if (validated.plan && validated.userId) {
-    return sql<Subscription[]>`
-      SELECT * FROM subscriptions
-      WHERE plan = ${validated.plan} AND user_id = ${validated.userId}
-      ORDER BY created_at DESC
-      LIMIT ${validated.limit}
-      OFFSET ${offset}
-    `
-  }
-
-  if (validated.status && validated.userId) {
-    return sql<Subscription[]>`
-      SELECT * FROM subscriptions
-      WHERE status = ${validated.status} AND user_id = ${validated.userId}
-      ORDER BY created_at DESC
-      LIMIT ${validated.limit}
-      OFFSET ${offset}
-    `
-  }
-
-  if (validated.plan) {
-    return sql<Subscription[]>`
-      SELECT * FROM subscriptions
-      WHERE plan = ${validated.plan}
-      ORDER BY created_at DESC
-      LIMIT ${validated.limit}
-      OFFSET ${offset}
-    `
-  }
-
-  if (validated.status) {
-    return sql<Subscription[]>`
-      SELECT * FROM subscriptions
-      WHERE status = ${validated.status}
-      ORDER BY created_at DESC
-      LIMIT ${validated.limit}
-      OFFSET ${offset}
-    `
-  }
-
-  if (validated.userId) {
-    return sql<Subscription[]>`
-      SELECT * FROM subscriptions
-      WHERE user_id = ${validated.userId}
-      ORDER BY created_at DESC
-      LIMIT ${validated.limit}
-      OFFSET ${offset}
-    `
-  }
+  const hasPlan = validated.plan !== undefined
+  const hasStatus = validated.status !== undefined
+  const hasUserId = validated.userId !== undefined
 
   return sql<Subscription[]>`
-    SELECT * FROM subscriptions
-    ORDER BY created_at DESC
+    SELECT s.*, u.username, u.email
+    FROM subscriptions s
+    LEFT JOIN users u ON u.id = s.user_id
+    WHERE 1=1
+      ${hasPlan ? sql`AND s.plan = ${validated.plan!}` : sql``}
+      ${hasStatus ? sql`AND s.status = ${validated.status!}` : sql``}
+      ${hasUserId ? sql`AND s.user_id = ${validated.userId!}` : sql``}
+    ORDER BY s.created_at DESC
     LIMIT ${validated.limit}
     OFFSET ${offset}
   `
@@ -287,48 +229,17 @@ export async function countSubscriptions(
 ): Promise<number> {
   const validated = listSubscriptionsSchema.parse(filters)
 
-  let rows: { count: string }[]
+  const hasPlan = validated.plan !== undefined
+  const hasStatus = validated.status !== undefined
+  const hasUserId = validated.userId !== undefined
 
-  if (validated.plan && validated.status && validated.userId) {
-    rows = await sql<{ count: string }[]>`
-      SELECT COUNT(*)::text AS count FROM subscriptions
-      WHERE plan = ${validated.plan} AND status = ${validated.status} AND user_id = ${validated.userId}
-    `
-  } else if (validated.plan && validated.status) {
-    rows = await sql<{ count: string }[]>`
-      SELECT COUNT(*)::text AS count FROM subscriptions
-      WHERE plan = ${validated.plan} AND status = ${validated.status}
-    `
-  } else if (validated.plan && validated.userId) {
-    rows = await sql<{ count: string }[]>`
-      SELECT COUNT(*)::text AS count FROM subscriptions
-      WHERE plan = ${validated.plan} AND user_id = ${validated.userId}
-    `
-  } else if (validated.status && validated.userId) {
-    rows = await sql<{ count: string }[]>`
-      SELECT COUNT(*)::text AS count FROM subscriptions
-      WHERE status = ${validated.status} AND user_id = ${validated.userId}
-    `
-  } else if (validated.plan) {
-    rows = await sql<{ count: string }[]>`
-      SELECT COUNT(*)::text AS count FROM subscriptions
-      WHERE plan = ${validated.plan}
-    `
-  } else if (validated.status) {
-    rows = await sql<{ count: string }[]>`
-      SELECT COUNT(*)::text AS count FROM subscriptions
-      WHERE status = ${validated.status}
-    `
-  } else if (validated.userId) {
-    rows = await sql<{ count: string }[]>`
-      SELECT COUNT(*)::text AS count FROM subscriptions
-      WHERE user_id = ${validated.userId}
-    `
-  } else {
-    rows = await sql<{ count: string }[]>`
-      SELECT COUNT(*)::text AS count FROM subscriptions
-    `
-  }
+  const rows = await sql<{ count: string }[]>`
+    SELECT COUNT(*)::text AS count FROM subscriptions s
+    WHERE 1=1
+      ${hasPlan ? sql`AND s.plan = ${validated.plan!}` : sql``}
+      ${hasStatus ? sql`AND s.status = ${validated.status!}` : sql``}
+      ${hasUserId ? sql`AND s.user_id = ${validated.userId!}` : sql``}
+  `
 
   return Number(rows[0]?.count ?? 0)
 }

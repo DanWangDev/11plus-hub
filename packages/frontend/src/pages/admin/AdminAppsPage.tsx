@@ -5,9 +5,14 @@ import { Input } from '@/components/ui/Input'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { listApplications } from '@/api/apps'
-import { createApplication, updateApplication, rotateClientSecret } from '@/api/admin'
+import {
+  createApplication,
+  updateApplication,
+  rotateClientSecret,
+  deleteApplication,
+} from '@/api/admin'
 import type { Application } from '@/types/api'
-import { Copy, KeyRound, Pencil, Plus, X } from 'lucide-react'
+import { Copy, KeyRound, Pencil, Plus, Trash2, X } from 'lucide-react'
 
 const STATUS_BADGES: Record<string, string> = {
   active: 'bg-green-100 text-green-700',
@@ -119,6 +124,20 @@ export function AdminAppsPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to rotate secret')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (app: Application) => {
+    if (!confirm(`Delete app "${app.name}"? This will mark it as deleted.`)) return
+    setSaving(true)
+    setError('')
+    try {
+      await deleteApplication(app.id)
+      void fetchApps()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete app')
     } finally {
       setSaving(false)
     }
@@ -405,6 +424,14 @@ export function AdminAppsPage() {
                           title="Rotate client secret"
                         >
                           <KeyRound size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(app)}
+                          disabled={saving}
+                          className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                          title="Delete app"
+                        >
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>

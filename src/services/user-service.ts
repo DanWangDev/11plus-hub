@@ -51,6 +51,7 @@ export interface User {
   email_verified: boolean
   created_at: Date
   updated_at: Date
+  deleted_at: Date | null
 }
 
 export interface UserWithPassword extends User {
@@ -97,12 +98,23 @@ export async function createUser(sql: postgres.Sql, data: CreateUserInput): Prom
 
 export async function findUserById(sql: postgres.Sql, id: number): Promise<User | null> {
   const rows = await sql<User[]>`
-    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at
+    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
     FROM users
-    WHERE id = ${id}
+    WHERE id = ${id} AND deleted_at IS NULL
   `
 
   return rows[0] ?? null
+}
+
+export async function softDeleteUser(sql: postgres.Sql, id: number): Promise<User | null> {
+  const rows = await sql<UserWithPassword[]>`
+    UPDATE users SET deleted_at = now()
+    WHERE id = ${id} AND deleted_at IS NULL
+    RETURNING *
+  `
+
+  const user = rows[0]
+  return user ? excludePasswordHash(user) : null
 }
 
 export async function findUserByEmail(
@@ -112,7 +124,7 @@ export async function findUserByEmail(
   const rows = await sql<UserWithPassword[]>`
     SELECT *
     FROM users
-    WHERE email = ${email}
+    WHERE email = ${email} AND deleted_at IS NULL
   `
 
   return rows[0] ?? null
@@ -125,7 +137,7 @@ export async function findUserByUsername(
   const rows = await sql<UserWithPassword[]>`
     SELECT *
     FROM users
-    WHERE username = ${username}
+    WHERE username = ${username} AND deleted_at IS NULL
   `
 
   return rows[0] ?? null
@@ -136,9 +148,9 @@ export async function findUserByGoogleId(
   googleId: string,
 ): Promise<User | null> {
   const rows = await sql<User[]>`
-    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at
+    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
     FROM users
-    WHERE google_id = ${googleId}
+    WHERE google_id = ${googleId} AND deleted_at IS NULL
   `
 
   return rows[0] ?? null
@@ -199,9 +211,9 @@ export async function listUsers(sql: postgres.Sql, filters: ListUsersInput): Pro
 
   if (validated.role && validated.search) {
     return sql<User[]>`
-      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at
+      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
       FROM users
-      WHERE role = ${validated.role}
+      WHERE deleted_at IS NULL AND role = ${validated.role}
         AND (username ILIKE ${'%' + validated.search + '%'} OR email ILIKE ${'%' + validated.search + '%'} OR display_name ILIKE ${'%' + validated.search + '%'})
       ORDER BY created_at DESC
       LIMIT ${validated.limit}
@@ -211,9 +223,9 @@ export async function listUsers(sql: postgres.Sql, filters: ListUsersInput): Pro
 
   if (validated.role) {
     return sql<User[]>`
-      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at
+      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
       FROM users
-      WHERE role = ${validated.role}
+      WHERE deleted_at IS NULL AND role = ${validated.role}
       ORDER BY created_at DESC
       LIMIT ${validated.limit}
       OFFSET ${offset}
@@ -222,9 +234,9 @@ export async function listUsers(sql: postgres.Sql, filters: ListUsersInput): Pro
 
   if (validated.search) {
     return sql<User[]>`
-      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at
+      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
       FROM users
-      WHERE username ILIKE ${'%' + validated.search + '%'} OR email ILIKE ${'%' + validated.search + '%'} OR display_name ILIKE ${'%' + validated.search + '%'}
+      WHERE deleted_at IS NULL AND (username ILIKE ${'%' + validated.search + '%'} OR email ILIKE ${'%' + validated.search + '%'} OR display_name ILIKE ${'%' + validated.search + '%'})
       ORDER BY created_at DESC
       LIMIT ${validated.limit}
       OFFSET ${offset}
@@ -232,8 +244,9 @@ export async function listUsers(sql: postgres.Sql, filters: ListUsersInput): Pro
   }
 
   return sql<User[]>`
-    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at
+    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
     FROM users
+    WHERE deleted_at IS NULL
     ORDER BY created_at DESC
     LIMIT ${validated.limit}
     OFFSET ${offset}
@@ -248,22 +261,23 @@ export async function countUsers(sql: postgres.Sql, filters: ListUsersInput): Pr
   if (validated.role && validated.search) {
     rows = await sql<{ count: string }[]>`
       SELECT COUNT(*)::text AS count FROM users
-      WHERE role = ${validated.role}
+      WHERE deleted_at IS NULL AND role = ${validated.role}
         AND (username ILIKE ${'%' + validated.search + '%'} OR email ILIKE ${'%' + validated.search + '%'} OR display_name ILIKE ${'%' + validated.search + '%'})
     `
   } else if (validated.role) {
     rows = await sql<{ count: string }[]>`
       SELECT COUNT(*)::text AS count FROM users
-      WHERE role = ${validated.role}
+      WHERE deleted_at IS NULL AND role = ${validated.role}
     `
   } else if (validated.search) {
     rows = await sql<{ count: string }[]>`
       SELECT COUNT(*)::text AS count FROM users
-      WHERE username ILIKE ${'%' + validated.search + '%'} OR email ILIKE ${'%' + validated.search + '%'} OR display_name ILIKE ${'%' + validated.search + '%'}
+      WHERE deleted_at IS NULL AND (username ILIKE ${'%' + validated.search + '%'} OR email ILIKE ${'%' + validated.search + '%'} OR display_name ILIKE ${'%' + validated.search + '%'})
     `
   } else {
     rows = await sql<{ count: string }[]>`
       SELECT COUNT(*)::text AS count FROM users
+      WHERE deleted_at IS NULL
     `
   }
 

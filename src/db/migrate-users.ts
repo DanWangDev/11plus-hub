@@ -126,6 +126,27 @@ async function insertHubUser(
   sql: postgres.Sql,
   user: HubUser,
 ): Promise<{ id: number } | undefined> {
+  // Check for existing user by username first (handles seed data conflicts)
+  const existingByUsername = await sql`
+    SELECT id FROM users WHERE username = ${user.username}
+  `
+  if (existingByUsername[0]) {
+    const existing = existingByUsername[0] as { id: number }
+    // Update existing user with migrated data (fill in missing fields)
+    await sql`
+      UPDATE users SET
+        password_hash = COALESCE(users.password_hash, ${user.password_hash}),
+        google_id = COALESCE(users.google_id, ${user.google_id}),
+        display_name = COALESCE(NULLIF(users.display_name, ''), ${user.display_name})
+      WHERE id = ${existing.id}
+    `
+    logger.info('merged with existing user by username', {
+      username: user.username,
+      hubId: existing.id,
+    })
+    return existing
+  }
+
   const rows = await sql`
     INSERT INTO users (username, email, password_hash, display_name, role, google_id, email_verified, created_at)
     VALUES (

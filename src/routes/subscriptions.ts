@@ -4,6 +4,7 @@ import { ZodError } from 'zod'
 import { db } from '../db/connection.js'
 import { AppError } from '../middleware/error-handler.js'
 import { createLogger } from '../lib/logger.js'
+import { logAction, AuditActions } from '../services/audit-service.js'
 import {
   createSubscription,
   findSubscriptionById,
@@ -20,6 +21,12 @@ import {
   listSubscriptionsSchema,
 } from '../services/subscription-service.js'
 import type postgres from 'postgres'
+
+function getActorId(req: Request): number | null {
+  const header = req.headers['x-user-id']
+  const id = Number(header)
+  return Number.isFinite(id) && id > 0 ? id : null
+}
 
 interface SubscriptionsRouterOptions {
   sql?: postgres.Sql
@@ -49,6 +56,14 @@ export function createSubscriptionsRouter(options: SubscriptionsRouterOptions = 
         userId: data.userId,
         duration: Date.now() - start,
       })
+
+      await logAction(sql, {
+        actorId: getActorId(req),
+        action: AuditActions.SUBSCRIPTION_CREATE,
+        targetId: data.userId,
+        details: { subscriptionId: subscription.id, plan: data.plan },
+        ipAddress: req.ip,
+      }).catch(() => {})
 
       res.status(201).json({
         success: true,
@@ -176,6 +191,14 @@ export function createSubscriptionsRouter(options: SubscriptionsRouterOptions = 
           duration: Date.now() - start,
         })
 
+        await logAction(sql, {
+          actorId: getActorId(req),
+          action: AuditActions.SUBSCRIPTION_UPDATE,
+          targetId: subscription.user_id,
+          details: { subscriptionId: id, fields: Object.keys(data) },
+          ipAddress: req.ip,
+        }).catch(() => {})
+
         res.json({
           success: true,
           data: subscription,
@@ -223,6 +246,14 @@ export function createSubscriptionsRouter(options: SubscriptionsRouterOptions = 
           subscriptionId: id,
           duration: Date.now() - start,
         })
+
+        await logAction(sql, {
+          actorId: getActorId(req),
+          action: AuditActions.SUBSCRIPTION_CANCEL,
+          targetId: subscription.user_id,
+          details: { subscriptionId: id },
+          ipAddress: req.ip,
+        }).catch(() => {})
 
         res.json({
           success: true,
@@ -300,6 +331,14 @@ export function createSubscriptionsRouter(options: SubscriptionsRouterOptions = 
           duration: Date.now() - start,
         })
 
+        await logAction(sql, {
+          actorId: getActorId(req),
+          action: AuditActions.APP_ACCESS_GRANT,
+          targetId: userId,
+          details: { appId },
+          ipAddress: req.ip,
+        }).catch(() => {})
+
         res.status(201).json({
           success: true,
           data: access,
@@ -343,6 +382,14 @@ export function createSubscriptionsRouter(options: SubscriptionsRouterOptions = 
           appId,
           duration: Date.now() - start,
         })
+
+        await logAction(sql, {
+          actorId: getActorId(req),
+          action: AuditActions.APP_ACCESS_REVOKE,
+          targetId: userId,
+          details: { appId },
+          ipAddress: req.ip,
+        }).catch(() => {})
 
         res.json({
           success: true,
