@@ -151,7 +151,9 @@ export function AdminSubscriptionsPage() {
       </div>
 
       {error && (
-        <Alert variant="error" className="mb-4">{error}</Alert>
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
       )}
 
       {showCreate && (
@@ -235,14 +237,10 @@ export function AdminSubscriptionsPage() {
         <Card className="p-8 text-center text-slate-500">Loading subscriptions...</Card>
       )}
 
-      {state.kind === 'error' && (
-        <Alert variant="error">{state.message}</Alert>
-      )}
+      {state.kind === 'error' && <Alert variant="error">{state.message}</Alert>}
 
       {state.kind === 'loaded' && state.subscriptions.length === 0 && (
-        <Card className="p-8 text-center text-slate-500">
-          No subscriptions found.
-        </Card>
+        <Card className="p-8 text-center text-slate-500">No subscriptions found.</Card>
       )}
 
       {state.kind === 'loaded' && state.subscriptions.length > 0 && (
@@ -252,13 +250,27 @@ export function AdminSubscriptionsPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">ID</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">User ID</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Plan</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Status</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Features</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Expires</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Actions</th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      ID
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      User ID
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Plan
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Status
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Features
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Expires
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

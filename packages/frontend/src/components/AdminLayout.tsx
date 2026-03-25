@@ -92,10 +92,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {menuOpen && (
-          <div
-            id="admin-mobile-menu"
-            className="border-t border-slate-100 px-4 py-3 md:hidden"
-          >
+          <div id="admin-mobile-menu" className="border-t border-slate-100 px-4 py-3 md:hidden">
             <div className="space-y-1">
               {navItems.map(({ to, label, icon: Icon }) => {
                 const active = location.pathname.startsWith(to)

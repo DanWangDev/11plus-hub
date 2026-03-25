@@ -73,14 +73,10 @@ export function AdminAuditPage() {
         <Card className="p-8 text-center text-slate-500">Loading audit log...</Card>
       )}
 
-      {state.kind === 'error' && (
-        <Alert variant="error">{state.message}</Alert>
-      )}
+      {state.kind === 'error' && <Alert variant="error">{state.message}</Alert>}
 
       {state.kind === 'loaded' && state.entries.length === 0 && (
-        <Card className="p-8 text-center text-slate-500">
-          No audit entries found.
-        </Card>
+        <Card className="p-8 text-center text-slate-500">No audit entries found.</Card>
       )}
 
       {state.kind === 'loaded' && state.entries.length > 0 && (
@@ -90,12 +86,24 @@ export function AdminAuditPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Time</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Action</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Actor ID</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Target ID</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">IP</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Details</th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Time
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Action
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Actor ID
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Target ID
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      IP
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Details
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

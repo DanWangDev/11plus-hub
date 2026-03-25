@@ -5,7 +5,7 @@ describe('envSchema', () => {
   it('uses defaults when no env vars are set', () => {
     const result = envSchema.parse({})
     expect(result.NODE_ENV).toBe('development')
-    expect(result.PORT).toBe(3000)
+    expect(result.PORT).toBe(3009)
     expect(result.HOST).toBe('0.0.0.0')
     expect(result.DB_HOST).toBe('localhost')
     expect(result.DB_PORT).toBe(5432)

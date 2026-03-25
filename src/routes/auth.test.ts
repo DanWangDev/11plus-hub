@@ -218,7 +218,7 @@ describe('auth routes', () => {
       expect(res.status).toBe(400)
       expect(res.body).toMatchObject({
         success: false,
-        error: 'Email and password are required',
+        error: 'Email or username, and password are required',
       })
     })
 
@@ -228,7 +228,7 @@ describe('auth routes', () => {
       expect(res.status).toBe(400)
       expect(res.body).toMatchObject({
         success: false,
-        error: 'Email and password are required',
+        error: 'Email or username, and password are required',
       })
     })
   })

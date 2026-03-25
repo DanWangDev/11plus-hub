@@ -104,7 +104,9 @@ export function AdminUsersPage() {
       </div>
 
       {error && (
-        <Alert variant="error" className="mb-4">{error}</Alert>
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
       )}
 
       <Card className="mb-6 p-4">
@@ -141,14 +143,10 @@ export function AdminUsersPage() {
         <Card className="p-8 text-center text-slate-500">Loading users...</Card>
       )}
 
-      {state.kind === 'error' && (
-        <Alert variant="error">{state.message}</Alert>
-      )}
+      {state.kind === 'error' && <Alert variant="error">{state.message}</Alert>}
 
       {state.kind === 'loaded' && state.users.length === 0 && (
-        <Card className="p-8 text-center text-slate-500">
-          No users match your search.
-        </Card>
+        <Card className="p-8 text-center text-slate-500">No users match your search.</Card>
       )}
 
       {state.kind === 'loaded' && state.users.length > 0 && (
@@ -158,13 +156,27 @@ export function AdminUsersPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">ID</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Username</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Email</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Display Name</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Role</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Verified</th>
-                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">Actions</th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      ID
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Username
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Email
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Display Name
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Role
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Verified
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

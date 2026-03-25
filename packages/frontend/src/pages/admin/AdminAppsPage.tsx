@@ -5,11 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { listApplications } from '@/api/apps'
-import {
-  createApplication,
-  updateApplication,
-  rotateClientSecret,
-} from '@/api/admin'
+import { createApplication, updateApplication, rotateClientSecret } from '@/api/admin'
 import type { Application } from '@/types/api'
 import { Copy, KeyRound, Pencil, Plus, X } from 'lucide-react'
 
@@ -84,7 +80,10 @@ export function AdminAppsPage() {
         name: newName,
         slug: newSlug,
         url: newUrl,
-        redirect_uris: newRedirects.split('\n').map((u) => u.trim()).filter(Boolean),
+        redirect_uris: newRedirects
+          .split('\n')
+          .map((u) => u.trim())
+          .filter(Boolean),
       })
       if (response.success && response.data) {
         setRevealedSecret({
@@ -144,7 +143,10 @@ export function AdminAppsPage() {
         name: editing.name,
         url: editing.url,
         status: editing.status,
-        redirect_uris: editing.redirect_uris.split('\n').map((u) => u.trim()).filter(Boolean),
+        redirect_uris: editing.redirect_uris
+          .split('\n')
+          .map((u) => u.trim())
+          .filter(Boolean),
       })
       setEditing(null)
       void fetchApps()
@@ -169,7 +171,9 @@ export function AdminAppsPage() {
       </div>
 
       {error && (
-        <Alert variant="error" className="mb-4">{error}</Alert>
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
       )}
 
       {/* Secret reveal banner */}
@@ -268,9 +272,7 @@ export function AdminAppsPage() {
       {/* Edit modal */}
       {editing && (
         <Card className="mb-6 border-primary-200 bg-primary-50 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">
-            Editing: {editing.name}
-          </h2>
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">Editing: {editing.name}</h2>
           <div className="space-y-3">
             <Input
               label="App Name"
@@ -321,9 +323,7 @@ export function AdminAppsPage() {
         <Card className="p-8 text-center text-slate-500">Loading applications...</Card>
       )}
 
-      {state.kind === 'error' && (
-        <Alert variant="error">{state.message}</Alert>
-      )}
+      {state.kind === 'error' && <Alert variant="error">{state.message}</Alert>}
 
       {state.kind === 'loaded' && state.apps.length === 0 && (
         <Card className="p-8 text-center text-slate-500">
@@ -337,12 +337,24 @@ export function AdminAppsPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">Name</th>
-                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">Slug</th>
-                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">Client ID</th>
-                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">Status</th>
-                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">Created</th>
-                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">Actions</th>
+                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                    Name
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                    Slug
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                    Client ID
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                    Status
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                    Created
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
