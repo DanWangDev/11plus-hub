@@ -31,6 +31,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/services/google-auth-service.ts', 'src/services/turnstile-service.ts'],
+    rules: {
+      'n/no-unsupported-features/node-builtins': ['error', { ignores: ['fetch'] }],
+    },
+  },
+  {
     files: ['packages/frontend/**/*.ts', 'packages/frontend/**/*.tsx'],
     rules: {
       'n/no-unsupported-features/node-builtins': 'off',

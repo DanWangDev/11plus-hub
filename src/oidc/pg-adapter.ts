@@ -19,14 +19,14 @@ export function createPgAdapter(sql: postgres.Sql) {
           VALUES (
             ${id},
             ${type},
-            ${JSON.stringify(payload)},
+            ${sql.json(JSON.parse(JSON.stringify(payload)))},
             ${payload.grantId ?? null},
             ${payload.userCode ?? null},
             ${payload.uid ?? null},
             ${expiresAt}
           )
           ON CONFLICT (id, type) DO UPDATE SET
-            payload = ${JSON.stringify(payload)},
+            payload = ${sql.json(JSON.parse(JSON.stringify(payload)))},
             grant_id = ${payload.grantId ?? null},
             user_code = ${payload.userCode ?? null},
             uid = ${payload.uid ?? null},

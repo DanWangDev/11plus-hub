@@ -4,24 +4,27 @@ import { loginSchema, signupSchema, forgotPasswordSchema, resetPasswordSchema } 
 describe('loginSchema', () => {
   it('accepts valid data', () => {
     const result = loginSchema.safeParse({
-      email: 'test@example.com',
+      identifier: 'test@example.com',
       password: 'password123',
     })
     expect(result.success).toBe(true)
   })
 
-  it('rejects empty email', () => {
-    const result = loginSchema.safeParse({ email: '', password: 'pass' })
-    expect(result.success).toBe(false)
+  it('accepts username as identifier', () => {
+    const result = loginSchema.safeParse({
+      identifier: 'BigDaddy',
+      password: 'password123',
+    })
+    expect(result.success).toBe(true)
   })
 
-  it('rejects invalid email', () => {
-    const result = loginSchema.safeParse({ email: 'not-email', password: 'pass' })
+  it('rejects empty identifier', () => {
+    const result = loginSchema.safeParse({ identifier: '', password: 'pass' })
     expect(result.success).toBe(false)
   })
 
   it('rejects empty password', () => {
-    const result = loginSchema.safeParse({ email: 'test@example.com', password: '' })
+    const result = loginSchema.safeParse({ identifier: 'test@example.com', password: '' })
     expect(result.success).toBe(false)
   })
 })

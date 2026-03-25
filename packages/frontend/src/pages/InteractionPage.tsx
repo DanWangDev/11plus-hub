@@ -151,15 +151,15 @@ function InteractionLoginView({
 
       <form onSubmit={form.handleSubmit} noValidate>
         <Input
-          label="Email"
-          type="email"
-          autoComplete="email"
+          label="Email or Username"
+          type="text"
+          autoComplete="username"
           autoFocus
           required
-          placeholder="you@example.com"
-          value={(form.values.email as string) ?? ''}
-          onChange={(e) => form.setValue('email', e.target.value)}
-          error={form.errors.email}
+          placeholder="you@example.com or username"
+          value={(form.values.identifier as string) ?? ''}
+          onChange={(e) => form.setValue('identifier', e.target.value)}
+          error={form.errors.identifier}
         />
 
         <Input
