@@ -1,0 +1,82 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: hub-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hub
+
+  app:
+    image: ghcr.io/danwangdev/11plus-hub:latest
+    container_name: hub-app
+    restart: unless-stopped
+    command: >
+      sh -c "node dist/db/migrate.js up && node dist/db/seed.js && node dist/server.js"
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - hub
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: hub-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on:
+      - app
+    networks:
+      - hub
+
+  # One-time user migration from SQLite databases
+  # Usage:
+  #   1. Place vocab-master.db and writing-buddy.db in ./data/
+  #   2. docker compose -f docker-compose.prod.yml --profile migration run --rm migrate-users
+  #   3. Add --dry-run to preview: override command with sh -c "npx tsx src/db/migrate-users.ts --vocab-master /data/vocab-master.db --writing-buddy /data/writing-buddy.db --dry-run"
+  migrate-users:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: hub-migrate
+    command: >
+      sh -c "npx tsx src/db/migrate-users.ts
+      --vocab-master /data/vocab-master.db
+      --writing-buddy /data/writing-buddy.db"
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    volumes:
+      - ${MIGRATION_DATA_DIR:-./data}:/data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - migration
+    networks:
+      - hub
+
+volumes:
+  pgdata:
+
+networks:
+  hub:

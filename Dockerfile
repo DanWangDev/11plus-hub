@@ -42,6 +42,7 @@ FROM base AS production
 ENV NODE_ENV=production
 RUN addgroup -g 1001 -S nodejs && adduser -S hub -u 1001
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/src/db/migrations ./dist/db/migrations
 COPY --from=frontend-build /app/dist ./packages/frontend/dist
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
