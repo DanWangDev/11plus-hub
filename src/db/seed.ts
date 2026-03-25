@@ -1,7 +1,12 @@
+import { createHash } from 'crypto'
 import { createDb, closeDb } from './connection.js'
 import bcrypt from 'bcrypt'
 
 const BCRYPT_ROUNDS = 12
+
+function hashSha256(value: string): string {
+  return createHash('sha256').update(value).digest('hex')
+}
 
 async function main(): Promise<void> {
   const sql = createDb()
@@ -44,29 +49,31 @@ async function main(): Promise<void> {
       ON CONFLICT (username) DO NOTHING
     `
 
-    // Register apps
-    const vocabSecret = await bcrypt.hash('vocab-dev-secret', BCRYPT_ROUNDS)
-    const writingSecret = await bcrypt.hash('writing-dev-secret', BCRYPT_ROUNDS)
+    // Register apps (store both bcrypt hash and SHA-256 hash)
+    const vocabSecretHash = await bcrypt.hash('vocab-dev-secret', BCRYPT_ROUNDS)
+    const vocabSecretSha256 = hashSha256('vocab-dev-secret')
+    const writingSecretHash = await bcrypt.hash('writing-dev-secret', BCRYPT_ROUNDS)
+    const writingSecretSha256 = hashSha256('writing-dev-secret')
 
     await sql`
-      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, redirect_uris, stats_api_url)
+      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, stats_api_url)
       VALUES (
         'Vocab Master', 'vocab-master', 'https://vocab-master.labf.app',
-        'vocab-master-client', ${vocabSecret},
+        'vocab-master-client', ${vocabSecretHash}, ${vocabSecretSha256},
         ARRAY['https://vocab-master.labf.app/auth/callback', 'http://localhost:5174/auth/callback'],
         'https://vocab-master.labf.app/api/stats'
       )
-      ON CONFLICT (slug) DO NOTHING
+      ON CONFLICT (slug) DO UPDATE SET client_secret_sha256 = ${vocabSecretSha256}
     `
 
     await sql`
-      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, redirect_uris)
+      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris)
       VALUES (
         'Writing Buddy', 'writing-buddy', 'https://writing-buddy.labf.app',
-        'writing-buddy-client', ${writingSecret},
+        'writing-buddy-client', ${writingSecretHash}, ${writingSecretSha256},
         ARRAY['https://writing-buddy.labf.app/auth/callback', 'http://localhost:5175/auth/callback']
       )
-      ON CONFLICT (slug) DO NOTHING
+      ON CONFLICT (slug) DO UPDATE SET client_secret_sha256 = ${writingSecretSha256}
     `
 
     // Create free subscription for admin

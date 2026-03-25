@@ -59,6 +59,9 @@ export function createAccountFinder(sql: postgres.Sql) {
           plan: subscription?.plan ?? 'free',
           features: subscription?.features ?? [],
           apps: appSlugs,
+          expires_at: subscription?.expires_at
+            ? new Date(subscription.expires_at).toISOString()
+            : null,
         }
       },
     }

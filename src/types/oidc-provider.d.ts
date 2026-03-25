@@ -40,6 +40,11 @@ declare module 'oidc-provider' {
     claims: () => Promise<Record<string, unknown>>
   }
 
+  interface OidcSession {
+    accountId?: string
+    grantIdFor(clientId: string): string | undefined
+  }
+
   interface InteractionDetails {
     uid: string
     prompt: {
@@ -47,9 +52,7 @@ declare module 'oidc-provider' {
       details: Record<string, unknown>
     }
     params: Record<string, unknown>
-    session?: {
-      accountId?: string
-    }
+    session?: OidcSession
     grantId?: string
   }
 
@@ -72,6 +75,21 @@ declare module 'oidc-provider' {
   interface ClientInstance {
     clientId: string
     metadata(): ClientMetadata
+    grantTypeAllowed(grantType: string): boolean
+  }
+
+  interface AuthorizationCode {
+    scopes: Set<string>
+    [key: string]: unknown
+  }
+
+  interface OidcContext {
+    oidc: {
+      result?: { consent?: { grantId?: string } }
+      session?: OidcSession
+      client?: ClientInstance
+      provider: Provider
+    }
   }
 
   interface Configuration {
@@ -102,8 +120,20 @@ declare module 'oidc-provider' {
       error: Error,
     ) => Promise<void>
     conformIdTokenClaims?: boolean
-    clientBasedCORS?: () => boolean
+    clientBasedCORS?:
+      | (() => boolean)
+      | ((
+          ctx: unknown,
+          origin: string,
+          client: { redirectUris?: string[]; [key: string]: unknown },
+        ) => boolean)
     clients?: ClientMetadata[]
+    loadExistingGrant?: (ctx: OidcContext) => Promise<GrantInstance | undefined>
+    issueRefreshToken?: (
+      ctx: unknown,
+      client: ClientInstance,
+      code: AuthorizationCode,
+    ) => Promise<boolean>
   }
 
   class Provider {

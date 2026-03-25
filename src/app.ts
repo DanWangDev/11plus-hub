@@ -16,6 +16,7 @@ import { createAuditRouter } from './routes/audit.js'
 import { createSubscriptionsRouter } from './routes/subscriptions.js'
 import { createInteractionRouter } from './routes/oidc-interactions.js'
 import { createPasswordResetRouter } from './routes/password-reset.js'
+import { createSecretAuthMiddleware } from './oidc/secret-auth-middleware.js'
 import { apiLimiter } from './middleware/rate-limit.js'
 
 export interface AppOptions {
@@ -79,6 +80,8 @@ export function createApp(options: AppOptions = {}): express.Express {
         sql: options.sql,
       }),
     )
+    // Hash incoming client_secret before oidc-provider sees it (IdentityServer pattern)
+    app.use('/oidc/token', createSecretAuthMiddleware())
     app.use('/oidc', options.oidcProvider.callback())
   }
 

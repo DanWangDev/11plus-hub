@@ -1,4 +1,5 @@
 import Provider from 'oidc-provider'
+import type { ClientMetadata } from 'oidc-provider'
 import type postgres from 'postgres'
 import { createPgAdapter } from './pg-adapter.js'
 import { createLogger } from '../lib/logger.js'
@@ -10,6 +11,7 @@ export interface OidcProviderOptions {
   sql: postgres.Sql
   signingKey: string
   cookieKeys: string[]
+  clients?: ClientMetadata[]
   findAccount: (
     ctx: unknown,
     sub: string,
@@ -23,12 +25,15 @@ export interface OidcProviderOptions {
 }
 
 export function createOidcProvider(options: OidcProviderOptions): Provider {
-  const { issuer, sql, signingKey, cookieKeys, findAccount } = options
+  const { issuer, sql, signingKey, cookieKeys, clients, findAccount } = options
 
   const adapter = createPgAdapter(sql)
 
   const provider = new Provider(issuer, {
     adapter,
+
+    // Static client registration from applications table
+    ...(clients && clients.length > 0 ? { clients } : {}),
 
     findAccount: async (ctx, sub) => {
       const account = await findAccount(ctx, sub)
@@ -43,7 +48,7 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
       openid: ['sub'],
       profile: ['username', 'display_name', 'role'],
       email: ['email', 'email_verified'],
-      hub: ['plan', 'features', 'apps'],
+      hub: ['plan', 'features', 'apps', 'expires_at'],
     },
 
     scopes: ['openid', 'profile', 'email', 'hub'],
@@ -55,6 +60,54 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
     features: {
       devInteractions: { enabled: false },
       resourceIndicators: { enabled: false },
+      rpInitiatedLogout: { enabled: true },
+    },
+
+    // Always issue refresh tokens for confidential first-party clients.
+    // This avoids requiring `offline_access` scope in every authorization request.
+    issueRefreshToken: async (_ctx, client, code) => {
+      if (client.grantTypeAllowed('refresh_token') && code.scopes.has('openid')) {
+        return true
+      }
+      return false
+    },
+
+    // Auto-consent for first-party apps — skip the consent screen entirely.
+    // All registered clients are first-party (our own apps). If third-party
+    // clients are ever added, gate this on a `first_party` column.
+    loadExistingGrant: async (ctx) => {
+      const grantId =
+        ctx.oidc.result?.consent?.grantId ||
+        (ctx.oidc.session?.accountId
+          ? ctx.oidc.session.grantIdFor(ctx.oidc.client!.clientId)
+          : undefined)
+
+      if (grantId) {
+        return ctx.oidc.provider.Grant.find(grantId)
+      }
+
+      // Auto-create a grant with all scopes for first-party clients
+      const grant = new ctx.oidc.provider.Grant({
+        accountId: ctx.oidc.session!.accountId!,
+        clientId: ctx.oidc.client!.clientId,
+      })
+
+      grant.addOIDCScope('openid profile email hub')
+      grant.addOIDCClaims([
+        'sub',
+        'username',
+        'display_name',
+        'email',
+        'email_verified',
+        'role',
+        'plan',
+        'features',
+        'apps',
+        'expires_at',
+      ])
+
+      await grant.save()
+      return grant
     },
 
     pkce: {
@@ -121,7 +174,18 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
 </html>`
     },
 
-    clientBasedCORS: () => true,
+    clientBasedCORS: (_ctx, origin, client) => {
+      // Allow CORS from origins that match a registered client's redirect URIs
+      const allowedOrigins = (client.redirectUris ?? []).map((uri: string) => {
+        try {
+          const url = new URL(uri)
+          return url.origin
+        } catch {
+          return ''
+        }
+      })
+      return allowedOrigins.includes(origin)
+    },
   })
 
   provider.on('grant.success', (...args: unknown[]) => {
