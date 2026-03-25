@@ -4,6 +4,7 @@ import type Provider from 'oidc-provider'
 import type postgres from 'postgres'
 import { findUserByEmail, findUserByUsername, verifyPassword } from '../services/user-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
+import { checkUserEntitlement } from '../oidc/entitlement-check.js'
 import { createLogger } from '../lib/logger.js'
 
 const logger = createLogger({ route: 'oidc-interactions' })
@@ -115,6 +116,36 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           res.status(401).json({
             success: false,
             error: 'Invalid credentials',
+          })
+          return
+        }
+
+        // Check entitlement before completing login
+        const interactionDetails = await provider.interactionDetails(req, res)
+        const clientId = String(
+          (interactionDetails.params as Record<string, unknown>).client_id ?? '',
+        )
+
+        const entitlement = await checkUserEntitlement(sql, user.id, clientId)
+        if (!entitlement.allowed) {
+          logger.warn('oidc api login denied - no entitlement', {
+            operation: 'login',
+            userId: user.id,
+            clientId,
+            reason: entitlement.reason,
+            duration: Date.now() - start,
+          })
+
+          await logAction(sql, {
+            actorId: user.id,
+            action: AuditActions.ENTITLEMENT_DENIED,
+            details: { clientId, appName: entitlement.appName, reason: entitlement.reason },
+            ipAddress: req.ip,
+          }).catch(() => {})
+
+          res.status(403).json({
+            success: false,
+            error: `Your plan does not include access to ${entitlement.appName ?? 'this application'}. Please upgrade your subscription.`,
           })
           return
         }
@@ -348,6 +379,34 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           return
         }
 
+        // Check entitlement before completing login
+        const interactionDetails = await provider.interactionDetails(req, res)
+        const clientId = String(
+          (interactionDetails.params as Record<string, unknown>).client_id ?? '',
+        )
+
+        const entitlement = await checkUserEntitlement(sql, user.id, clientId)
+        if (!entitlement.allowed) {
+          logger.warn('oidc login denied - no entitlement', {
+            operation: 'login',
+            userId: user.id,
+            clientId,
+            reason: entitlement.reason,
+            duration: Date.now() - start,
+          })
+
+          await logAction(sql, {
+            actorId: user.id,
+            action: AuditActions.ENTITLEMENT_DENIED,
+            details: { clientId, appName: entitlement.appName, reason: entitlement.reason },
+            ipAddress: req.ip,
+          }).catch(() => {})
+
+          res.type('html')
+          res.status(403).send(renderAccessDeniedPage(entitlement.appName ?? 'this application'))
+          return
+        }
+
         logger.info('oidc login success', {
           operation: 'login',
           userId: user.id,
@@ -472,6 +531,30 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
     },
   )
 
+  // GET /auth/logout — initiate RP-initiated logout
+  router.get('/auth/logout', (req: Request, res: Response) => {
+    // Redirect to the OIDC end-session endpoint
+    // The provider handles session cleanup and post_logout_redirect
+    const endSessionUrl = new URL('/oidc/session/end', `${req.protocol}://${req.get('host')}`)
+
+    // If an id_token_hint is provided, pass it through for cleaner logout
+    const idTokenHint = req.query.id_token_hint
+    if (typeof idTokenHint === 'string') {
+      endSessionUrl.searchParams.set('id_token_hint', idTokenHint)
+    }
+
+    const postLogoutRedirectUri = req.query.post_logout_redirect_uri
+    if (typeof postLogoutRedirectUri === 'string') {
+      endSessionUrl.searchParams.set('post_logout_redirect_uri', postLogoutRedirectUri)
+    }
+
+    logger.info('initiating logout', {
+      operation: 'logout',
+    })
+
+    res.redirect(endSessionUrl.toString())
+  })
+
   return router
 }
 
@@ -558,6 +641,38 @@ function renderConsentPage(uid: string, clientName: string, scope: string): stri
         <button type="submit" class="deny" style="width:100%">Deny</button>
       </form>
     </div>
+  </div>
+</body>
+</html>`
+}
+
+function renderAccessDeniedPage(appName: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Access Denied — Lab F</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#f8fafc;color:#334155;display:flex;justify-content:center;align-items:center;min-height:100vh}
+    .card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:40px;width:100%;max-width:420px;text-align:center}
+    h1{font-size:24px;font-weight:600;color:#dc2626;margin-bottom:8px}
+    .info{color:#64748b;font-size:14px;margin-bottom:24px;line-height:1.6}
+    .app-name{font-weight:600;color:#0f172a}
+    a{display:inline-block;padding:12px 24px;background:#0ea5e9;color:#fff;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;margin-top:8px}
+    a:hover{background:#0284c7}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Access Denied</h1>
+    <p class="info">
+      Your current plan does not include access to
+      <span class="app-name">${escapeHtml(appName)}</span>.
+    </p>
+    <p class="info">Please upgrade your subscription to use this application.</p>
+    <a href="/">Go to Hub</a>
   </div>
 </body>
 </html>`

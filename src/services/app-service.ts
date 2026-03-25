@@ -47,6 +47,7 @@ export interface Application {
   url: string
   client_id: string
   client_secret_hash: string
+  client_secret_sha256: string | null
   redirect_uris: string[]
   icon_url: string | null
   stats_api_url: string | null
@@ -84,15 +85,17 @@ export async function createApplication(
   const clientId = randomUUID()
   const clientSecret = randomBytes(32).toString('hex')
   const clientSecretHash = await bcrypt.hash(clientSecret, BCRYPT_ROUNDS)
+  const clientSecretSha256 = hashSha256(clientSecret)
 
   const rows = await sql`
-    INSERT INTO applications (name, slug, url, client_id, client_secret_hash, redirect_uris, icon_url, stats_api_url)
+    INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, icon_url, stats_api_url)
     VALUES (
       ${validated.name},
       ${validated.slug},
       ${validated.url},
       ${clientId},
       ${clientSecretHash},
+      ${clientSecretSha256},
       ${validated.redirectUris},
       ${validated.iconUrl ?? null},
       ${validated.statsApiUrl ?? null}
@@ -135,6 +138,10 @@ export async function findApplicationBySlug(sql: Sql, slug: string): Promise<App
 
 export async function verifyClientSecret(plaintext: string, hash: string): Promise<boolean> {
   return bcrypt.compare(plaintext, hash)
+}
+
+export function verifyClientSecretSha256(plaintext: string, storedHash: string): boolean {
+  return hashSha256(plaintext) === storedHash
 }
 
 export async function updateApplication(
@@ -237,10 +244,11 @@ export async function rotateClientSecret(
 
   const clientSecret = randomBytes(32).toString('hex')
   const clientSecretHash = await bcrypt.hash(clientSecret, BCRYPT_ROUNDS)
+  const clientSecretSha256 = hashSha256(clientSecret)
 
   const rows = await sql`
     UPDATE applications
-    SET client_secret_hash = ${clientSecretHash}
+    SET client_secret_hash = ${clientSecretHash}, client_secret_sha256 = ${clientSecretSha256}
     WHERE id = ${id}
     RETURNING *
   `

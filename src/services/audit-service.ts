@@ -25,6 +25,7 @@ export const AuditActions = {
   APP_DELETE: 'app_delete',
   IMPERSONATE_START: 'impersonate_start',
   IMPERSONATE_END: 'impersonate_end',
+  ENTITLEMENT_DENIED: 'entitlement_denied',
 } as const
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions]

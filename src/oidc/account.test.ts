@@ -94,6 +94,7 @@ describe('account finder', () => {
       plan: 'bundle',
       features: ['writing', 'vocab'],
       apps: ['writing-buddy', 'vocab-master'],
+      expires_at: null,
     })
   })
 
@@ -120,5 +121,35 @@ describe('account finder', () => {
     expect(claims.plan).toBe('free')
     expect(claims.features).toEqual([])
     expect(claims.apps).toEqual([])
+    expect(claims.expires_at).toBeNull()
+  })
+
+  it('includes expires_at from subscription', async () => {
+    const user = {
+      id: 42,
+      username: 'emma',
+      display_name: 'Emma Wang',
+      email: 'emma@example.com',
+      email_verified: true,
+      role: 'student',
+    }
+    const expDate = new Date('2027-01-01T00:00:00Z')
+    const subscription = {
+      plan: 'vocab',
+      features: ['vocab'],
+      expires_at: expDate,
+    }
+
+    mockFindUserById.mockResolvedValue(user)
+    mockFindSubscriptionByUserId.mockResolvedValue(subscription)
+    mockGetUserAppAccess.mockResolvedValue([{ app_id: 1 }])
+
+    const mockSql = createMockSql([{ slug: 'vocab-master' }])
+    const findAccount = createAccountFinder(mockSql as never)
+
+    const result = await findAccount(null, '42')
+    const claims = await result!.claims()
+
+    expect(claims.expires_at).toBe('2027-01-01T00:00:00.000Z')
   })
 })
