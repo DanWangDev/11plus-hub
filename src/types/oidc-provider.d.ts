@@ -75,6 +75,12 @@ declare module 'oidc-provider' {
   interface ClientInstance {
     clientId: string
     metadata(): ClientMetadata
+    grantTypeAllowed(grantType: string): boolean
+  }
+
+  interface AuthorizationCode {
+    scopes: Set<string>
+    [key: string]: unknown
   }
 
   interface OidcContext {
@@ -123,6 +129,11 @@ declare module 'oidc-provider' {
         ) => boolean)
     clients?: ClientMetadata[]
     loadExistingGrant?: (ctx: OidcContext) => Promise<GrantInstance | undefined>
+    issueRefreshToken?: (
+      ctx: unknown,
+      client: ClientInstance,
+      code: AuthorizationCode,
+    ) => Promise<boolean>
   }
 
   class Provider {

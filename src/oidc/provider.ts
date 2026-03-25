@@ -63,6 +63,15 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
       rpInitiatedLogout: { enabled: true },
     },
 
+    // Always issue refresh tokens for confidential first-party clients.
+    // This avoids requiring `offline_access` scope in every authorization request.
+    issueRefreshToken: async (_ctx, client, code) => {
+      if (client.grantTypeAllowed('refresh_token') && code.scopes.has('openid')) {
+        return true
+      }
+      return false
+    },
+
     // Auto-consent for first-party apps — skip the consent screen entirely.
     // All registered clients are first-party (our own apps). If third-party
     // clients are ever added, gate this on a `first_party` column.
