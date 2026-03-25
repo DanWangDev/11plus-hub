@@ -31,6 +31,21 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', 'coverage/', '*.config.js', '*.config.ts', '**/*.d.ts'],
+    files: ['packages/frontend/**/*.ts', 'packages/frontend/**/*.tsx'],
+    rules: {
+      'n/no-unsupported-features/node-builtins': 'off',
+      'n/no-unsupported-features/es-syntax': 'off',
+    },
+  },
+  {
+    ignores: [
+      'dist/',
+      'node_modules/',
+      'coverage/',
+      '*.config.js',
+      '*.config.ts',
+      '**/*.d.ts',
+      'packages/frontend/dist/',
+    ],
   },
 )
