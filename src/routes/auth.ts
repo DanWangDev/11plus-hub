@@ -2,14 +2,18 @@ import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { ZodError } from 'zod'
 import { db } from '../db/connection.js'
+import { env } from '../config/env.js'
 import { createLogger } from '../lib/logger.js'
 import {
   createUser,
   createUserSchema,
   findUserByEmail,
+  findUserByGoogleId,
   findUserByUsername,
   verifyPassword,
 } from '../services/user-service.js'
+import { verifyGoogleToken, isGoogleConfigured } from '../services/google-auth-service.js'
+import { verifyTurnstileToken } from '../services/turnstile-service.js'
 import type postgres from 'postgres'
 import { loginLimiter, registerLimiter } from '../middleware/rate-limit.js'
 
@@ -25,7 +29,24 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
   router.post('/api/auth/register', registerLimiter, async (req: Request, res: Response) => {
     const start = Date.now()
     try {
-      const data = createUserSchema.parse(req.body)
+      const { turnstileToken, ...body } = req.body as Record<string, unknown> & {
+        turnstileToken?: string
+      }
+
+      if (env.TURNSTILE_SECRET_KEY) {
+        const ip = req.ip ?? req.socket.remoteAddress ?? ''
+        const ok = await verifyTurnstileToken(turnstileToken ?? '', ip)
+        if (!ok) {
+          logger.warn('registration turnstile failed', {
+            operation: 'register',
+            duration: Date.now() - start,
+          })
+          res.status(403).json({ success: false, error: 'Bot verification failed' })
+          return
+        }
+      }
+
+      const data = createUserSchema.parse(body)
       const user = await createUser(sql, data)
 
       logger.info('user registered', {
@@ -79,10 +100,24 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
   router.post('/api/auth/login', loginLimiter, async (req: Request, res: Response) => {
     const start = Date.now()
     try {
-      const { email, username, password } = req.body as {
+      const { email, username, password, turnstileToken } = req.body as {
         email?: string
         username?: string
         password?: string
+        turnstileToken?: string
+      }
+
+      if (env.TURNSTILE_SECRET_KEY) {
+        const ip = req.ip ?? req.socket.remoteAddress ?? ''
+        const ok = await verifyTurnstileToken(turnstileToken ?? '', ip)
+        if (!ok) {
+          logger.warn('login turnstile failed', {
+            operation: 'login',
+            duration: Date.now() - start,
+          })
+          res.status(403).json({ success: false, error: 'Bot verification failed' })
+          return
+        }
       }
 
       const identifier = email ?? username
@@ -154,6 +189,128 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
         success: false,
         error: 'Internal server error',
       })
+    }
+  })
+
+  router.post('/api/auth/google', loginLimiter, async (req: Request, res: Response) => {
+    const start = Date.now()
+
+    if (!isGoogleConfigured()) {
+      res.status(501).json({ success: false, error: 'Google sign-in is not configured' })
+      return
+    }
+
+    try {
+      const { token, tokenType, turnstileToken } = req.body as {
+        token?: string
+        tokenType?: 'id_token' | 'access_token'
+        turnstileToken?: string
+      }
+
+      if (env.TURNSTILE_SECRET_KEY) {
+        const ip = req.ip ?? req.socket.remoteAddress ?? ''
+        const ok = await verifyTurnstileToken(turnstileToken ?? '', ip)
+        if (!ok) {
+          logger.warn('google auth turnstile failed', {
+            operation: 'google-auth',
+            duration: Date.now() - start,
+          })
+          res.status(403).json({ success: false, error: 'Bot verification failed' })
+          return
+        }
+      }
+
+      if (!token) {
+        res.status(400).json({ success: false, error: 'Google token is required' })
+        return
+      }
+
+      const googleUser = await verifyGoogleToken(token, tokenType ?? 'id_token')
+
+      // Check if user exists by google_id
+      let user = await findUserByGoogleId(sql, googleUser.googleId)
+      let isNewUser = false
+
+      if (!user) {
+        // Check if user exists by email — link accounts
+        const existingByEmail = await findUserByEmail(sql, googleUser.email)
+        if (existingByEmail) {
+          const rows = await sql<
+            {
+              id: number
+              username: string
+              email: string
+              display_name: string
+              role: string
+              parent_id: number | null
+              google_id: string | null
+              email_verified: boolean
+              created_at: Date
+              updated_at: Date
+            }[]
+          >`
+            UPDATE users
+            SET google_id = ${googleUser.googleId}, email_verified = true, updated_at = now()
+            WHERE id = ${existingByEmail.id}
+            RETURNING id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at
+          `
+          user = rows[0] ?? null
+          logger.info('linked google account to existing user', {
+            operation: 'google-auth',
+            userId: existingByEmail.id,
+            duration: Date.now() - start,
+          })
+        } else {
+          // Create new user from Google profile
+          const emailPrefix = googleUser.email.split('@')[0] ?? googleUser.email
+          const username = emailPrefix
+            .replace(/[^a-zA-Z0-9_-]/g, '_')
+            .slice(0, 30)
+            .padEnd(3, '_')
+
+          user = await createUser(sql, {
+            username,
+            email: googleUser.email,
+            displayName: googleUser.name,
+            googleId: googleUser.googleId,
+            role: 'student',
+          })
+          isNewUser = true
+
+          logger.info('created user via google', {
+            operation: 'google-auth',
+            userId: user.id,
+            duration: Date.now() - start,
+          })
+        }
+      } else {
+        logger.info('user authenticated via google', {
+          operation: 'google-auth',
+          userId: user.id,
+          duration: Date.now() - start,
+        })
+      }
+
+      if (!user) {
+        res.status(500).json({ success: false, error: 'Failed to authenticate with Google' })
+        return
+      }
+
+      res.status(isNewUser ? 201 : 200).json({
+        success: true,
+        data: {
+          user,
+          token: 'placeholder-jwt-token',
+          isNewUser,
+        },
+      })
+    } catch (error) {
+      logger.error('google auth failed', {
+        operation: 'google-auth',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration: Date.now() - start,
+      })
+      res.status(401).json({ success: false, error: 'Google authentication failed' })
     }
   })
 

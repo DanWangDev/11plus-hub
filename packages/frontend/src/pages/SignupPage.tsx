@@ -4,20 +4,30 @@ import { AuthLayout } from '@/components/AuthLayout'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
+import { GoogleSignInButton } from '@/components/GoogleSignInButton'
+import { TurnstileWidget, isTurnstileEnabled } from '@/components/TurnstileWidget'
 import { useForm } from '@/hooks/use-form'
 import { signupSchema, type SignupFormData } from '@/lib/validation'
-import { register } from '@/api/auth'
+import { register, googleAuth } from '@/api/auth'
 import { ApiError } from '@/lib/api-client'
+import { useAuth } from '@/contexts/auth-context'
 
 export function SignupPage() {
   const navigate = useNavigate()
+  const { setUser } = useAuth()
   const [success, setSuccess] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [googleError, setGoogleError] = useState<string | null>(null)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const form = useForm<SignupFormData>({
     schema: signupSchema,
     onSubmit: async (data) => {
       try {
-        const response = await register(data)
+        const response = await register({
+          ...data,
+          turnstileToken: turnstileToken ?? undefined,
+        })
         if (response.success) {
           setSuccess(true)
           setTimeout(() => navigate('/login'), 2000)
@@ -34,6 +44,27 @@ export function SignupPage() {
       }
     },
   })
+
+  const handleGoogleSuccess = async (accessToken: string) => {
+    setGoogleError(null)
+    setGoogleLoading(true)
+    try {
+      const response = await googleAuth({
+        token: accessToken,
+        tokenType: 'access_token',
+        turnstileToken: turnstileToken ?? undefined,
+      })
+      if (response.success && response.data) {
+        const { user } = response.data
+        setUser(user)
+        navigate(user.role === 'admin' ? '/admin' : '/dashboard')
+      }
+    } catch (error) {
+      setGoogleError(error instanceof ApiError ? error.message : 'Google sign-up failed')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
 
   if (success) {
     return (
@@ -55,13 +86,32 @@ export function SignupPage() {
           {form.serverError}
         </Alert>
       )}
+      {googleError && (
+        <Alert variant="error" className="mb-4">
+          {googleError}
+        </Alert>
+      )}
+
+      <GoogleSignInButton
+        onSuccess={handleGoogleSuccess}
+        onError={() => setGoogleError('Google sign-up was cancelled')}
+        disabled={googleLoading || (isTurnstileEnabled && !turnstileToken)}
+      />
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-slate-200" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="bg-white px-2 text-slate-500">or sign up with email</span>
+        </div>
+      </div>
 
       <form onSubmit={form.handleSubmit} noValidate>
         <Input
           label="Display Name"
           type="text"
           autoComplete="name"
-          autoFocus
           required
           placeholder="Emma"
           value={(form.values.displayName as string) ?? ''}
@@ -102,7 +152,14 @@ export function SignupPage() {
           error={form.errors.password}
         />
 
-        <Button type="submit" loading={form.isSubmitting} className="mt-2 w-full">
+        <TurnstileWidget onVerify={setTurnstileToken} onExpire={() => setTurnstileToken(null)} />
+
+        <Button
+          type="submit"
+          loading={form.isSubmitting}
+          disabled={isTurnstileEnabled && !turnstileToken}
+          className="mt-2 w-full"
+        >
           Create account
         </Button>
       </form>

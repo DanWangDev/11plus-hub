@@ -65,6 +65,15 @@ vi.mock('../lib/logger.js', () => ({
   }),
 }))
 
+vi.mock('../services/google-auth-service.js', () => ({
+  verifyGoogleToken: vi.fn(),
+  isGoogleConfigured: vi.fn().mockReturnValue(false),
+}))
+
+vi.mock('../services/turnstile-service.js', () => ({
+  verifyTurnstileToken: vi.fn().mockResolvedValue(true),
+}))
+
 describe('auth routes', () => {
   const app = createApp({ skipDbCheck: true })
 

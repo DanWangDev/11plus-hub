@@ -48,6 +48,10 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
 
     scopes: ['openid', 'profile', 'email', 'hub'],
 
+    // Include all requested claims in id_token (not just at userinfo)
+    // This lets client apps verify the id_token locally with full user data
+    conformIdTokenClaims: false,
+
     features: {
       devInteractions: { enabled: false },
       resourceIndicators: { enabled: false },
@@ -100,6 +104,9 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
         operation: 'renderError',
         error: out.error,
         errorDescription: out.error_description,
+        fullOut: JSON.stringify(out),
+        originalError: _error instanceof Error ? _error.message : String(_error),
+        stack: _error instanceof Error ? _error.stack : undefined,
       })
 
       ctx.type = 'html'

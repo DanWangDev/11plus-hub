@@ -51,7 +51,7 @@ describe('InteractionPage', () => {
     render(<InteractionPage />)
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Email')).toBeInTheDocument()
+      expect(screen.getByLabelText('Email or Username')).toBeInTheDocument()
       expect(screen.getByLabelText('Password')).toBeInTheDocument()
     })
   })
@@ -97,16 +97,16 @@ describe('InteractionPage', () => {
     render(<InteractionPage />)
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Email')).toBeInTheDocument()
+      expect(screen.getByLabelText('Email or Username')).toBeInTheDocument()
     })
 
-    await user.type(screen.getByLabelText('Email'), 'emma@test.com')
+    await user.type(screen.getByLabelText('Email or Username'), 'emma@test.com')
     await user.type(screen.getByLabelText('Password'), 'password123')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     await waitFor(() => {
       expect(mockSubmitLogin).toHaveBeenCalledWith('test-uid-123', {
-        email: 'emma@test.com',
+        identifier: 'emma@test.com',
         password: 'password123',
       })
     })

@@ -15,6 +15,16 @@ vi.mock('react-router', async () => {
 
 vi.mock('@/api/auth', () => ({
   register: vi.fn(),
+  googleAuth: vi.fn(),
+}))
+
+vi.mock('@/components/GoogleSignInButton', () => ({
+  GoogleSignInButton: () => null,
+}))
+
+vi.mock('@/components/TurnstileWidget', () => ({
+  TurnstileWidget: () => null,
+  isTurnstileEnabled: false,
 }))
 
 import { register } from '@/api/auth'

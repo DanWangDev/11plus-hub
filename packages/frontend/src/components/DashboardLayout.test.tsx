@@ -9,13 +9,9 @@ describe('DashboardLayout', () => {
     expect(screen.getByText('Dashboard content')).toBeInTheDocument()
   })
 
-  it('shows userName', () => {
-    render(<DashboardLayout userName="Emma">Content</DashboardLayout>)
-    expect(screen.getByText('Emma')).toBeInTheDocument()
-  })
-
-  it('defaults userName to User', () => {
+  it('shows display name from auth context', () => {
     render(<DashboardLayout>Content</DashboardLayout>)
+    // Default mock user or "User" fallback
     expect(screen.getAllByText('User').length).toBeGreaterThan(0)
   })
 

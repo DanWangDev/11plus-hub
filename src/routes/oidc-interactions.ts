@@ -282,6 +282,12 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
       })
       res.status(400).send('Unknown interaction')
     } catch (error) {
+      logger.error('interaction details failed', {
+        operation: 'interactionDetails',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        cookies: req.headers.cookie,
+      })
       next(error)
     }
   })

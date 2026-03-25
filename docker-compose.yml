@@ -41,12 +41,27 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@labf.app}
       ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-Admin}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
     volumes:
       - ./src:/app/src
       - ./package.json:/app/package.json
     depends_on:
       db:
         condition: service_healthy
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: hub-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    depends_on:
+      - app
+    profiles:
+      - production
 
   pgadmin:
     image: dpage/pgadmin4:latest

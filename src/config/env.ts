@@ -19,6 +19,11 @@ export const envSchema = z.object({
   OIDC_SIGNING_KEY: z.string().optional(),
   OIDC_COOKIE_KEYS: z.string().default('dev-oidc-cookie-key-minimum-32-characters!!'),
 
+  GOOGLE_CLIENT_ID: z.string().optional(),
+
+  TURNSTILE_SITE_KEY: z.string().optional(),
+  TURNSTILE_SECRET_KEY: z.string().optional(),
+
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 })
 

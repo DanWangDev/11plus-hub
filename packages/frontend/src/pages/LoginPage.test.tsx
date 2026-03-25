@@ -15,6 +15,16 @@ vi.mock('react-router', async () => {
 
 vi.mock('@/api/auth', () => ({
   login: vi.fn(),
+  googleAuth: vi.fn(),
+}))
+
+vi.mock('@/components/GoogleSignInButton', () => ({
+  GoogleSignInButton: () => null,
+}))
+
+vi.mock('@/components/TurnstileWidget', () => ({
+  TurnstileWidget: () => null,
+  isTurnstileEnabled: false,
 }))
 
 import { login } from '@/api/auth'
@@ -28,7 +38,7 @@ describe('LoginPage', () => {
   it('renders login form', () => {
     render(<LoginPage />)
     expect(screen.getByRole('heading', { name: 'Sign In' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Email')).toBeInTheDocument()
+    expect(screen.getByLabelText('Email or Username')).toBeInTheDocument()
     expect(screen.getByLabelText('Password')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
   })
@@ -48,19 +58,6 @@ describe('LoginPage', () => {
     await waitFor(() => {
       const alerts = screen.getAllByRole('alert')
       expect(alerts.length).toBeGreaterThan(0)
-    })
-  })
-
-  it('shows validation error for invalid email', async () => {
-    const user = userEvent.setup()
-    render(<LoginPage />)
-
-    await user.type(screen.getByLabelText('Email'), 'not-an-email')
-    await user.type(screen.getByLabelText('Password'), 'password123')
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
-
-    await waitFor(() => {
-      expect(screen.getByText('Please enter a valid email')).toBeInTheDocument()
     })
   })
 
@@ -87,14 +84,15 @@ describe('LoginPage', () => {
 
     render(<LoginPage />)
 
-    await user.type(screen.getByLabelText('Email'), 'emma@test.com')
+    await user.type(screen.getByLabelText('Email or Username'), 'emma@test.com')
     await user.type(screen.getByLabelText('Password'), 'password123')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
-        email: 'emma@test.com',
+        identifier: 'emma@test.com',
         password: 'password123',
+        turnstileToken: undefined,
       })
       expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
     })
@@ -107,12 +105,12 @@ describe('LoginPage', () => {
 
     render(<LoginPage />)
 
-    await user.type(screen.getByLabelText('Email'), 'emma@test.com')
+    await user.type(screen.getByLabelText('Email or Username'), 'emma@test.com')
     await user.type(screen.getByLabelText('Password'), 'wrong')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     await waitFor(() => {
-      expect(screen.getByText('Invalid email or password')).toBeInTheDocument()
+      expect(screen.getByText('Invalid credentials')).toBeInTheDocument()
     })
   })
 })
