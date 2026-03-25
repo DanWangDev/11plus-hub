@@ -54,9 +54,7 @@
 
 ### P0: Cloudflare Tunnel + Deployment [done]
 
-- cloudflared service in docker-compose.yml (production profile)
-- Env var: TUNNEL_TOKEN
-- Start with: docker compose --profile production up
+- Configured on Cloudflare dashboard (no app-level code needed)
 
 ## Phase B: App Migrations (planned)
 

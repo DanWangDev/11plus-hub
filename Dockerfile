@@ -15,6 +15,10 @@ RUN npm ci --ignore-scripts
 
 # ── Frontend Build ───────────────────────────────────
 FROM base AS frontend-build
+ARG VITE_GOOGLE_CLIENT_ID=""
+ARG VITE_TURNSTILE_SITE_KEY=""
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ENV VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY
 COPY --from=frontend-deps /app/node_modules ./node_modules
 COPY packages/frontend/ ./
 RUN npx vite build

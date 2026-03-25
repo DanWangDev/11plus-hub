@@ -22,6 +22,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+        VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
     container_name: hub-app
     restart: unless-stopped
     ports:
@@ -51,18 +54,6 @@ services:
       db:
         condition: service_healthy
 
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: hub-tunnel
-    restart: unless-stopped
-    command: tunnel run
-    environment:
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
-    depends_on:
-      - app
-    profiles:
-      - production
-
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: hub-pgadmin
@@ -70,9 +61,9 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@labf.app
       PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_LISTEN_PORT: 5050
+      PGADMIN_LISTEN_PORT: 5040
     ports:
-      - '5051:5050'
+      - '5040:5040'
     volumes:
       - pgadmin_data:/var/lib/pgadmin
       - ./pgadmin-servers.json:/pgadmin4/servers.json:ro

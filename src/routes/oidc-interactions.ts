@@ -2,7 +2,7 @@ import { Router } from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import type Provider from 'oidc-provider'
 import type postgres from 'postgres'
-import { findUserByEmail, verifyPassword } from '../services/user-service.js'
+import { findUserByEmail, findUserByUsername, verifyPassword } from '../services/user-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
 import { createLogger } from '../lib/logger.js'
 
@@ -68,20 +68,24 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
     async (req: Request, res: Response, next: NextFunction) => {
       const start = Date.now()
       try {
-        const { email, password } = req.body as {
+        const { identifier, email, password } = req.body as {
+          identifier?: string
           email?: string
           password?: string
         }
 
-        if (!email || !password) {
+        const loginId = identifier ?? email
+        if (!loginId || !password) {
           res.status(400).json({
             success: false,
-            error: 'Email and password are required',
+            error: 'Email or username, and password are required',
           })
           return
         }
 
-        const user = await findUserByEmail(sql, email)
+        const user = loginId.includes('@')
+          ? await findUserByEmail(sql, loginId)
+          : await findUserByUsername(sql, loginId)
         if (!user || !user.password_hash) {
           logger.warn('oidc api login failed - user not found', {
             operation: 'login',
@@ -299,18 +303,20 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
       const start = Date.now()
       try {
         const uid = String(req.params.uid)
-        const { email, password } = req.body as {
-          email?: string
+        const { identifier, password } = req.body as {
+          identifier?: string
           password?: string
         }
 
-        if (!email || !password) {
+        if (!identifier || !password) {
           res.type('html')
-          res.status(400).send(renderLoginPage(uid, '', 'Email and password are required'))
+          res.status(400).send(renderLoginPage(uid, '', 'Email or username, and password are required'))
           return
         }
 
-        const user = await findUserByEmail(sql, email)
+        const user = identifier.includes('@')
+          ? await findUserByEmail(sql, identifier)
+          : await findUserByUsername(sql, identifier)
         if (!user || !user.password_hash) {
           logger.warn('oidc login failed - user not found', {
             operation: 'login',
@@ -500,8 +506,8 @@ function renderLoginPage(uid: string, clientId?: string, error?: string): string
     <p class="subtitle">Your family's learning hub</p>
     ${errorHtml}
     <form method="post" action="/auth/interaction/${escapeHtml(uid)}/login">
-      <label for="email">Email</label>
-      <input type="email" id="email" name="email" required autofocus>
+      <label for="identifier">Email or Username</label>
+      <input type="text" id="identifier" name="identifier" required autofocus placeholder="you@example.com or username">
       <label for="password">Password</label>
       <input type="password" id="password" name="password" required>
       <button type="submit">Sign in</button>
