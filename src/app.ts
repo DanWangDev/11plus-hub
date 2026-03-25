@@ -39,7 +39,11 @@ export function createApp(options: AppOptions = {}): express.Express {
             'https://challenges.cloudflare.com',
             'https://accounts.google.com',
           ],
-          'frame-src': ["'self'", 'https://challenges.cloudflare.com', 'https://accounts.google.com'],
+          'frame-src': [
+            "'self'",
+            'https://challenges.cloudflare.com',
+            'https://accounts.google.com',
+          ],
           'connect-src': ["'self'", 'https://accounts.google.com'],
           'form-action': ["'self'", 'http://localhost:*', 'https://*.labf.app'],
         },

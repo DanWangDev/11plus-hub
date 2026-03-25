@@ -310,7 +310,9 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
 
         if (!identifier || !password) {
           res.type('html')
-          res.status(400).send(renderLoginPage(uid, '', 'Email or username, and password are required'))
+          res
+            .status(400)
+            .send(renderLoginPage(uid, '', 'Email or username, and password are required'))
           return
         }
 
