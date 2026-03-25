@@ -7,9 +7,11 @@ import { useForm } from '@/hooks/use-form'
 import { loginSchema, type LoginFormData } from '@/lib/validation'
 import { login } from '@/api/auth'
 import { ApiError } from '@/lib/api-client'
+import { useAuth } from '@/contexts/auth-context'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const { setUser } = useAuth()
 
   const form = useForm<LoginFormData>({
     schema: loginSchema,
@@ -17,11 +19,13 @@ export function LoginPage() {
       try {
         const response = await login(data)
         if (response.success && response.data) {
-          navigate('/dashboard')
+          const { user } = response.data
+          setUser(user)
+          navigate(user.role === 'admin' ? '/admin' : '/dashboard')
         }
       } catch (error) {
         if (error instanceof ApiError) {
-          throw new Error(error.status === 401 ? 'Invalid email or password' : error.message)
+          throw new Error(error.status === 401 ? 'Invalid credentials' : error.message)
         }
         throw error
       }
@@ -38,15 +42,15 @@ export function LoginPage() {
 
       <form onSubmit={form.handleSubmit} noValidate>
         <Input
-          label="Email"
-          type="email"
-          autoComplete="email"
+          label="Email or Username"
+          type="text"
+          autoComplete="username"
           autoFocus
           required
-          placeholder="you@example.com"
-          value={(form.values.email as string) ?? ''}
-          onChange={(e) => form.setValue('email', e.target.value)}
-          error={form.errors.email}
+          placeholder="you@example.com or username"
+          value={(form.values.identifier as string) ?? ''}
+          onChange={(e) => form.setValue('identifier', e.target.value)}
+          error={form.errors.identifier}
         />
 
         <Input

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().int().positive().default(3000),
+  PORT: z.coerce.number().int().positive().default(3009),
   HOST: z.string().default('0.0.0.0'),
 
   DATABASE_URL: z.string().url().optional(),
@@ -15,7 +15,7 @@ export const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   SESSION_SECRET: z.string().min(32).default('dev-session-secret-minimum-32-characters-long!!'),
 
-  OIDC_ISSUER: z.string().url().default('http://localhost:3000'),
+  OIDC_ISSUER: z.string().url().default('http://localhost:3009'),
   OIDC_SIGNING_KEY: z.string().optional(),
   OIDC_COOKIE_KEYS: z.string().default('dev-oidc-cookie-key-minimum-32-characters!!'),
 

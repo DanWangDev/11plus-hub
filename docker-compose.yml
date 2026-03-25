@@ -25,15 +25,22 @@ services:
     container_name: hub-app
     restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '3009:3009'
     environment:
       NODE_ENV: development
-      PORT: 3000
+      PORT: 3009
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: hub
       DB_USER: hub
       DB_PASSWORD: hub_dev_password
+      OIDC_ISSUER: http://localhost:3009
+      CORS_ORIGIN: http://localhost:3009
+      LOG_LEVEL: debug
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@labf.app}
+      ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-Admin}
     volumes:
       - ./src:/app/src
       - ./package.json:/app/package.json

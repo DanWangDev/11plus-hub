@@ -7,14 +7,24 @@ async function main(): Promise<void> {
   const sql = createDb()
 
   try {
-    const adminPassword = await bcrypt.hash('admin123!@#', BCRYPT_ROUNDS)
+    const adminUsername = process.env.ADMIN_USERNAME
+    const adminDisplayName = process.env.ADMIN_DISPLAY_NAME
+    const adminEmail = process.env.ADMIN_EMAIL
+    const adminPass = process.env.ADMIN_PASSWORD
+
+    if (!adminUsername || !adminPass || !adminEmail || !adminDisplayName) {
+      throw new Error(
+        'Missing required env vars: ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL, ADMIN_DISPLAY_NAME',
+      )
+    }
+    const adminPassword = await bcrypt.hash(adminPass, BCRYPT_ROUNDS)
     const parentPassword = await bcrypt.hash('parent123!@#', BCRYPT_ROUNDS)
     const studentPassword = await bcrypt.hash('student123!@#', BCRYPT_ROUNDS)
 
     // Create admin user
     const [admin] = await sql`
       INSERT INTO users (username, email, password_hash, display_name, role, email_verified)
-      VALUES ('admin', 'admin@labf.app', ${adminPassword}, 'Admin', 'admin', true)
+      VALUES (${adminUsername}, ${adminEmail}, ${adminPassword}, ${adminDisplayName}, 'admin', true)
       ON CONFLICT (username) DO NOTHING
       RETURNING id
     `

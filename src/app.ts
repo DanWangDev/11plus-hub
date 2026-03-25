@@ -66,7 +66,7 @@ export function createApp(options: AppOptions = {}): express.Express {
   if (options.frontendDir) {
     app.use(express.static(options.frontendDir))
     // SPA fallback: serve index.html for non-API, non-OIDC routes
-    app.get('*', (req, res, next) => {
+    app.get('{*path}', (req, res, next) => {
       if (
         req.path.startsWith('/api/') ||
         req.path.startsWith('/oidc/') ||
