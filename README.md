@@ -109,31 +109,70 @@ docker build --target production -t hub .
 
 ```
 src/
-├── config/          # Environment and app configuration
-│   └── env.ts       # Zod-validated environment variables
-├── db/              # Database migrations and seed data
-│   └── migrations/  # SQL migration files
-├── middleware/       # Express middleware
-│   ├── error-handler.ts  # Centralized error handling
-│   └── request-id.ts     # Request ID tracking
-├── routes/          # Route handlers
-│   └── health.ts    # Health & readiness checks
-├── services/        # Business logic
-├── types/           # TypeScript type definitions
-│   └── api.ts       # Shared API response types
-├── test/            # Test utilities and fixtures
-├── app.ts           # Express app factory
-└── server.ts        # Server entry point
+├── config/env.ts            # Zod-validated environment variables
+├── db/
+│   ├── connection.ts        # postgres.js connection
+│   ├── migrator.ts          # SQL migration runner
+│   ├── migrate-users.ts     # Vocab-master user import script
+│   └── migrations/          # 9 SQL migration files
+├── lib/logger.ts            # Structured logger
+├── middleware/
+│   ├── error-handler.ts     # Centralized error handling + 404
+│   ├── request-id.ts        # X-Request-ID tracking
+│   └── rate-limit.ts        # Per-route rate limiting
+├── oidc/
+│   ├── provider.ts          # oidc-provider configuration
+│   ├── pg-adapter.ts        # Custom PostgreSQL adapter
+│   ├── account.ts           # Account model for OIDC claims
+│   ├── client-loader.ts     # Load clients from applications table
+│   └── dev-keys.ts          # Development signing keys
+├── routes/
+│   ├── health.ts            # /health, /ready
+│   ├── auth.ts              # Register, login
+│   ├── users.ts             # User CRUD
+│   ├── applications.ts      # App registry CRUD
+│   ├── subscriptions.ts     # Subscription management
+│   ├── password-reset.ts    # Forgot/reset password
+│   ├── audit.ts             # Audit log queries
+│   └── oidc-interactions.ts # Login/consent interaction UI
+├── services/
+│   ├── user-service.ts
+│   ├── app-service.ts
+│   ├── subscription-service.ts
+│   ├── audit-service.ts
+│   └── password-reset-service.ts
+├── types/                   # TypeScript type definitions
+├── app.ts                   # Express app factory
+└── server.ts                # Server entry point
+packages/
+└── frontend/                # React SPA (in progress)
+    └── src/pages/           # Login, Signup, Dashboard, etc.
 ```
 
 ## API Endpoints
-
-### Health
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check (status, version, uptime) |
 | GET | `/ready` | Readiness check (database connectivity) |
+| POST | `/api/auth/register` | Create account |
+| POST | `/api/auth/login` | Email/password login |
+| POST | `/api/auth/forgot-password` | Request password reset |
+| POST | `/api/auth/reset-password` | Reset with token |
+| GET | `/api/users` | List users |
+| GET/PATCH/DELETE | `/api/users/:id` | User CRUD |
+| POST/GET | `/api/applications` | App registry |
+| GET/PATCH/DELETE | `/api/applications/:id` | App CRUD |
+| POST | `/api/subscriptions` | Create subscription |
+| GET | `/api/subscriptions/user/:userId` | Get user subscription |
+| PATCH | `/api/subscriptions/:id` | Update subscription |
+| GET | `/api/audit` | Query audit log |
+| GET | `/oidc/.well-known/openid-configuration` | OIDC discovery |
+| GET | `/oidc/jwks` | JSON Web Key Set |
+| GET | `/oidc/auth` | OIDC authorization |
+| POST | `/oidc/token` | OIDC token exchange |
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for full endpoint details and database schema.
 
 ## CI/CD Pipeline
 
@@ -155,10 +194,14 @@ The GitHub Actions pipeline runs on every push and PR to `main`:
 
 ## Delivery Phases
 
-- **Phase A** — Hub Core: OIDC provider, auth UI, app registry, app dashboard, SDK
-- **Phase B** — App Migrations: migrate vocab-master and writing-buddy
-- **Phase C** — Expansions: email (Resend), admin panel, subscriptions
-- **Phase D** — Cross-app Intelligence: learning events, parent dashboard
+| Phase | Status | Scope |
+|-------|--------|-------|
+| **A** | In progress | Hub core: OIDC provider, auth UI, app registry, app dashboard, SDK |
+| **B** | Planned | App migrations: vocab-master + writing-buddy switch to hub auth |
+| **C** | Planned | Expansions: email (Resend), admin panel, subscription assignment |
+| **D** | Planned | Cross-app intelligence: learning events, parent dashboard |
+
+See [TODOS.md](TODOS.md) for detailed task breakdown and status.
 
 ## License
 
