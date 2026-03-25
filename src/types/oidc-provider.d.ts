@@ -101,6 +101,7 @@ declare module 'oidc-provider' {
       out: { error?: string; error_description?: string },
       error: Error,
     ) => Promise<void>
+    conformIdTokenClaims?: boolean
     clientBasedCORS?: () => boolean
     clients?: ClientMetadata[]
   }

@@ -16,6 +16,8 @@ function createMockSql(returnValue: unknown[] = []) {
     Promise.resolve(returnValue),
   ) as unknown as Record<string, unknown>
 
+  sqlFn.json = (value: unknown) => JSON.stringify(value)
+
   return Object.assign(sqlFn) as unknown as ReturnType<typeof vi.fn>
 }
 

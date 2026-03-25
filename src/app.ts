@@ -29,14 +29,16 @@ export function createApp(options: AppOptions = {}): express.Express {
   const app = express()
 
   // Security & parsing
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        'form-action': ["'self'", 'http://localhost:*', 'https://*.labf.app'],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          'form-action': ["'self'", 'http://localhost:*', 'https://*.labf.app'],
+        },
       },
-    },
-  }))
+    }),
+  )
   app.use(cors())
   app.use(compression())
   app.use(cookieParser())
