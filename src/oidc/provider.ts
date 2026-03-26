@@ -62,7 +62,7 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
         enabled: true,
         // Auto-submit the logout confirmation form so users don't see
         // the ugly default "Do you want to sign out?" page.
-        logoutSource: async (ctx, form) => {
+        logoutSource: async (ctx: { body: string }, form: string) => {
           ctx.body = `<!DOCTYPE html>
 <html><head><title>Signing out...</title></head>
 <body onload="document.forms[0].submit()">

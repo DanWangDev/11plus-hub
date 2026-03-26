@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { Request, Response, NextFunction } from 'express'
+import type { Request, Response } from 'express'
 import { createRequireAuth, requireAdmin } from './auth.js'
 
 vi.mock('../lib/logger.js', () => ({
