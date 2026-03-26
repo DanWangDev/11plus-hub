@@ -1,5 +1,5 @@
 import { useState, useCallback, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { Menu, X, LogOut } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/contexts/auth-context'
@@ -10,17 +10,11 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const navigate = useNavigate()
   const { user, logout } = useAuth()
 
   const toggleMenu = useCallback(() => {
     setMenuOpen((prev) => !prev)
   }, [])
-
-  const handleSignOut = useCallback(() => {
-    logout()
-    navigate('/login')
-  }, [logout, navigate])
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -40,7 +34,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="hidden items-center gap-4 sm:flex">
             <span className="text-sm text-slate-600">{user?.display_name ?? 'User'}</span>
             <button
-              onClick={handleSignOut}
+              onClick={logout}
               className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700"
               aria-label="Sign out"
             >
@@ -65,7 +59,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">{user?.display_name ?? 'User'}</span>
               <button
-                onClick={handleSignOut}
+                onClick={logout}
                 className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
               >
                 <LogOut size={16} aria-hidden="true" />

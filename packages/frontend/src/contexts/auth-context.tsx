@@ -1,36 +1,50 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
-import type { User } from '@/types/api'
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import type { HubUser } from '@/types/api'
 
 interface AuthState {
-  user: User | null
-  setUser: (user: User | null) => void
+  user: HubUser | null
+  loading: boolean
   logout: () => void
+  refresh: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem('hub_user')
-    return stored ? (JSON.parse(stored) as User) : null
-  })
+  const [user, setUser] = useState<HubUser | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const handleSetUser = useCallback((u: User | null) => {
-    setUser(u)
-    if (u) {
-      localStorage.setItem('hub_user', JSON.stringify(u))
-    } else {
-      localStorage.removeItem('hub_user')
+  const fetchMe = useCallback(async () => {
+    try {
+      const res = await fetch('/auth/me', { credentials: 'include' })
+      if (res.ok) {
+        const body = (await res.json()) as { success: boolean; data?: HubUser }
+        setUser(body.data ?? null)
+      } else {
+        setUser(null)
+      }
+    } catch {
+      setUser(null)
+    } finally {
+      setLoading(false)
     }
   }, [])
 
+  useEffect(() => {
+    void fetchMe()
+  }, [fetchMe])
+
   const logout = useCallback(() => {
-    handleSetUser(null)
-    localStorage.removeItem('hub_token')
-  }, [handleSetUser])
+    // POST to /auth/logout — the backend destroys the session and redirects
+    const form = document.createElement('form')
+    form.method = 'POST'
+    form.action = '/auth/logout'
+    document.body.appendChild(form)
+    form.submit()
+  }, [])
 
   return (
-    <AuthContext.Provider value={{ user, setUser: handleSetUser, logout }}>
+    <AuthContext.Provider value={{ user, loading, logout, refresh: fetchMe }}>
       {children}
     </AuthContext.Provider>
   )
