@@ -58,6 +58,7 @@ async function main(): Promise<void> {
     const hubSecretSha256 = hashSha256('hub-dev-client-secret')
 
     // Hub self-registration as OIDC client (eats its own dog food)
+    // ON CONFLICT: only update non-sensitive fields — never overwrite rotated secrets
     await sql`
       INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, backchannel_logout_uri)
       VALUES (
@@ -67,8 +68,8 @@ async function main(): Promise<void> {
         'http://localhost:3009/auth/backchannel-logout'
       )
       ON CONFLICT (slug) DO UPDATE SET
-        client_secret_sha256 = ${hubSecretSha256},
-        backchannel_logout_uri = 'http://localhost:3009/auth/backchannel-logout'
+        redirect_uris = EXCLUDED.redirect_uris,
+        backchannel_logout_uri = EXCLUDED.backchannel_logout_uri
     `
 
     await sql`
@@ -81,8 +82,8 @@ async function main(): Promise<void> {
         'https://vocab-master.labf.app/api/stats'
       )
       ON CONFLICT (slug) DO UPDATE SET
-        client_secret_sha256 = ${vocabSecretSha256},
-        backchannel_logout_uri = 'http://localhost:5174/auth/backchannel-logout'
+        redirect_uris = EXCLUDED.redirect_uris,
+        backchannel_logout_uri = EXCLUDED.backchannel_logout_uri
     `
 
     await sql`
@@ -94,9 +95,8 @@ async function main(): Promise<void> {
         'http://localhost:5050/api/auth/backchannel-logout'
       )
       ON CONFLICT (slug) DO UPDATE SET
-        client_secret_sha256 = ${writingSecretSha256},
-        redirect_uris = ARRAY['https://writing-buddy.labf.app/api/auth/callback', 'http://localhost:5179/api/auth/callback', 'http://localhost:5055/api/auth/callback'],
-        backchannel_logout_uri = 'http://localhost:5050/api/auth/backchannel-logout'
+        redirect_uris = EXCLUDED.redirect_uris,
+        backchannel_logout_uri = EXCLUDED.backchannel_logout_uri
     `
 
     // Create free subscription for admin
