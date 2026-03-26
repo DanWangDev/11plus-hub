@@ -16,6 +16,44 @@ import { createLogger } from '../lib/logger.js'
 
 const logger = createLogger({ route: 'oidc-interactions' })
 
+/**
+ * Wraps provider.interactionFinished() to return a JSON response with the
+ * redirect URL instead of a 303 redirect. SPA fetch() follows redirects
+ * automatically and ends up parsing HTML as JSON, causing "Unexpected token '<'"
+ * errors. This helper captures the redirect URL and returns it as JSON so the
+ * frontend can do `window.location.href = redirectTo`.
+ */
+async function finishInteractionAsJson(
+  provider: Provider,
+  req: Request,
+  res: Response,
+  result: Record<string, unknown>,
+  options: { mergeWithLastSubmission: boolean },
+): Promise<void> {
+  // Intercept the redirect by temporarily replacing res.redirect
+  const originalRedirect = res.redirect.bind(res)
+  let redirectUrl: string | undefined
+
+  res.redirect = function interceptedRedirect(statusOrUrl: number | string, url?: string): void {
+    redirectUrl = typeof statusOrUrl === 'string' ? statusOrUrl : url
+  } as typeof res.redirect
+
+  try {
+    await provider.interactionFinished(req, res, result, options)
+  } finally {
+    res.redirect = originalRedirect
+  }
+
+  if (redirectUrl) {
+    res.json({ success: true, redirectTo: redirectUrl })
+  } else {
+    // Fallback: interactionFinished already sent the response
+    logger.warn('interactionFinished did not produce a redirect', {
+      operation: 'finishInteractionAsJson',
+    })
+  }
+}
+
 interface InteractionRouterOptions {
   provider: Provider
   sql: postgres.Sql
@@ -175,7 +213,7 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           },
         }
 
-        await provider.interactionFinished(req, res, result, {
+        await finishInteractionAsJson(provider, req, res, result, {
           mergeWithLastSubmission: false,
         })
       } catch (error) {
@@ -248,7 +286,7 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
         }
 
         const result = { consent }
-        await provider.interactionFinished(req, res, result, {
+        await finishInteractionAsJson(provider, req, res, result, {
           mergeWithLastSubmission: true,
         })
       } catch (error) {
@@ -272,7 +310,7 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           error_description: 'User aborted the interaction',
         }
 
-        await provider.interactionFinished(req, res, result, {
+        await finishInteractionAsJson(provider, req, res, result, {
           mergeWithLastSubmission: false,
         })
       } catch (error) {
@@ -420,7 +458,7 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           },
         }
 
-        await provider.interactionFinished(req, res, result, {
+        await finishInteractionAsJson(provider, req, res, result, {
           mergeWithLastSubmission: false,
         })
       } catch (error) {
