@@ -109,6 +109,13 @@
 - **What:** Extract the design system from `docs/designs/hub-idp-app.md` into a standalone `DESIGN.md`.
 - **Context:** Inter typography, slate neutrals, wireframes, interaction states, responsive specs, accessibility.
 
+### P1: Dynamic OIDC Client Loading
+
+- **What:** Replace static client registration with dynamic DB lookup so that client metadata changes (secret rotation, redirect_uri updates) take effect without restarting the hub.
+- **Why:** Currently `loadClientsFromDb` runs once at startup and passes clients to oidc-provider's static config. Rotating a client secret via the admin panel requires a hub restart. This caught us during writing-buddy's session-auth migration (2026-03-26).
+- **Effort:** S (human: ~2 days / CC: ~20 min)
+- **Context:** oidc-provider supports a `Client` model in its Adapter interface. The pg-adapter already handles sessions/tokens/codes dynamically — extend it to handle `Client` lookups too. The adapter's `find(id)` method would query the `applications` table by `client_id`, returning `ClientMetadata`. Cache with short TTL (e.g. 60s) to avoid per-request DB queries.
+
 ### P1: Hub Resilience Hardening
 
 - **What:** Address 3 failure mode gaps: (1) SSO cookie blocking detection, (2) concurrent token refresh race condition, (3) OIDC signing key loss protection.
