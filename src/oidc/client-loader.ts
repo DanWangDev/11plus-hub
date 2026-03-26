@@ -12,6 +12,7 @@ interface DbApplication {
   name: string
   slug: string
   url: string
+  backchannel_logout_uri: string | null
 }
 
 function hashSha256(value: string): string {
@@ -32,7 +33,7 @@ export function verifyClientSecret(plaintext: string, storedSha256: string): boo
 
 export async function loadClientsFromDb(sql: postgres.Sql): Promise<ClientMetadata[]> {
   const apps = await sql<DbApplication[]>`
-    SELECT client_id, client_secret_sha256, redirect_uris, name, slug, url
+    SELECT client_id, client_secret_sha256, redirect_uris, name, slug, url, backchannel_logout_uri
     FROM applications
     WHERE status = 'active'
   `
@@ -55,6 +56,9 @@ export async function loadClientsFromDb(sql: postgres.Sql): Promise<ClientMetada
       token_endpoint_auth_method: isConfidential ? 'client_secret_post' : 'none',
       scope: 'openid profile email hub',
       post_logout_redirect_uris: [app.url],
+      ...(app.backchannel_logout_uri
+        ? { backchannel_logout_uri: app.backchannel_logout_uri }
+        : {}),
     }
   })
 
