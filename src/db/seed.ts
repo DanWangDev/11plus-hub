@@ -90,12 +90,13 @@ async function main(): Promise<void> {
       VALUES (
         'Writing Buddy', 'writing-buddy', 'https://writing-buddy.labf.app',
         'writing-buddy-client', ${writingSecretHash}, ${writingSecretSha256},
-        ARRAY['https://writing-buddy.labf.app/auth/callback', 'http://localhost:5175/auth/callback'],
-        'http://localhost:5175/auth/backchannel-logout'
+        ARRAY['https://writing-buddy.labf.app/api/auth/callback', 'http://localhost:5179/api/auth/callback', 'http://localhost:5055/api/auth/callback'],
+        'http://localhost:5050/api/auth/backchannel-logout'
       )
       ON CONFLICT (slug) DO UPDATE SET
         client_secret_sha256 = ${writingSecretSha256},
-        backchannel_logout_uri = 'http://localhost:5175/auth/backchannel-logout'
+        redirect_uris = ARRAY['https://writing-buddy.labf.app/api/auth/callback', 'http://localhost:5179/api/auth/callback', 'http://localhost:5055/api/auth/callback'],
+        backchannel_logout_uri = 'http://localhost:5050/api/auth/backchannel-logout'
     `
 
     // Create free subscription for admin
@@ -103,6 +104,13 @@ async function main(): Promise<void> {
       await sql`
         INSERT INTO subscriptions (user_id, plan, status, features, assigned_by)
         VALUES (${admin.id}, 'bundle', 'active', ARRAY['writing', 'vocab'], ${admin.id})
+        ON CONFLICT DO NOTHING
+      `
+
+      // Grant app access for all registered apps
+      await sql`
+        INSERT INTO user_app_access (user_id, app_id)
+        SELECT ${admin.id}, id FROM applications
         ON CONFLICT DO NOTHING
       `
     }
