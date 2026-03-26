@@ -87,7 +87,7 @@ describe('app-service', () => {
         name: 'Test App',
         slug: 'test-app',
         url: 'https://test.example.com',
-        redirectUris: ['https://test.example.com/callback'],
+        redirect_uris: ['https://test.example.com/callback'],
       })
 
       expect(result.application).toMatchObject({ name: 'Test App', slug: 'test-app' })
@@ -102,7 +102,7 @@ describe('app-service', () => {
         name: 'Test App',
         slug: 'test-app',
         url: 'https://test.example.com',
-        redirectUris: ['https://test.example.com/callback'],
+        redirect_uris: ['https://test.example.com/callback'],
       })
 
       expect(result.application.client_id).toBeDefined()
@@ -115,7 +115,7 @@ describe('app-service', () => {
         name: 'Test App',
         slug: 'test-app',
         url: 'https://test.example.com',
-        redirectUris: ['https://test.example.com/callback'],
+        redirect_uris: ['https://test.example.com/callback'],
       })
 
       expect(bcryptModule.default.hash).toHaveBeenCalledWith(expect.any(String), 12)
@@ -128,7 +128,7 @@ describe('app-service', () => {
           name: 'Test App',
           slug: 'INVALID SLUG',
           url: 'https://test.example.com',
-          redirectUris: ['https://test.example.com/callback'],
+          redirect_uris: ['https://test.example.com/callback'],
         }),
       ).rejects.toThrow()
     })
@@ -144,7 +144,7 @@ describe('app-service', () => {
         createApplication(sql, {
           name: 'App',
           slug: 'app',
-          redirectUris: ['https://test.example.com/callback'],
+          redirect_uris: ['https://test.example.com/callback'],
         }),
       ).rejects.toThrow()
     })
@@ -156,7 +156,7 @@ describe('app-service', () => {
           name: 'App',
           slug: 'app',
           url: 'https://test.example.com',
-          redirectUris: [],
+          redirect_uris: [],
         }),
       ).rejects.toThrow()
     })
@@ -354,7 +354,7 @@ describe('app-service', () => {
           name: 'App',
           slug: 'Invalid Slug!',
           url: 'https://test.example.com',
-          redirectUris: ['https://test.example.com/callback'],
+          redirect_uris: ['https://test.example.com/callback'],
         }),
       ).rejects.toThrow()
     })
@@ -365,7 +365,7 @@ describe('app-service', () => {
         createApplication(sql, {
           name: 'App',
           slug: 'app',
-          redirectUris: ['https://test.example.com/callback'],
+          redirect_uris: ['https://test.example.com/callback'],
         }),
       ).rejects.toThrow()
     })
@@ -377,7 +377,7 @@ describe('app-service', () => {
           name: 'App',
           slug: 'app',
           url: 'https://test.example.com',
-          redirectUris: [],
+          redirect_uris: [],
         }),
       ).rejects.toThrow()
     })
@@ -389,7 +389,7 @@ describe('app-service', () => {
           name: 'App',
           slug: 'app',
           url: 'https://test.example.com',
-          redirectUris: ['not-a-url'],
+          redirect_uris: ['not-a-url'],
         }),
       ).rejects.toThrow()
     })
