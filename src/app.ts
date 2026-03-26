@@ -79,7 +79,12 @@ export function createApp(options: AppOptions = {}): express.Express {
   if (options.hubAuth) {
     const requireAuth = createRequireAuth(options.hubAuth.sessionSecret)
     app.use('/api/users', requireAuth, requireAdmin)
-    app.use('/api/apps', requireAuth, requireAdmin)
+    // GET /api/apps is readable by any authenticated user (student dashboard needs it)
+    // Write operations (POST/PATCH/DELETE) require admin
+    app.use('/api/apps', requireAuth, (req, res, next) => {
+      if (req.method === 'GET') return next()
+      requireAdmin(req, res, next)
+    })
     app.use('/api/subscriptions', requireAuth, requireAdmin)
     app.use('/api/audit', requireAuth, requireAdmin)
   }
