@@ -31,6 +31,10 @@ export interface AppOptions {
 export function createApp(options: AppOptions = {}): express.Express {
   const app = express()
 
+  // Trust proxy headers (Cloudflare tunnel, Docker reverse proxies)
+  // Required so Express reports correct protocol (https) and client IP
+  app.set('trust proxy', true)
+
   // Security & parsing
   app.use(
     helmet({
@@ -76,6 +80,14 @@ export function createApp(options: AppOptions = {}): express.Express {
 
   // OIDC Provider
   if (options.oidcProvider && options.sql) {
+    // When SPA is available, serve it for interaction pages instead of the HTML fallback.
+    // The SPA uses fetch() (JSON API) which avoids CSP form-action restrictions that
+    // block HTML form submissions behind Cloudflare tunnels / reverse proxies.
+    if (options.frontendDir) {
+      app.get('/auth/interaction/:uid', (_req, res) => {
+        res.sendFile(join(options.frontendDir!, 'index.html'))
+      })
+    }
     app.use(
       createInteractionRouter({
         provider: options.oidcProvider,
@@ -106,7 +118,7 @@ export function createApp(options: AppOptions = {}): express.Express {
         req.path.startsWith('/oidc/') ||
         req.path.startsWith('/health') ||
         req.path.startsWith('/ready') ||
-        req.path.startsWith('/auth/') ||
+        (req.path.startsWith('/auth/') && !req.path.startsWith('/auth/interaction/')) ||
         req.path.startsWith('/.well-known/')
       ) {
         next()
