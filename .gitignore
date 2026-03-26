@@ -26,6 +26,9 @@ coverage/
 # Docker volumes
 pgdata/
 
+# Local data
+data/
+
 # Logs
 *.log
 npm-debug.log*

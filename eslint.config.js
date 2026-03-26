@@ -31,7 +31,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/services/google-auth-service.ts', 'src/services/turnstile-service.ts'],
+    files: ['src/services/google-auth-service.ts', 'src/services/turnstile-service.ts', 'src/routes/hub-auth.ts'],
     rules: {
       'n/no-unsupported-features/node-builtins': ['error', { ignores: ['fetch'] }],
     },
