@@ -80,8 +80,12 @@ function createClientAdapter(sql: postgres.Sql): Adapter {
 
     // Client model is read-only — these are no-ops
     async upsert(): Promise<void> {},
-    async findByUserCode(): Promise<AdapterPayload | undefined> { return undefined },
-    async findByUid(): Promise<AdapterPayload | undefined> { return undefined },
+    async findByUserCode(): Promise<AdapterPayload | undefined> {
+      return undefined
+    },
+    async findByUid(): Promise<AdapterPayload | undefined> {
+      return undefined
+    },
     async consume(): Promise<void> {},
     async destroy(): Promise<void> {},
     async revokeByGrantId(): Promise<void> {},

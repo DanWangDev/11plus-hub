@@ -224,7 +224,10 @@ describe('pg-adapter', () => {
     })
 
     it('includes backchannel_logout_uri when set', async () => {
-      const appWithLogout = { ...sampleDbApp, backchannel_logout_uri: 'https://app.example.com/logout' }
+      const appWithLogout = {
+        ...sampleDbApp,
+        backchannel_logout_uri: 'https://app.example.com/logout',
+      }
       const mockSql = createMockSql([appWithLogout])
       const adapter = createPgAdapter(mockSql as never)
       const instance = adapter('Client')
