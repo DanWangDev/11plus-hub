@@ -67,7 +67,6 @@ async function main(): Promise<void> {
         'http://localhost:3009/auth/backchannel-logout'
       )
       ON CONFLICT (slug) DO UPDATE SET
-        client_secret_sha256 = ${hubSecretSha256},
         backchannel_logout_uri = 'http://localhost:3009/auth/backchannel-logout'
     `
 
@@ -81,7 +80,6 @@ async function main(): Promise<void> {
         'https://vocab-master.labf.app/api/stats'
       )
       ON CONFLICT (slug) DO UPDATE SET
-        client_secret_sha256 = ${vocabSecretSha256},
         backchannel_logout_uri = 'http://localhost:5174/auth/backchannel-logout'
     `
 
@@ -94,7 +92,6 @@ async function main(): Promise<void> {
         'http://localhost:5050/api/auth/backchannel-logout'
       )
       ON CONFLICT (slug) DO UPDATE SET
-        client_secret_sha256 = ${writingSecretSha256},
         redirect_uris = ARRAY['https://writing-buddy.labf.app/api/auth/callback', 'http://localhost:5179/api/auth/callback', 'http://localhost:5055/api/auth/callback'],
         backchannel_logout_uri = 'http://localhost:5050/api/auth/backchannel-logout'
     `
