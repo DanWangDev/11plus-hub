@@ -35,12 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchMe])
 
   const logout = useCallback(() => {
-    // POST to /auth/logout — the backend destroys the session and redirects
-    const form = document.createElement('form')
-    form.method = 'POST'
-    form.action = '/auth/logout'
-    document.body.appendChild(form)
-    form.submit()
+    // GET /auth/logout — backend destroys session and redirects to OIDC end_session.
+    // Uses navigation instead of form POST to avoid CSP form-action blocking
+    // behind Cloudflare tunnel / reverse proxies.
+    window.location.href = '/auth/logout'
   }, [])
 
   return (
