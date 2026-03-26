@@ -56,6 +56,28 @@
 
 - Configured on Cloudflare dashboard (no app-level code needed)
 
+### P0: Hub OIDC Self-Client + Back-Channel Logout [planned]
+
+- **What:** Make the hub use its own OIDC provider for login. Register hub as an OIDC client in the applications table. Add Google OAuth to the OIDC interaction login page. Enable back-channel logout for instant session propagation to client apps.
+- **Why:** Cross-tab login doesn't persist because the hub uses localStorage-based direct auth instead of OIDC sessions. Client apps can't SSO because the hub never creates an OIDC session. Two disconnected auth systems (direct auth vs OIDC) — this unifies them.
+- **Effort:** M (human: ~1 week / CC: ~45 min)
+- **Depends on:** Phase A P0 items (all done). Blocks Phase B app migrations.
+- **Context:**
+  - Root cause: `POST /api/auth/login` returns a placeholder JWT with no server session. OIDC interaction login creates proper sessions but the hub frontend doesn't use it.
+  - Hub frontend `AuthContext` switches from localStorage to httpOnly cookie (fetch `/auth/me`). Hub uses `@danwangdev/auth-client` SDK like other apps.
+  - Google OAuth appears in both registration page and OIDC interaction login page (all apps benefit).
+  - Back-channel logout: enable `features.backchannelLogout` in oidc-provider. Add `backchannel_logout_uri` column to applications table. oidc-provider sends signed `logout_token` JWT to each client on session destroy.
+  - `POST /api/auth/login` deprecated. `/api/auth/google` stays as backend handler for both registration and OIDC interaction.
+  - Back-channel logout failures logged but don't block hub logout (resilience). Client apps fall back to token expiry.
+
+### P0: Auth-Client SDK Back-Channel Logout Support [planned]
+
+- **What:** Add `POST /auth/backchannel-logout` route to `@danwangdev/auth-client` SDK. Verifies `logout_token` JWT from oidc-provider via JWKS, finds the session for that user, and destroys the iron-session.
+- **Why:** Back-channel logout requires each client app to have a logout endpoint. Building it into the SDK means vocab-master and writing-buddy get it for free.
+- **Effort:** S (human: ~1 day / CC: ~15 min)
+- **Depends on:** Hub OIDC Self-Client + Back-Channel Logout TODO above.
+- **Context:** oidc-provider sends a signed JWT with `sub` claim. SDK endpoint verifies signature via JWKS, matches session by `sub`, and destroys it. Version bump to auth-client needed. Apps must update dependency.
+
 ## Phase B: App Migrations (planned)
 
 ### P1: Migrate Vocab-Master to Hub Auth
