@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createPgAdapter } from './pg-adapter.js'
+import { createPgAdapter, clearClientCache } from './pg-adapter.js'
 
 vi.mock('../lib/logger.js', () => ({
   createLogger: () => ({
@@ -161,6 +161,120 @@ describe('pg-adapter', () => {
       await instance.revokeByGrantId('grant-1')
 
       expect(mockSql).toHaveBeenCalled()
+    })
+  })
+
+  describe('Client adapter (dynamic loading)', () => {
+    const sampleDbApp = {
+      client_id: 'test-client-id',
+      client_secret_sha256: 'abc123hash',
+      redirect_uris: ['https://app.example.com/callback'],
+      name: 'Test App',
+      slug: 'test-app',
+      url: 'https://app.example.com',
+      backchannel_logout_uri: null,
+      status: 'active',
+    }
+
+    beforeEach(() => {
+      clearClientCache()
+    })
+
+    it('returns client metadata when found', async () => {
+      const mockSql = createMockSql([sampleDbApp])
+      const adapter = createPgAdapter(mockSql as never)
+      const instance = adapter('Client')
+
+      const result = await instance.find('test-client-id')
+
+      expect(result).toMatchObject({
+        client_id: 'test-client-id',
+        client_secret: 'abc123hash',
+        client_name: 'Test App',
+        redirect_uris: ['https://app.example.com/callback'],
+        grant_types: ['authorization_code', 'refresh_token'],
+        response_types: ['code'],
+        token_endpoint_auth_method: 'client_secret_post',
+        scope: 'openid profile email hub',
+      })
+    })
+
+    it('returns undefined when client not found', async () => {
+      const mockSql = createMockSql([])
+      const adapter = createPgAdapter(mockSql as never)
+      const instance = adapter('Client')
+
+      const result = await instance.find('nonexistent')
+
+      expect(result).toBeUndefined()
+    })
+
+    it('handles public clients (no secret)', async () => {
+      const publicApp = { ...sampleDbApp, client_secret_sha256: null }
+      const mockSql = createMockSql([publicApp])
+      const adapter = createPgAdapter(mockSql as never)
+      const instance = adapter('Client')
+
+      const result = await instance.find('test-client-id')
+
+      expect(result).not.toHaveProperty('client_secret')
+      expect(result).toMatchObject({
+        token_endpoint_auth_method: 'none',
+      })
+    })
+
+    it('includes backchannel_logout_uri when set', async () => {
+      const appWithLogout = {
+        ...sampleDbApp,
+        backchannel_logout_uri: 'https://app.example.com/logout',
+      }
+      const mockSql = createMockSql([appWithLogout])
+      const adapter = createPgAdapter(mockSql as never)
+      const instance = adapter('Client')
+
+      const result = await instance.find('test-client-id')
+
+      expect(result).toMatchObject({
+        backchannel_logout_uri: 'https://app.example.com/logout',
+      })
+    })
+
+    it('caches results and avoids repeat DB queries', async () => {
+      const mockSql = createMockSql([sampleDbApp])
+      const adapter = createPgAdapter(mockSql as never)
+      const instance = adapter('Client')
+
+      await instance.find('test-client-id')
+      await instance.find('test-client-id')
+
+      // Should only query DB once due to cache
+      expect(mockSql).toHaveBeenCalledTimes(1)
+    })
+
+    it('clearClientCache forces fresh DB query', async () => {
+      const mockSql = createMockSql([sampleDbApp])
+      const adapter = createPgAdapter(mockSql as never)
+      const instance = adapter('Client')
+
+      await instance.find('test-client-id')
+      clearClientCache()
+      await instance.find('test-client-id')
+
+      expect(mockSql).toHaveBeenCalledTimes(2)
+    })
+
+    it('no-ops for write operations', async () => {
+      const mockSql = createMockSql()
+      const adapter = createPgAdapter(mockSql as never)
+      const instance = adapter('Client')
+
+      await instance.upsert('id', { kind: 'Client' })
+      await instance.consume('id')
+      await instance.destroy('id')
+      await instance.revokeByGrantId('grant')
+
+      // No DB calls for write operations on Client adapter
+      expect(mockSql).not.toHaveBeenCalled()
     })
   })
 })

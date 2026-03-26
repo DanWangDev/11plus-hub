@@ -1,5 +1,4 @@
 import Provider from 'oidc-provider'
-import type { ClientMetadata } from 'oidc-provider'
 import type postgres from 'postgres'
 import { createPgAdapter } from './pg-adapter.js'
 import { createLogger } from '../lib/logger.js'
@@ -11,7 +10,6 @@ export interface OidcProviderOptions {
   sql: postgres.Sql
   signingKey: string
   cookieKeys: string[]
-  clients?: ClientMetadata[]
   findAccount: (
     ctx: unknown,
     sub: string,
@@ -25,15 +23,15 @@ export interface OidcProviderOptions {
 }
 
 export function createOidcProvider(options: OidcProviderOptions): Provider {
-  const { issuer, sql, signingKey, cookieKeys, clients, findAccount } = options
+  const { issuer, sql, signingKey, cookieKeys, findAccount } = options
 
   const adapter = createPgAdapter(sql)
 
   const provider = new Provider(issuer, {
     adapter,
 
-    // Static client registration from applications table
-    ...(clients && clients.length > 0 ? { clients } : {}),
+    // Clients are loaded dynamically by the adapter's Client model
+    // (see pg-adapter.ts createClientAdapter) — no static registration needed.
 
     findAccount: async (ctx, sub) => {
       const account = await findAccount(ctx, sub)

@@ -6,7 +6,6 @@ import { env } from './config/env.js'
 import { createDb } from './db/connection.js'
 import { createOidcProvider } from './oidc/provider.js'
 import { createAccountFinder } from './oidc/account.js'
-import { loadClientsFromDb } from './oidc/client-loader.js'
 import { generateDevSigningKey } from './oidc/dev-keys.js'
 import { createLogger } from './lib/logger.js'
 
@@ -18,15 +17,11 @@ async function main(): Promise<void> {
   const signingKey = env.OIDC_SIGNING_KEY ?? (await generateDevSigningKey())
   const cookieKeys = env.OIDC_COOKIE_KEYS.split(',')
 
-  // Load registered applications as OIDC clients
-  const clients = await loadClientsFromDb(sql)
-
   const oidcProvider = createOidcProvider({
     issuer: env.OIDC_ISSUER,
     sql,
     signingKey,
     cookieKeys,
-    clients,
     findAccount: createAccountFinder(sql),
   })
 

@@ -14,6 +14,7 @@ import {
   revokeServiceToken,
 } from '../services/app-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
+import { clearClientCache } from '../oidc/pg-adapter.js'
 
 const logger = createLogger({ service: 'applications-route' })
 
@@ -148,6 +149,9 @@ export function createApplicationsRouter(): Router {
         throw new AppError(404, 'Application not found')
       }
 
+      // Invalidate OIDC client cache so changes take effect immediately
+      clearClientCache()
+
       logger.info('Application updated', {
         operation: 'updateApplication',
         appId: id,
@@ -227,6 +231,9 @@ export function createApplicationsRouter(): Router {
         if (!result) {
           throw new AppError(404, 'Application not found')
         }
+
+        // Invalidate OIDC client cache so the new secret takes effect immediately
+        clearClientCache()
 
         logger.info('Client secret rotated', {
           operation: 'rotateClientSecret',
