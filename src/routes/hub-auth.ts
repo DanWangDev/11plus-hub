@@ -257,8 +257,13 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     }
   })
 
-  // POST /auth/logout — clear session and redirect to OIDC end_session
-  router.post('/auth/logout', async (req: Request, res: Response) => {
+  // GET|POST /auth/logout — clear session and redirect to OIDC end_session
+  // GET supported because CSP form-action blocks POST behind Cloudflare tunnel
+  router.all('/auth/logout', async (req: Request, res: Response) => {
+    if (req.method !== 'GET' && req.method !== 'POST') {
+      res.status(405).end()
+      return
+    }
     try {
       const session = await getSession(req, res, sessionSecret)
       const idToken = session.tokens?.id_token
