@@ -6,8 +6,100 @@ const logger = createLogger({ service: 'oidc-pg-adapter' })
 
 type ModelName = string
 
+interface DbApplication {
+  client_id: string
+  client_secret_sha256: string | null
+  redirect_uris: string[]
+  name: string
+  slug: string
+  url: string
+  backchannel_logout_uri: string | null
+  status: string
+}
+
+interface CacheEntry {
+  payload: AdapterPayload | undefined
+  cachedAt: number
+}
+
+const CLIENT_CACHE_TTL_MS = 60_000 // 60 seconds
+const clientCache = new Map<string, CacheEntry>()
+
+function mapAppToClientPayload(app: DbApplication): AdapterPayload {
+  const isConfidential = app.client_secret_sha256 !== null
+  const origins = app.redirect_uris
+    .map((uri) => {
+      try {
+        return new URL(uri).origin
+      } catch {
+        return null
+      }
+    })
+    .filter((origin): origin is string => origin !== null && origin !== app.url)
+
+  return {
+    client_id: app.client_id,
+    ...(isConfidential ? { client_secret: app.client_secret_sha256! } : {}),
+    redirect_uris: app.redirect_uris,
+    client_name: app.name,
+    grant_types: ['authorization_code', 'refresh_token'],
+    response_types: ['code'],
+    token_endpoint_auth_method: isConfidential ? 'client_secret_post' : 'none',
+    scope: 'openid profile email hub',
+    post_logout_redirect_uris: [app.url, ...origins],
+    ...(app.backchannel_logout_uri ? { backchannel_logout_uri: app.backchannel_logout_uri } : {}),
+  }
+}
+
+function createClientAdapter(sql: postgres.Sql): Adapter {
+  return {
+    async find(id: string): Promise<AdapterPayload | undefined> {
+      const now = Date.now()
+      const cached = clientCache.get(id)
+      if (cached && now - cached.cachedAt < CLIENT_CACHE_TTL_MS) {
+        return cached.payload
+      }
+
+      const rows = await sql<DbApplication[]>`
+        SELECT client_id, client_secret_sha256, redirect_uris, name, slug, url, backchannel_logout_uri, status
+        FROM applications
+        WHERE client_id = ${id} AND status = 'active'
+      `
+
+      const app = rows[0]
+      const payload = app ? mapAppToClientPayload(app) : undefined
+
+      clientCache.set(id, { payload, cachedAt: now })
+
+      if (payload) {
+        logger.info('oidc client loaded dynamically', { operation: 'clientFind', clientId: id })
+      }
+
+      return payload
+    },
+
+    // Client model is read-only — these are no-ops
+    async upsert(): Promise<void> {},
+    async findByUserCode(): Promise<AdapterPayload | undefined> { return undefined },
+    async findByUid(): Promise<AdapterPayload | undefined> { return undefined },
+    async consume(): Promise<void> {},
+    async destroy(): Promise<void> {},
+    async revokeByGrantId(): Promise<void> {},
+  }
+}
+
+/** Clear the client cache (useful after secret rotation or app updates) */
+export function clearClientCache(): void {
+  clientCache.clear()
+}
+
 export function createPgAdapter(sql: postgres.Sql) {
   return function PgAdapter(name: ModelName): Adapter {
+    // Client model queries the applications table dynamically
+    if (name === 'Client') {
+      return createClientAdapter(sql)
+    }
+
     const type = name.toLowerCase()
 
     return {
