@@ -10,11 +10,9 @@ import { useForm } from '@/hooks/use-form'
 import { signupSchema, type SignupFormData } from '@/lib/validation'
 import { register, googleAuth } from '@/api/auth'
 import { ApiError } from '@/lib/api-client'
-import { useAuth } from '@/contexts/auth-context'
 
 export function SignupPage() {
   const navigate = useNavigate()
-  const { setUser } = useAuth()
   const [success, setSuccess] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [googleError, setGoogleError] = useState<string | null>(null)
@@ -55,9 +53,8 @@ export function SignupPage() {
         turnstileToken: turnstileToken ?? undefined,
       })
       if (response.success && response.data) {
-        const { user } = response.data
-        setUser(user)
-        navigate(user.role === 'admin' ? '/admin' : '/dashboard')
+        // Registration via Google creates the account — redirect to OIDC login to establish session
+        window.location.href = '/auth/login?returnTo=/dashboard'
       }
     } catch (error) {
       setGoogleError(error instanceof ApiError ? error.message : 'Google sign-up failed')

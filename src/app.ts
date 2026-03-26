@@ -16,6 +16,7 @@ import { createAuditRouter } from './routes/audit.js'
 import { createSubscriptionsRouter } from './routes/subscriptions.js'
 import { createInteractionRouter } from './routes/oidc-interactions.js'
 import { createPasswordResetRouter } from './routes/password-reset.js'
+import { createHubAuthRouter, type HubAuthOptions } from './routes/hub-auth.js'
 import { createSecretAuthMiddleware } from './oidc/secret-auth-middleware.js'
 import { apiLimiter } from './middleware/rate-limit.js'
 
@@ -24,6 +25,7 @@ export interface AppOptions {
   sql?: postgres.Sql
   oidcProvider?: Provider
   frontendDir?: string
+  hubAuth?: HubAuthOptions
 }
 
 export function createApp(options: AppOptions = {}): express.Express {
@@ -85,9 +87,18 @@ export function createApp(options: AppOptions = {}): express.Express {
     app.use('/oidc', options.oidcProvider.callback())
   }
 
+  // Hub's own OIDC client routes (login/callback/logout/me/backchannel-logout)
+  if (options.hubAuth) {
+    app.use(createHubAuthRouter(options.hubAuth))
+  }
+
   // Serve frontend SPA in production
   if (options.frontendDir) {
     app.use(express.static(options.frontendDir))
+    // OIDC discovery redirect: provider is mounted at /oidc but issuer is the root
+    app.get('/.well-known/openid-configuration', (_req, res) => {
+      res.redirect(301, '/oidc/.well-known/openid-configuration')
+    })
     // SPA fallback: serve index.html for non-API, non-OIDC routes
     app.get('{*path}', (req, res, next) => {
       if (
@@ -95,7 +106,8 @@ export function createApp(options: AppOptions = {}): express.Express {
         req.path.startsWith('/oidc/') ||
         req.path.startsWith('/health') ||
         req.path.startsWith('/ready') ||
-        req.path.startsWith('/auth/interaction/')
+        req.path.startsWith('/auth/') ||
+        req.path.startsWith('/.well-known/')
       ) {
         next()
         return

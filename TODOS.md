@@ -18,7 +18,7 @@
 - React SPA (Vite + React 19 + Tailwind CSS 4) with login, signup, forgot/reset password, dashboard
 - Username or email login support
 - Role-based routing (admin -> /admin, student/parent -> /dashboard)
-- Auth context with localStorage persistence
+- Auth context with httpOnly cookie session (via OIDC `/auth/me`)
 - Frontend built into Docker image (multi-stage Dockerfile)
 - Auto-migrations and auto-seeding on container startup
 - Admin credentials via env vars (no hardcoded defaults)
@@ -56,7 +56,7 @@
 
 - Configured on Cloudflare dashboard (no app-level code needed)
 
-### P0: Hub OIDC Self-Client + Back-Channel Logout [planned]
+### P0: Hub OIDC Self-Client + Back-Channel Logout [done]
 
 - **What:** Make the hub use its own OIDC provider for login. Register hub as an OIDC client in the applications table. Add Google OAuth to the OIDC interaction login page. Enable back-channel logout for instant session propagation to client apps.
 - **Why:** Cross-tab login doesn't persist because the hub uses localStorage-based direct auth instead of OIDC sessions. Client apps can't SSO because the hub never creates an OIDC session. Two disconnected auth systems (direct auth vs OIDC) — this unifies them.
@@ -70,7 +70,7 @@
   - `POST /api/auth/login` deprecated. `/api/auth/google` stays as backend handler for both registration and OIDC interaction.
   - Back-channel logout failures logged but don't block hub logout (resilience). Client apps fall back to token expiry.
 
-### P0: Auth-Client SDK Back-Channel Logout Support [planned]
+### P0: Auth-Client SDK Back-Channel Logout Support [done]
 
 - **What:** Add `POST /auth/backchannel-logout` route to `@danwangdev/auth-client` SDK. Verifies `logout_token` JWT from oidc-provider via JWKS, finds the session for that user, and destroys the iron-session.
 - **Why:** Back-channel logout requires each client app to have a logout endpoint. Building it into the SDK means vocab-master and writing-buddy get it for free.

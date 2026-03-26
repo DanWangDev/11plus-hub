@@ -49,6 +49,13 @@ export function submitInteractionLogin(uid: string, data: LoginInput): Promise<A
   return apiClient.post(`/api/auth/interaction/${uid}/login`, data)
 }
 
+export function submitInteractionGoogle(
+  uid: string,
+  data: { token: string; tokenType: 'id_token' | 'access_token' },
+): Promise<ApiResponse> {
+  return apiClient.post(`/api/auth/interaction/${uid}/google`, data)
+}
+
 export function submitInteractionConsent(uid: string): Promise<ApiResponse> {
   return apiClient.post(`/api/auth/interaction/${uid}/confirm`)
 }

@@ -38,6 +38,13 @@ async function main(): Promise<void> {
     sql,
     oidcProvider,
     frontendDir,
+    hubAuth: {
+      issuer: env.OIDC_ISSUER,
+      clientId: env.HUB_CLIENT_ID,
+      clientSecret: env.HUB_CLIENT_SECRET,
+      sessionSecret: env.HUB_SESSION_SECRET,
+      redirectUri: `${env.OIDC_ISSUER}/auth/callback`,
+    },
   })
 
   app.listen(env.PORT, env.HOST, () => {

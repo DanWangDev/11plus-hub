@@ -68,7 +68,7 @@ describe('application routes', () => {
           name: 'Test App',
           slug: 'test-app',
           url: 'https://test.example.com',
-          redirectUris: ['https://test.example.com/callback'],
+          redirect_uris: ['https://test.example.com/callback'],
         })
 
       expect(res.status).toBe(201)
@@ -88,7 +88,7 @@ describe('application routes', () => {
           name: 'Test App',
           slug: 'test-app',
           url: 'https://test.example.com',
-          redirectUris: ['https://test.example.com/callback'],
+          redirect_uris: ['https://test.example.com/callback'],
         })
 
       expect(res.status).toBe(409)

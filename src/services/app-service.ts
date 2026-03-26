@@ -14,17 +14,17 @@ export const createAppSchema = z.object({
     .max(50)
     .regex(/^[a-z0-9-]+$/),
   url: z.string().url(),
-  redirectUris: z.array(z.string().url()).min(1),
-  iconUrl: z.string().url().optional(),
-  statsApiUrl: z.string().url().optional(),
+  redirect_uris: z.array(z.string().url()).min(1),
+  icon_url: z.string().url().optional(),
+  stats_api_url: z.string().url().optional(),
 })
 
 export const updateAppSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   url: z.string().url().optional(),
-  redirectUris: z.array(z.string().url()).min(1).optional(),
-  iconUrl: z.string().url().nullable().optional(),
-  statsApiUrl: z.string().url().nullable().optional(),
+  redirect_uris: z.array(z.string().url()).min(1).optional(),
+  icon_url: z.string().url().nullable().optional(),
+  stats_api_url: z.string().url().nullable().optional(),
   status: z.enum(['active', 'inactive', 'archived', 'deleted']).optional(),
 })
 
@@ -96,9 +96,9 @@ export async function createApplication(
       ${clientId},
       ${clientSecretHash},
       ${clientSecretSha256},
-      ${validated.redirectUris},
-      ${validated.iconUrl ?? null},
-      ${validated.statsApiUrl ?? null}
+      ${validated.redirect_uris},
+      ${validated.icon_url ?? null},
+      ${validated.stats_api_url ?? null}
     )
     RETURNING *
   `
@@ -160,10 +160,10 @@ export async function updateApplication(
     name: validated.name ?? existing.name,
     url: validated.url ?? existing.url,
     redirect_uris:
-      validated.redirectUris !== undefined ? validated.redirectUris : existing.redirect_uris,
-    icon_url: validated.iconUrl !== undefined ? validated.iconUrl : existing.icon_url,
+      validated.redirect_uris !== undefined ? validated.redirect_uris : existing.redirect_uris,
+    icon_url: validated.icon_url !== undefined ? validated.icon_url : existing.icon_url,
     stats_api_url:
-      validated.statsApiUrl !== undefined ? validated.statsApiUrl : existing.stats_api_url,
+      validated.stats_api_url !== undefined ? validated.stats_api_url : existing.stats_api_url,
     status: validated.status ?? existing.status,
   }
 

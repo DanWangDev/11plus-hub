@@ -11,24 +11,11 @@ export class ApiError extends Error {
   }
 }
 
-function getAuthHeaders(): Record<string, string> {
-  const stored = localStorage.getItem('hub_user')
-  if (stored) {
-    try {
-      const user = JSON.parse(stored) as { id: number }
-      return { 'X-User-Id': String(user.id) }
-    } catch {
-      return {}
-    }
-  }
-  return {}
-}
-
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(url, {
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...getAuthHeaders(),
       ...options.headers,
     },
     ...options,

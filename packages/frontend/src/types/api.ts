@@ -70,6 +70,20 @@ export interface InteractionDetails {
   }
 }
 
+/** OIDC claims from /auth/me (cookie-backed session) */
+export interface HubUser {
+  sub: string
+  username: string
+  display_name: string
+  email: string
+  email_verified: boolean
+  role: string
+  plan: string
+  features: string[]
+  apps: string[]
+  expires_at: string | null
+}
+
 export interface PasswordResetRequest {
   email: string
 }

@@ -54,26 +54,49 @@ async function main(): Promise<void> {
     const vocabSecretSha256 = hashSha256('vocab-dev-secret')
     const writingSecretHash = await bcrypt.hash('writing-dev-secret', BCRYPT_ROUNDS)
     const writingSecretSha256 = hashSha256('writing-dev-secret')
+    const hubSecretHash = await bcrypt.hash('hub-dev-client-secret', BCRYPT_ROUNDS)
+    const hubSecretSha256 = hashSha256('hub-dev-client-secret')
+
+    // Hub self-registration as OIDC client (eats its own dog food)
+    await sql`
+      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, backchannel_logout_uri)
+      VALUES (
+        '11plus Hub', 'hub', 'http://localhost:3009',
+        'hub', ${hubSecretHash}, ${hubSecretSha256},
+        ARRAY['http://localhost:3009/auth/callback', 'https://hub.labf.app/auth/callback'],
+        'http://localhost:3009/auth/backchannel-logout'
+      )
+      ON CONFLICT (slug) DO UPDATE SET
+        client_secret_sha256 = ${hubSecretSha256},
+        backchannel_logout_uri = 'http://localhost:3009/auth/backchannel-logout'
+    `
 
     await sql`
-      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, stats_api_url)
+      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, backchannel_logout_uri, stats_api_url)
       VALUES (
         'Vocab Master', 'vocab-master', 'https://vocab-master.labf.app',
         'vocab-master-client', ${vocabSecretHash}, ${vocabSecretSha256},
         ARRAY['https://vocab-master.labf.app/auth/callback', 'http://localhost:5174/auth/callback'],
+        'http://localhost:5174/auth/backchannel-logout',
         'https://vocab-master.labf.app/api/stats'
       )
-      ON CONFLICT (slug) DO UPDATE SET client_secret_sha256 = ${vocabSecretSha256}
+      ON CONFLICT (slug) DO UPDATE SET
+        client_secret_sha256 = ${vocabSecretSha256},
+        backchannel_logout_uri = 'http://localhost:5174/auth/backchannel-logout'
     `
 
     await sql`
-      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris)
+      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, backchannel_logout_uri)
       VALUES (
         'Writing Buddy', 'writing-buddy', 'https://writing-buddy.labf.app',
         'writing-buddy-client', ${writingSecretHash}, ${writingSecretSha256},
-        ARRAY['https://writing-buddy.labf.app/auth/callback', 'http://localhost:5175/auth/callback']
+        ARRAY['https://writing-buddy.labf.app/api/auth/callback', 'http://localhost:5179/api/auth/callback', 'http://localhost:5055/api/auth/callback'],
+        'http://localhost:5050/api/auth/backchannel-logout'
       )
-      ON CONFLICT (slug) DO UPDATE SET client_secret_sha256 = ${writingSecretSha256}
+      ON CONFLICT (slug) DO UPDATE SET
+        client_secret_sha256 = ${writingSecretSha256},
+        redirect_uris = ARRAY['https://writing-buddy.labf.app/api/auth/callback', 'http://localhost:5179/api/auth/callback', 'http://localhost:5055/api/auth/callback'],
+        backchannel_logout_uri = 'http://localhost:5050/api/auth/backchannel-logout'
     `
 
     // Create free subscription for admin
@@ -81,6 +104,13 @@ async function main(): Promise<void> {
       await sql`
         INSERT INTO subscriptions (user_id, plan, status, features, assigned_by)
         VALUES (${admin.id}, 'bundle', 'active', ARRAY['writing', 'vocab'], ${admin.id})
+        ON CONFLICT DO NOTHING
+      `
+
+      // Grant app access for all registered apps
+      await sql`
+        INSERT INTO user_app_access (user_id, app_id)
+        SELECT ${admin.id}, id FROM applications
         ON CONFLICT DO NOTHING
       `
     }

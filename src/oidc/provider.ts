@@ -61,6 +61,7 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
       devInteractions: { enabled: false },
       resourceIndicators: { enabled: false },
       rpInitiatedLogout: { enabled: true },
+      backchannelLogout: { enabled: true },
     },
 
     // Always issue refresh tokens for confidential first-party clients.
@@ -201,6 +202,24 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
     const error = args[1] as Error
     logger.error('oidc grant error', {
       operation: 'grant.error',
+      clientId: ctx.oidc?.client?.clientId,
+      error: error.message,
+    })
+  })
+
+  provider.on('backchannel.success', (...args: unknown[]) => {
+    const ctx = args[0] as { oidc?: { client?: { clientId?: string } } }
+    logger.info('backchannel logout success', {
+      operation: 'backchannel.success',
+      clientId: ctx.oidc?.client?.clientId,
+    })
+  })
+
+  provider.on('backchannel.error', (...args: unknown[]) => {
+    const ctx = args[0] as { oidc?: { client?: { clientId?: string } } }
+    const error = args[1] as Error
+    logger.warn('backchannel logout failed', {
+      operation: 'backchannel.error',
       clientId: ctx.oidc?.client?.clientId,
       error: error.message,
     })

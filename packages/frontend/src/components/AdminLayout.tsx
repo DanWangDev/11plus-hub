@@ -1,5 +1,5 @@
 import { useState, useCallback, type ReactNode } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { Menu, X, LogOut, Users, AppWindow, CreditCard, ScrollText } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/contexts/auth-context'
@@ -18,17 +18,11 @@ interface AdminLayoutProps {
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
-  const navigate = useNavigate()
   const { user, logout } = useAuth()
 
   const toggleMenu = useCallback(() => {
     setMenuOpen((prev) => !prev)
   }, [])
-
-  const handleSignOut = useCallback(() => {
-    logout()
-    navigate('/login')
-  }, [logout, navigate])
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -71,7 +65,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <div className="hidden items-center gap-4 md:flex">
             <span className="text-sm text-slate-600">{user?.display_name ?? 'Admin'}</span>
             <button
-              onClick={handleSignOut}
+              onClick={logout}
               className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700"
               aria-label="Sign out"
             >
@@ -116,7 +110,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
               <span className="text-sm text-slate-600">{user?.display_name ?? 'Admin'}</span>
               <button
-                onClick={handleSignOut}
+                onClick={logout}
                 className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
               >
                 <LogOut size={16} aria-hidden="true" />

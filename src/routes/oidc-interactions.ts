@@ -2,7 +2,14 @@ import { Router } from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import type Provider from 'oidc-provider'
 import type postgres from 'postgres'
-import { findUserByEmail, findUserByUsername, verifyPassword } from '../services/user-service.js'
+import {
+  createUser,
+  findUserByEmail,
+  findUserByGoogleId,
+  findUserByUsername,
+  verifyPassword,
+} from '../services/user-service.js'
+import { verifyGoogleToken, isGoogleConfigured } from '../services/google-auth-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
 import { checkUserEntitlement } from '../oidc/entitlement-check.js'
 import { createLogger } from '../lib/logger.js'
@@ -269,6 +276,159 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           mergeWithLastSubmission: false,
         })
       } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  // POST /api/auth/interaction/:uid/google — Google OAuth during OIDC interaction
+  router.post(
+    '/api/auth/interaction/:uid/google',
+    async (req: Request, res: Response, next: NextFunction) => {
+      const start = Date.now()
+
+      if (!isGoogleConfigured()) {
+        res.status(501).json({ success: false, error: 'Google sign-in is not configured' })
+        return
+      }
+
+      try {
+        const { token, tokenType } = req.body as {
+          token?: string
+          tokenType?: 'id_token' | 'access_token'
+        }
+
+        if (!token) {
+          res.status(400).json({ success: false, error: 'Google token is required' })
+          return
+        }
+
+        const googleUser = await verifyGoogleToken(token, tokenType ?? 'id_token')
+
+        // Find or create user from Google profile
+        let user = await findUserByGoogleId(sql, googleUser.googleId)
+        let isNewUser = false
+
+        if (!user) {
+          const existingByEmail = await findUserByEmail(sql, googleUser.email)
+          if (existingByEmail) {
+            // Link Google account to existing user
+            const rows = await sql<
+              {
+                id: number
+                username: string
+                email: string
+                display_name: string
+                role: string
+                parent_id: number | null
+                google_id: string | null
+                email_verified: boolean
+                created_at: Date
+                updated_at: Date
+                deleted_at: Date | null
+              }[]
+            >`
+              UPDATE users
+              SET google_id = ${googleUser.googleId}, email_verified = true, updated_at = now()
+              WHERE id = ${existingByEmail.id}
+              RETURNING id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
+            `
+            user = rows[0] ?? null
+
+            logger.info('linked google account during interaction', {
+              operation: 'interactionGoogleLogin',
+              userId: existingByEmail.id,
+              duration: Date.now() - start,
+            })
+          } else {
+            // Create new user from Google profile
+            const emailPrefix = googleUser.email.split('@')[0] ?? googleUser.email
+            const username = emailPrefix
+              .replace(/[^a-zA-Z0-9_-]/g, '_')
+              .slice(0, 30)
+              .padEnd(3, '_')
+
+            user = await createUser(sql, {
+              username,
+              email: googleUser.email,
+              displayName: googleUser.name,
+              googleId: googleUser.googleId,
+              role: 'student',
+            })
+            isNewUser = true
+
+            logger.info('created user via google during interaction', {
+              operation: 'interactionGoogleLogin',
+              userId: user.id,
+              duration: Date.now() - start,
+            })
+          }
+        }
+
+        if (!user) {
+          res.status(500).json({ success: false, error: 'Failed to authenticate with Google' })
+          return
+        }
+
+        // Check entitlement
+        const interactionDetails = await provider.interactionDetails(req, res)
+        const clientId = String(
+          (interactionDetails.params as Record<string, unknown>).client_id ?? '',
+        )
+
+        const entitlement = await checkUserEntitlement(sql, user.id, clientId)
+        if (!entitlement.allowed) {
+          logger.warn('google interaction login denied - no entitlement', {
+            operation: 'interactionGoogleLogin',
+            userId: user.id,
+            clientId,
+            reason: entitlement.reason,
+            duration: Date.now() - start,
+          })
+
+          await logAction(sql, {
+            actorId: user.id,
+            action: AuditActions.ENTITLEMENT_DENIED,
+            details: { clientId, appName: entitlement.appName, reason: entitlement.reason },
+            ipAddress: req.ip,
+          }).catch(() => {})
+
+          res.status(403).json({
+            success: false,
+            error: `Your plan does not include access to ${entitlement.appName ?? 'this application'}. Please upgrade your subscription.`,
+          })
+          return
+        }
+
+        logger.info('google interaction login success', {
+          operation: 'interactionGoogleLogin',
+          userId: user.id,
+          isNewUser,
+          duration: Date.now() - start,
+        })
+
+        await logAction(sql, {
+          actorId: user.id,
+          action: isNewUser ? AuditActions.REGISTER : AuditActions.LOGIN,
+          details: { source: 'google' },
+          ipAddress: req.ip,
+        }).catch(() => {})
+
+        const result = {
+          login: {
+            accountId: String(user.id),
+          },
+        }
+
+        await provider.interactionFinished(req, res, result, {
+          mergeWithLastSubmission: false,
+        })
+      } catch (error) {
+        logger.error('google interaction login failed', {
+          operation: 'interactionGoogleLogin',
+          error: error instanceof Error ? error.message : String(error),
+          duration: Date.now() - start,
+        })
         next(error)
       }
     },

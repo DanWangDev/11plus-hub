@@ -19,6 +19,11 @@ export const envSchema = z.object({
   OIDC_SIGNING_KEY: z.string().optional(),
   OIDC_COOKIE_KEYS: z.string().default('dev-oidc-cookie-key-minimum-32-characters!!'),
 
+  // Hub as its own OIDC client (self-client for SSO)
+  HUB_CLIENT_ID: z.string().default('hub'),
+  HUB_CLIENT_SECRET: z.string().default('hub-dev-client-secret'),
+  HUB_SESSION_SECRET: z.string().min(32).default('hub-session-secret-minimum-32-characters-long!!'),
+
   GOOGLE_CLIENT_ID: z.string().optional(),
 
   TURNSTILE_SITE_KEY: z.string().optional(),
