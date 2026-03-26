@@ -17,11 +17,13 @@ import { createLogger } from '../lib/logger.js'
 const logger = createLogger({ route: 'oidc-interactions' })
 
 /**
- * Wraps provider.interactionFinished() to return a JSON response with the
- * redirect URL instead of a 303 redirect. SPA fetch() follows redirects
- * automatically and ends up parsing HTML as JSON, causing "Unexpected token '<'"
- * errors. This helper captures the redirect URL and returns it as JSON so the
- * frontend can do `window.location.href = redirectTo`.
+ * Uses provider.interactionResult() to get the redirect URL without sending
+ * the response, then returns it as JSON so the SPA can do
+ * `window.location.href = redirectTo`.
+ *
+ * provider.interactionFinished() writes directly to res.statusCode/setHeader
+ * (bypassing Express's res.redirect), which causes fetch() to follow the
+ * redirect chain and fail parsing HTML as JSON ("Unexpected token '<'").
  */
 async function finishInteractionAsJson(
   provider: Provider,
@@ -30,28 +32,9 @@ async function finishInteractionAsJson(
   result: Record<string, unknown>,
   options: { mergeWithLastSubmission: boolean },
 ): Promise<void> {
-  // Intercept the redirect by temporarily replacing res.redirect
-  const originalRedirect = res.redirect.bind(res)
-  let redirectUrl: string | undefined
+  const redirectTo = await provider.interactionResult(req, res, result, options)
 
-  res.redirect = function interceptedRedirect(statusOrUrl: number | string, url?: string): void {
-    redirectUrl = typeof statusOrUrl === 'string' ? statusOrUrl : url
-  } as typeof res.redirect
-
-  try {
-    await provider.interactionFinished(req, res, result, options)
-  } finally {
-    res.redirect = originalRedirect
-  }
-
-  if (redirectUrl) {
-    res.json({ success: true, redirectTo: redirectUrl })
-  } else {
-    // Fallback: interactionFinished already sent the response
-    logger.warn('interactionFinished did not produce a redirect', {
-      operation: 'finishInteractionAsJson',
-    })
-  }
+  res.json({ success: true, redirectTo })
 }
 
 interface InteractionRouterOptions {
