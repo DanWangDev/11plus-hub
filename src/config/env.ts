@@ -22,10 +22,7 @@ export const envSchema = z.object({
   // Hub as its own OIDC client (self-client for SSO)
   HUB_CLIENT_ID: z.string().default('hub'),
   HUB_CLIENT_SECRET: z.string().default('hub-dev-client-secret'),
-  HUB_SESSION_SECRET: z
-    .string()
-    .min(32)
-    .default('hub-session-secret-minimum-32-characters-long!!'),
+  HUB_SESSION_SECRET: z.string().min(32).default('hub-session-secret-minimum-32-characters-long!!'),
 
   GOOGLE_CLIENT_ID: z.string().optional(),
 

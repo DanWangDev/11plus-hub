@@ -69,10 +69,7 @@ function generatePkce(): { code_verifier: string; code_challenge: string } {
 /** Cache OIDC discovery metadata for 5 minutes */
 let metadataCache: { data: OidcMetadata; expiresAt: number } | null = null
 
-async function discoverOidc(
-  issuer: string,
-  internalIssuer?: string,
-): Promise<OidcMetadata> {
+async function discoverOidc(issuer: string, internalIssuer?: string): Promise<OidcMetadata> {
   if (metadataCache && Date.now() < metadataCache.expiresAt) {
     return metadataCache.data
   }
@@ -113,14 +110,7 @@ function decodeIdToken(idToken: string): Record<string, unknown> {
 
 export function createHubAuthRouter(options: HubAuthOptions): Router {
   const router = Router()
-  const {
-    issuer,
-    internalIssuer,
-    clientId,
-    clientSecret,
-    sessionSecret,
-    redirectUri,
-  } = options
+  const { issuer, internalIssuer, clientId, clientSecret, sessionSecret, redirectUri } = options
 
   // GET /auth/login — redirect to hub's own OIDC authorization endpoint
   router.get('/auth/login', async (req: Request, res: Response) => {
@@ -313,64 +303,60 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
   })
 
   // POST /auth/backchannel-logout — receive logout_token from oidc-provider
-  router.post(
-    '/auth/backchannel-logout',
-    async (req: Request, res: Response) => {
-      try {
-        const logoutToken =
-          req.body?.logout_token ?? (req as Request & { body: string }).body
+  router.post('/auth/backchannel-logout', async (req: Request, res: Response) => {
+    try {
+      const logoutToken = req.body?.logout_token ?? (req as Request & { body: string }).body
 
-        if (!logoutToken || typeof logoutToken !== 'string') {
-          logger.warn('bcl: missing logout_token', { operation: 'hubBcl' })
-          res.status(400).json({ error: 'Missing logout_token' })
-          return
-        }
-
-        // Verify the logout_token JWT
-        const metadata = await discoverOidc(issuer, internalIssuer)
-        const jwksUrl = internalIssuer
-          ? metadata.jwks_uri.replace(issuer, internalIssuer)
-          : metadata.jwks_uri
-        const jwks = await fetchJwks(jwksUrl)
-        const JWKS = jose.createLocalJWKSet(jwks)
-
-        const { payload } = await jose.jwtVerify(logoutToken, JWKS, {
-          issuer,
-          audience: clientId,
-        })
-
-        const sub = payload.sub
-        if (!sub) {
-          logger.warn('bcl: logout_token missing sub', { operation: 'hubBcl' })
-          res.status(400).json({ error: 'Invalid logout_token: missing sub' })
-          return
-        }
-
-        // For the hub's iron-session, we can't easily look up sessions by sub
-        // since iron-session is stateless (encrypted cookie). The BCL notification
-        // is acknowledged, and the next time the user's browser sends a request,
-        // the /auth/me endpoint will re-validate. For server-side session stores,
-        // this would destroy the session by sub.
-        //
-        // The primary value of BCL for the hub is that oidc-provider sends it to
-        // OTHER client apps (vocab-master, writing-buddy) when a hub user logs out.
-        // The hub's own session is already destroyed by the logout action itself.
-        logger.info('bcl: logout_token verified', {
-          operation: 'hubBcl',
-          sub,
-          sid: payload.sid as string | undefined,
-        })
-
-        res.status(200).json({ success: true })
-      } catch (error) {
-        logger.error('bcl: verification failed', {
-          operation: 'hubBcl',
-          error: error instanceof Error ? error.message : String(error),
-        })
-        res.status(400).json({ error: 'Invalid logout_token' })
+      if (!logoutToken || typeof logoutToken !== 'string') {
+        logger.warn('bcl: missing logout_token', { operation: 'hubBcl' })
+        res.status(400).json({ error: 'Missing logout_token' })
+        return
       }
-    },
-  )
+
+      // Verify the logout_token JWT
+      const metadata = await discoverOidc(issuer, internalIssuer)
+      const jwksUrl = internalIssuer
+        ? metadata.jwks_uri.replace(issuer, internalIssuer)
+        : metadata.jwks_uri
+      const jwks = await fetchJwks(jwksUrl)
+      const JWKS = jose.createLocalJWKSet(jwks)
+
+      const { payload } = await jose.jwtVerify(logoutToken, JWKS, {
+        issuer,
+        audience: clientId,
+      })
+
+      const sub = payload.sub
+      if (!sub) {
+        logger.warn('bcl: logout_token missing sub', { operation: 'hubBcl' })
+        res.status(400).json({ error: 'Invalid logout_token: missing sub' })
+        return
+      }
+
+      // For the hub's iron-session, we can't easily look up sessions by sub
+      // since iron-session is stateless (encrypted cookie). The BCL notification
+      // is acknowledged, and the next time the user's browser sends a request,
+      // the /auth/me endpoint will re-validate. For server-side session stores,
+      // this would destroy the session by sub.
+      //
+      // The primary value of BCL for the hub is that oidc-provider sends it to
+      // OTHER client apps (vocab-master, writing-buddy) when a hub user logs out.
+      // The hub's own session is already destroyed by the logout action itself.
+      logger.info('bcl: logout_token verified', {
+        operation: 'hubBcl',
+        sub,
+        sid: payload.sid as string | undefined,
+      })
+
+      res.status(200).json({ success: true })
+    } catch (error) {
+      logger.error('bcl: verification failed', {
+        operation: 'hubBcl',
+        error: error instanceof Error ? error.message : String(error),
+      })
+      res.status(400).json({ error: 'Invalid logout_token' })
+    }
+  })
 
   return router
 }
