@@ -95,6 +95,10 @@ export function createApp(options: AppOptions = {}): express.Express {
   // Serve frontend SPA in production
   if (options.frontendDir) {
     app.use(express.static(options.frontendDir))
+    // OIDC discovery redirect: provider is mounted at /oidc but issuer is the root
+    app.get('/.well-known/openid-configuration', (_req, res) => {
+      res.redirect(301, '/oidc/.well-known/openid-configuration')
+    })
     // SPA fallback: serve index.html for non-API, non-OIDC routes
     app.get('{*path}', (req, res, next) => {
       if (
@@ -102,7 +106,8 @@ export function createApp(options: AppOptions = {}): express.Express {
         req.path.startsWith('/oidc/') ||
         req.path.startsWith('/health') ||
         req.path.startsWith('/ready') ||
-        req.path.startsWith('/auth/')
+        req.path.startsWith('/auth/') ||
+        req.path.startsWith('/.well-known/')
       ) {
         next()
         return
