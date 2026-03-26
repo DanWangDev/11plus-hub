@@ -92,6 +92,8 @@ export async function createSubscription(
 
   const features = validated.features ?? getFeatures(validated.plan)
 
+  // Upsert: if user already has an active/trial subscription, update it
+  // instead of creating a duplicate (partial unique index enforces this)
   const rows = await sql<Subscription[]>`
     INSERT INTO subscriptions (user_id, plan, status, features, expires_at, assigned_by)
     VALUES (
@@ -102,6 +104,13 @@ export async function createSubscription(
       ${validated.expiresAt ?? null},
       ${validated.assignedBy ?? null}
     )
+    ON CONFLICT (user_id) WHERE status IN ('active', 'trial')
+    DO UPDATE SET
+      plan = EXCLUDED.plan,
+      status = EXCLUDED.status,
+      features = EXCLUDED.features,
+      expires_at = EXCLUDED.expires_at,
+      assigned_by = EXCLUDED.assigned_by
     RETURNING *
   `
 
@@ -109,6 +118,9 @@ export async function createSubscription(
   if (!subscription) {
     throw new AppError(500, 'Failed to create subscription')
   }
+
+  // Auto-sync app access based on the assigned plan
+  await syncAppAccessFromPlan(sql, validated.userId, validated.plan)
 
   logger.info('subscription created', {
     operation: 'createSubscription',
@@ -175,7 +187,14 @@ export async function updateSubscription(
     RETURNING *
   `
 
-  return rows[0] ?? null
+  const subscription = rows[0] ?? null
+
+  // Re-sync app access when plan changes
+  if (subscription && validated.plan) {
+    await syncAppAccessFromPlan(sql, subscription.user_id, subscription.plan)
+  }
+
+  return subscription
 }
 
 export async function cancelSubscription(sql: Sql, id: number): Promise<Subscription | null> {
