@@ -10,15 +10,25 @@ interface EntitlementResult {
   reason?: string
 }
 
+/** The hub's own client_id — all users can log into the hub itself */
+const HUB_CLIENT_ID = 'hub'
+
 /**
  * Check whether a user is entitled to access the application identified by client_id.
  * Called during the OIDC interaction flow after successful authentication.
+ *
+ * The hub itself is always accessible — it's the identity provider, not a gated app.
  */
 export async function checkUserEntitlement(
   sql: postgres.Sql,
   userId: number,
   clientId: string,
 ): Promise<EntitlementResult> {
+  // The hub is the identity provider — everyone can log into it
+  if (clientId === HUB_CLIENT_ID) {
+    return { allowed: true, appName: 'Hub' }
+  }
+
   // Look up the application by client_id to get its slug and name
   const apps = await sql<{ slug: string; name: string }[]>`
     SELECT slug, name FROM applications WHERE client_id = ${clientId} AND status = 'active'
