@@ -58,7 +58,14 @@ export async function loadClientsFromDb(sql: postgres.Sql): Promise<ClientMetada
       post_logout_redirect_uris: [
         app.url,
         ...app.redirect_uris
-          .map((uri) => { try { const u = new URL(uri); return u.origin } catch { return null } })
+          .map((uri) => {
+            try {
+              const u = new URL(uri)
+              return u.origin
+            } catch {
+              return null
+            }
+          })
           .filter((origin): origin is string => origin !== null && origin !== app.url),
       ],
       ...(app.backchannel_logout_uri ? { backchannel_logout_uri: app.backchannel_logout_uri } : {}),

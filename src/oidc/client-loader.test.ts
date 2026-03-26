@@ -67,7 +67,7 @@ describe('loadClientsFromDb', () => {
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],
       scope: 'openid profile email hub',
-      post_logout_redirect_uris: ['https://vocab-master.labf.app'],
+      post_logout_redirect_uris: ['https://vocab-master.labf.app', 'http://localhost:5174'],
     })
   })
 
