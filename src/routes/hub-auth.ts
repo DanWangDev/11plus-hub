@@ -80,7 +80,20 @@ async function discoverOidc(issuer: string, internalIssuer?: string): Promise<Oi
     throw new Error(`OIDC discovery failed: ${response.status}`)
   }
 
-  const data = (await response.json()) as OidcMetadata
+  const raw = (await response.json()) as OidcMetadata
+
+  // When internalIssuer differs from issuer (Docker networking), rewrite endpoints:
+  // - Browser-facing (authorization, end_session) → public issuer URL
+  // - Server-to-server (token, jwks) → internal issuer URL
+  const data: OidcMetadata = internalIssuer
+    ? {
+        authorization_endpoint: raw.authorization_endpoint.replace(internalIssuer, issuer),
+        end_session_endpoint: raw.end_session_endpoint?.replace(internalIssuer, issuer),
+        token_endpoint: raw.token_endpoint.replace(issuer, internalIssuer),
+        jwks_uri: raw.jwks_uri.replace(issuer, internalIssuer),
+      }
+    : raw
+
   metadataCache = { data, expiresAt: Date.now() + 5 * 60 * 1000 }
   return data
 }
@@ -193,12 +206,9 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
       }
 
       const metadata = await discoverOidc(issuer, internalIssuer)
-      const tokenUrl = internalIssuer
-        ? metadata.token_endpoint.replace(issuer, internalIssuer)
-        : metadata.token_endpoint
 
       // Exchange code for tokens
-      const tokenResponse = await fetch(tokenUrl, {
+      const tokenResponse = await fetch(metadata.token_endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
@@ -315,10 +325,7 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
 
       // Verify the logout_token JWT
       const metadata = await discoverOidc(issuer, internalIssuer)
-      const jwksUrl = internalIssuer
-        ? metadata.jwks_uri.replace(issuer, internalIssuer)
-        : metadata.jwks_uri
-      const jwks = await fetchJwks(jwksUrl)
+      const jwks = await fetchJwks(metadata.jwks_uri)
       const JWKS = jose.createLocalJWKSet(jwks)
 
       const { payload } = await jose.jwtVerify(logoutToken, JWKS, {
