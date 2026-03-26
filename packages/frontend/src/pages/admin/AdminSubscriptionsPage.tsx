@@ -45,7 +45,7 @@ interface EditingSub {
 export function AdminSubscriptionsPage() {
   const [state, setState] = useState<PageState>({ kind: 'loading' })
   const [planFilter, setPlanFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('active')
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [editing, setEditing] = useState<EditingSub | null>(null)
