@@ -62,10 +62,7 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
         enabled: true,
         // Auto-submit the logout confirmation form so users don't see
         // the ugly default "Do you want to sign out?" page.
-        logoutSource: async (
-          ctx: { body: string },
-          form: string,
-        ) => {
+        logoutSource: async (ctx: { body: string }, form: string) => {
           // Helmet CSP is skipped for /oidc/ routes (see app.ts), so
           // inline scripts and form submissions work without overrides.
           ctx.body = `<!DOCTYPE html>
