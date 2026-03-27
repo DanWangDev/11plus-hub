@@ -58,16 +58,28 @@ async function main(): Promise<void> {
     const hubSecretSha256 = hashSha256('hub-dev-client-secret')
 
     // Hub self-registration as OIDC client (eats its own dog food)
-    // ON CONFLICT: only update non-sensitive fields — never overwrite rotated secrets
+    // Use OIDC_ISSUER so the url/redirect_uris/backchannel_logout_uri match the
+    // production issuer. This ensures post_logout_redirect_uri validation works.
+    const hubIssuer = process.env.OIDC_ISSUER ?? 'http://localhost:3009'
+    const hubRedirectUris = [
+      `${hubIssuer}/auth/callback`,
+      // Include both dev and prod so the same seed works everywhere
+      ...(hubIssuer !== 'http://localhost:3009' ? ['http://localhost:3009/auth/callback'] : []),
+      ...(hubIssuer !== 'https://hub.labf.app' ? ['https://hub.labf.app/auth/callback'] : []),
+    ]
+
+    // ON CONFLICT: update url, redirect_uris, and backchannel_logout_uri
+    // so re-running seed fixes stale data — never overwrite rotated secrets
     await sql`
       INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, backchannel_logout_uri)
       VALUES (
-        '11plus Hub', 'hub', 'http://localhost:3009',
+        '11plus Hub', 'hub', ${hubIssuer},
         'hub', ${hubSecretHash}, ${hubSecretSha256},
-        ARRAY['http://localhost:3009/auth/callback', 'https://hub.labf.app/auth/callback'],
-        'http://localhost:3009/auth/backchannel-logout'
+        ${sql.array(hubRedirectUris)},
+        ${`${hubIssuer}/auth/backchannel-logout`}
       )
       ON CONFLICT (slug) DO UPDATE SET
+        url = EXCLUDED.url,
         redirect_uris = EXCLUDED.redirect_uris,
         backchannel_logout_uri = EXCLUDED.backchannel_logout_uri
     `
