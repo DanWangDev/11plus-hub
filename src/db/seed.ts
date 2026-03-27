@@ -68,20 +68,23 @@ async function main(): Promise<void> {
       ...(hubIssuer !== 'https://hub.labf.app' ? ['https://hub.labf.app/auth/callback'] : []),
     ]
 
-    // ON CONFLICT: update url, redirect_uris, and backchannel_logout_uri
-    // so re-running seed fixes stale data — never overwrite rotated secrets
+    // ON CONFLICT: update url and redirect_uris so re-running seed fixes
+    // stale data — never overwrite rotated secrets.
+    // No backchannel_logout_uri for the hub: it initiates logout itself and
+    // already destroys its own session. Registering a BCL URI causes
+    // oidc-provider to send a BCL request BACK to the hub during logout,
+    // creating a circular request that hangs the confirm endpoint.
     await sql`
-      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, backchannel_logout_uri)
+      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris)
       VALUES (
         '11plus Hub', 'hub', ${hubIssuer},
         'hub', ${hubSecretHash}, ${hubSecretSha256},
-        ${sql.array(hubRedirectUris)},
-        ${`${hubIssuer}/auth/backchannel-logout`}
+        ${sql.array(hubRedirectUris)}
       )
       ON CONFLICT (slug) DO UPDATE SET
         url = EXCLUDED.url,
         redirect_uris = EXCLUDED.redirect_uris,
-        backchannel_logout_uri = EXCLUDED.backchannel_logout_uri
+        backchannel_logout_uri = NULL
     `
 
     await sql`
