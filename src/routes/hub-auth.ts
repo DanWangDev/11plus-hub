@@ -51,6 +51,7 @@ async function getSession(req: Request, res: Response, password: string) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax' as const,
+      path: '/',
       maxAge: 7 * 24 * 60 * 60, // 7 days
     },
   })
@@ -267,7 +268,24 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     try {
       const session = await getSession(req, res, sessionSecret)
       const idToken = session.tokens?.id_token
-      await session.destroy()
+
+      // Clear session via iron-session (sets Max-Age=0 cookie)
+      session.destroy()
+
+      // Belt-and-suspenders: explicitly clear the cookie to guarantee removal.
+      // iron-session's destroy() sets a header, but behind reverse proxies
+      // (Cloudflare tunnel) the clearing header can be lost or overridden.
+      res.clearCookie(COOKIE_NAME, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax' as const,
+        path: '/',
+      })
+
+      logger.info('hub auth logout — session destroyed', {
+        operation: 'hubLogout',
+        hadIdToken: Boolean(idToken),
+      })
 
       try {
         const metadata = await discoverOidc(issuer, internalIssuer)
@@ -285,7 +303,6 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
         // Fall through to local redirect
       }
 
-      logger.info('hub auth logout', { operation: 'hubLogout' })
       res.redirect('/')
     } catch (error) {
       logger.error('hub auth logout failed', {
