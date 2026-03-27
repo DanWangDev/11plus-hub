@@ -3,6 +3,7 @@ export interface ApiResponse<T = unknown> {
   data?: T
   error?: string
   code?: string
+  redirectTo?: string
   meta?: {
     total: number
     page: number

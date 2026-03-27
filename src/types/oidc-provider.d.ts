@@ -97,7 +97,7 @@ declare module 'oidc-provider' {
     findAccount?: (ctx: unknown, sub: string, token?: unknown) => Promise<Account | undefined>
     claims?: Record<string, string[]>
     scopes?: string[]
-    features?: Record<string, { enabled: boolean }>
+    features?: Record<string, { enabled: boolean; [key: string]: unknown }>
     pkce?: {
       methods: string[]
       required: () => boolean
@@ -134,6 +134,8 @@ declare module 'oidc-provider' {
       client: ClientInstance,
       code: AuthorizationCode,
     ) => Promise<boolean>
+    httpOptions?: (url: unknown) => Record<string, unknown>
+    [key: string]: unknown
   }
 
   class Provider {
@@ -146,6 +148,12 @@ declare module 'oidc-provider' {
       result: InteractionResult,
       options?: { mergeWithLastSubmission?: boolean },
     ): Promise<void>
+    interactionResult(
+      req: unknown,
+      res: unknown,
+      result: InteractionResult | Record<string, unknown>,
+      options?: { mergeWithLastSubmission?: boolean },
+    ): Promise<string>
     on(event: string, handler: (...args: unknown[]) => void): void
 
     Client: {

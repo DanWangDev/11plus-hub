@@ -135,7 +135,11 @@ function InteractionLoginView({
     schema: loginSchema,
     onSubmit: async (data) => {
       try {
-        await submitInteractionLogin(uid, data)
+        const response = await submitInteractionLogin(uid, data)
+        if (response.redirectTo) {
+          window.location.href = response.redirectTo
+          return
+        }
         onComplete()
       } catch (error) {
         if (error instanceof ApiError) {
@@ -150,10 +154,14 @@ function InteractionLoginView({
     setGoogleError(null)
     setGoogleLoading(true)
     try {
-      await submitInteractionGoogle(uid, {
+      const response = await submitInteractionGoogle(uid, {
         token: accessToken,
         tokenType: 'access_token',
       })
+      if (response.redirectTo) {
+        window.location.href = response.redirectTo
+        return
+      }
       onComplete()
     } catch (error) {
       setGoogleError(error instanceof ApiError ? error.message : 'Google sign-in failed')
@@ -244,7 +252,11 @@ function ConsentView({
     setIsSubmitting(true)
     setError('')
     try {
-      await submitInteractionConsent(uid)
+      const response = await submitInteractionConsent(uid)
+      if (response.redirectTo) {
+        window.location.href = response.redirectTo
+        return
+      }
       onComplete()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to authorize')
@@ -257,7 +269,11 @@ function ConsentView({
     setIsSubmitting(true)
     setError('')
     try {
-      await abortInteraction(uid)
+      const response = await abortInteraction(uid)
+      if (response.redirectTo) {
+        window.location.href = response.redirectTo
+        return
+      }
       onComplete()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to deny')

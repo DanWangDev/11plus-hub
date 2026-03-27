@@ -58,9 +58,28 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
     features: {
       devInteractions: { enabled: false },
       resourceIndicators: { enabled: false },
-      rpInitiatedLogout: { enabled: true },
+      rpInitiatedLogout: {
+        enabled: true,
+        // Auto-submit the logout confirmation form so users don't see
+        // the ugly default "Do you want to sign out?" page.
+        logoutSource: async (ctx: { body: string }, form: string) => {
+          ctx.body = `<!DOCTYPE html>
+<html><head><title>Signing out...</title></head>
+<body onload="document.forms[0].submit()">
+  ${form}
+  <noscript>
+    <p>Your browser does not support JavaScript. Click the button below to sign out.</p>
+    ${form}
+  </noscript>
+</body></html>`
+        },
+      },
       backchannelLogout: { enabled: true },
     },
+
+    // Short timeout for backchannel logout HTTP requests to prevent
+    // the logout flow from hanging when a client is unreachable.
+    httpOptions: () => ({ timeout: { request: 2500 } }),
 
     // Always issue refresh tokens for confidential first-party clients.
     // This avoids requiring `offline_access` scope in every authorization request.
