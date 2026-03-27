@@ -267,7 +267,7 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     try {
       const session = await getSession(req, res, sessionSecret)
       const idToken = session.tokens?.id_token
-      session.destroy()
+      await session.destroy()
 
       try {
         const metadata = await discoverOidc(issuer, internalIssuer)

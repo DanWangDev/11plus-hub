@@ -37,27 +37,36 @@ export function createApp(options: AppOptions = {}): express.Express {
   app.set('trust proxy', true)
 
   // Security & parsing
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-          'script-src': [
-            "'self'",
-            'https://challenges.cloudflare.com',
-            'https://accounts.google.com',
-          ],
-          'frame-src': [
-            "'self'",
-            'https://challenges.cloudflare.com',
-            'https://accounts.google.com',
-          ],
-          'connect-src': ["'self'", 'https://accounts.google.com'],
-          'form-action': ["'self'", 'http://localhost:*', 'https://*.labf.app'],
-        },
+  // Skip Helmet CSP for /oidc/ paths — oidc-provider renders its own pages
+  // (logout confirmation, error) with inline scripts and form submissions
+  // that conflict with the SPA's strict CSP. The provider sets its own
+  // security headers via logoutSource/postLogoutSuccessSource callbacks.
+  const helmetWithCsp = helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'script-src': [
+          "'self'",
+          'https://challenges.cloudflare.com',
+          'https://accounts.google.com',
+        ],
+        'frame-src': [
+          "'self'",
+          'https://challenges.cloudflare.com',
+          'https://accounts.google.com',
+        ],
+        'connect-src': ["'self'", 'https://accounts.google.com'],
+        'form-action': ["'self'", 'http://localhost:*', 'https://*.labf.app'],
       },
-    }),
-  )
+    },
+  })
+  const helmetNoCsp = helmet({ contentSecurityPolicy: false })
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/oidc/')) {
+      return helmetNoCsp(req, res, next)
+    }
+    return helmetWithCsp(req, res, next)
+  })
   app.use(cors())
   app.use(compression())
   app.use(cookieParser())

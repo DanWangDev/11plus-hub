@@ -63,15 +63,11 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
         // Auto-submit the logout confirmation form so users don't see
         // the ugly default "Do you want to sign out?" page.
         logoutSource: async (
-          ctx: { body: string; set: (name: string, value: string) => void },
+          ctx: { body: string },
           form: string,
         ) => {
-          // Override CSP for this page to allow the inline auto-submit script.
-          // This is a transient confirmation page with no user data — safe to relax.
-          ctx.set(
-            'Content-Security-Policy',
-            "default-src 'none'; script-src 'unsafe-inline'; form-action 'self'",
-          )
+          // Helmet CSP is skipped for /oidc/ routes (see app.ts), so
+          // inline scripts and form submissions work without overrides.
           ctx.body = `<!DOCTYPE html>
 <html><head><title>Signing out...</title></head>
 <body>
@@ -86,10 +82,7 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
         // When post_logout_redirect_uri doesn't match any registered URI
         // (e.g. app.url in DB is localhost but issuer is the production domain),
         // redirect to /login instead of showing the default ugly success page.
-        postLogoutSuccessSource: async (ctx: {
-          body: string
-          set: (name: string, value: string) => void
-        }) => {
+        postLogoutSuccessSource: async (ctx: { body: string }) => {
           ctx.body = `<!DOCTYPE html>
 <html><head><meta http-equiv="refresh" content="0;url=/login"></head>
 <body><p>Signed out. <a href="/login">Return to login</a></p></body></html>`
