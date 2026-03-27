@@ -62,16 +62,37 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
         enabled: true,
         // Auto-submit the logout confirmation form so users don't see
         // the ugly default "Do you want to sign out?" page.
-        logoutSource: async (ctx: { body: string }, form: string) => {
+        logoutSource: async (
+          ctx: { body: string; set: (name: string, value: string) => void },
+          form: string,
+        ) => {
+          // Override CSP for this page to allow the inline auto-submit script.
+          // This is a transient confirmation page with no user data — safe to relax.
+          ctx.set(
+            'Content-Security-Policy',
+            "default-src 'none'; script-src 'unsafe-inline'; form-action 'self'",
+          )
           ctx.body = `<!DOCTYPE html>
 <html><head><title>Signing out...</title></head>
-<body onload="document.forms[0].submit()">
+<body>
   ${form}
+  <script>document.forms[0].submit()</script>
   <noscript>
     <p>Your browser does not support JavaScript. Click the button below to sign out.</p>
     ${form}
   </noscript>
 </body></html>`
+        },
+        // When post_logout_redirect_uri doesn't match any registered URI
+        // (e.g. app.url in DB is localhost but issuer is the production domain),
+        // redirect to /login instead of showing the default ugly success page.
+        postLogoutSuccessSource: async (ctx: {
+          body: string
+          set: (name: string, value: string) => void
+        }) => {
+          ctx.body = `<!DOCTYPE html>
+<html><head><meta http-equiv="refresh" content="0;url=/login"></head>
+<body><p>Signed out. <a href="/login">Return to login</a></p></body></html>`
         },
       },
       backchannelLogout: { enabled: true },
