@@ -155,6 +155,8 @@ declare module 'oidc-provider' {
       options?: { mergeWithLastSubmission?: boolean },
     ): Promise<string>
     on(event: string, handler: (...args: unknown[]) => void): void
+    /** Koa proxy setting — trust X-Forwarded-* headers from reverse proxies */
+    proxy: boolean
 
     Client: {
       find(clientId: string): Promise<ClientInstance | undefined>
