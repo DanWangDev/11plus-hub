@@ -712,29 +712,11 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
     },
   )
 
-  // GET /auth/logout — initiate RP-initiated logout
-  router.get('/auth/logout', (req: Request, res: Response) => {
-    // Redirect to the OIDC end-session endpoint
-    // The provider handles session cleanup and post_logout_redirect
-    const endSessionUrl = new URL('/oidc/session/end', `${req.protocol}://${req.get('host')}`)
-
-    // If an id_token_hint is provided, pass it through for cleaner logout
-    const idTokenHint = req.query.id_token_hint
-    if (typeof idTokenHint === 'string') {
-      endSessionUrl.searchParams.set('id_token_hint', idTokenHint)
-    }
-
-    const postLogoutRedirectUri = req.query.post_logout_redirect_uri
-    if (typeof postLogoutRedirectUri === 'string') {
-      endSessionUrl.searchParams.set('post_logout_redirect_uri', postLogoutRedirectUri)
-    }
-
-    logger.info('initiating logout', {
-      operation: 'logout',
-    })
-
-    res.redirect(endSessionUrl.toString())
-  })
+  // NOTE: /auth/logout is handled by hub-auth.ts (createHubAuthRouter),
+  // which clears the __hub_session cookie AND redirects to the OIDC
+  // end_session endpoint. Do NOT add a /auth/logout handler here —
+  // this router is mounted before hub-auth, so a handler here would
+  // shadow it and skip session destruction.
 
   return router
 }
