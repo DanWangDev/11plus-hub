@@ -56,10 +56,20 @@ export function createApp(options: AppOptions = {}): express.Express {
       },
     },
   })
-  const helmetNoCsp = helmet({ contentSecurityPolicy: false })
+  // OIDC routes need 'unsafe-inline' for oidc-provider's auto-submit logout
+  // form and error pages, but we still apply CSP (rather than disabling it entirely)
+  const helmetOidcCsp = helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'script-src': ["'self'", "'unsafe-inline'"],
+        'form-action': ["'self'", 'http://localhost:*', 'https://*.labf.app'],
+      },
+    },
+  })
   app.use((req, res, next) => {
     if (req.path.startsWith('/oidc/')) {
-      return helmetNoCsp(req, res, next)
+      return helmetOidcCsp(req, res, next)
     }
     return helmetWithCsp(req, res, next)
   })
