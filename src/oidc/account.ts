@@ -1,7 +1,11 @@
 import type postgres from 'postgres'
 import { findUserById } from '../services/user-service.js'
-import { findSubscriptionByUserId } from '../services/subscription-service.js'
-import { getUserAppAccess } from '../services/subscription-service.js'
+import {
+  findSubscriptionByUserId,
+  getUserAppAccess,
+  syncAppAccessFromPlan,
+  PLAN_APP_SLUGS,
+} from '../services/subscription-service.js'
 import { createLogger } from '../lib/logger.js'
 
 const logger = createLogger({ service: 'oidc-account' })
@@ -29,11 +33,14 @@ export function createAccountFinder(sql: postgres.Sql) {
       accountId: String(user.id),
       claims: async () => {
         const subscription = await findSubscriptionByUserId(sql, user.id)
+        const plan = subscription?.plan ?? 'free'
+
+        // Derive expected apps from the plan (source of truth)
+        const expectedApps = PLAN_APP_SLUGS[plan] ?? []
+
+        // Check actual app access — if out of sync, repair it
         const appAccess = await getUserAppAccess(sql, user.id)
-
         const appIds = appAccess.map((a) => a.app_id)
-
-        // Fetch app slugs for the access entries
         let appSlugs: string[] = []
         if (appIds.length > 0) {
           const apps = await sql<{ slug: string }[]>`
@@ -42,10 +49,23 @@ export function createAccountFinder(sql: postgres.Sql) {
           appSlugs = apps.map((a) => a.slug)
         }
 
+        // Auto-sync if user_app_access is stale (e.g. migrated users)
+        const missing = expectedApps.filter((slug) => !appSlugs.includes(slug))
+        if (missing.length > 0) {
+          logger.info('auto-syncing stale user_app_access', {
+            operation: 'claims',
+            userId: user.id,
+            plan,
+            missing,
+          })
+          await syncAppAccessFromPlan(sql, user.id, plan)
+          appSlugs = expectedApps
+        }
+
         logger.info('oidc claims generated', {
           operation: 'claims',
           userId: user.id,
-          plan: subscription?.plan ?? 'free',
+          plan,
           appCount: appSlugs.length,
         })
 
@@ -56,7 +76,7 @@ export function createAccountFinder(sql: postgres.Sql) {
           email: user.email,
           email_verified: user.email_verified,
           role: user.role,
-          plan: subscription?.plan ?? 'free',
+          plan,
           features: subscription?.features ?? [],
           apps: appSlugs,
           expires_at: subscription?.expires_at

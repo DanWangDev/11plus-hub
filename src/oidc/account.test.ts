@@ -12,6 +12,7 @@ vi.mock('../lib/logger.js', () => ({
 const mockFindUserById = vi.fn()
 const mockFindSubscriptionByUserId = vi.fn()
 const mockGetUserAppAccess = vi.fn()
+const mockSyncAppAccessFromPlan = vi.fn()
 
 vi.mock('../services/user-service.js', () => ({
   findUserById: (...args: unknown[]) => mockFindUserById(...args),
@@ -20,6 +21,14 @@ vi.mock('../services/user-service.js', () => ({
 vi.mock('../services/subscription-service.js', () => ({
   findSubscriptionByUserId: (...args: unknown[]) => mockFindSubscriptionByUserId(...args),
   getUserAppAccess: (...args: unknown[]) => mockGetUserAppAccess(...args),
+  syncAppAccessFromPlan: (...args: unknown[]) => mockSyncAppAccessFromPlan(...args),
+  PLAN_APP_SLUGS: {
+    free: [],
+    writing: ['writing-buddy'],
+    vocab: ['vocab-master'],
+    bundle: ['writing-buddy', 'vocab-master'],
+    family: ['writing-buddy', 'vocab-master'],
+  },
 }))
 
 type TaggedTemplateArgs = [TemplateStringsArray, ...unknown[]]

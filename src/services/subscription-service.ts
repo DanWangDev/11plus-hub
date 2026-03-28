@@ -15,7 +15,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
   family: ['writing', 'vocab'],
 }
 
-const PLAN_APP_SLUGS: Record<string, string[]> = {
+export const PLAN_APP_SLUGS: Record<string, string[]> = {
   free: [],
   writing: ['writing-buddy'],
   vocab: ['vocab-master'],
