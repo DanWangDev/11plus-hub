@@ -65,25 +65,27 @@ export function createApp(options: AppOptions = {}): express.Express {
   })
   // Restrict CORS to the hub's own origin + registered client origins.
   // oidc-provider handles /oidc/ CORS separately via clientBasedCORS.
-  const hubOrigin = options.hubAuth
-    ? new URL(options.hubAuth.issuer).origin
-    : undefined
+  const hubOrigin = options.hubAuth ? new URL(options.hubAuth.issuer).origin : undefined
   const corsAllowedOrigins = new Set<string>([
     ...(hubOrigin ? [hubOrigin] : []),
     // Dev origins
-    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3009', 'http://localhost:5173'] : []),
+    ...(process.env.NODE_ENV !== 'production'
+      ? ['http://localhost:3009', 'http://localhost:5173']
+      : []),
   ])
-  app.use(cors({
-    origin(origin, callback) {
-      // Allow requests with no origin (same-origin, server-to-server, curl)
-      if (!origin || corsAllowedOrigins.has(origin)) {
-        callback(null, true)
-      } else {
-        callback(null, false)
-      }
-    },
-    credentials: true,
-  }))
+  app.use(
+    cors({
+      origin(origin, callback) {
+        // Allow requests with no origin (same-origin, server-to-server, curl)
+        if (!origin || corsAllowedOrigins.has(origin)) {
+          callback(null, true)
+        } else {
+          callback(null, false)
+        }
+      },
+      credentials: true,
+    }),
+  )
   app.use(compression())
   app.use(cookieParser())
   app.use(express.json({ limit: '1mb' }))
