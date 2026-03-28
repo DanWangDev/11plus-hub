@@ -7,6 +7,7 @@ import { createDb } from './db/connection.js'
 import { createOidcProvider } from './oidc/provider.js'
 import { createAccountFinder } from './oidc/account.js'
 import { generateDevSigningKey } from './oidc/dev-keys.js'
+import { startOidcPayloadCleanup } from './jobs/oidc-cleanup.js'
 import { createLogger } from './lib/logger.js'
 
 const logger = createLogger({ service: 'server' })
@@ -41,6 +42,9 @@ async function main(): Promise<void> {
       redirectUri: `${env.OIDC_ISSUER}/auth/callback`,
     },
   })
+
+  // Clean up expired OIDC payloads hourly
+  startOidcPayloadCleanup(sql)
 
   app.listen(env.PORT, env.HOST, () => {
     logger.info('hub server started', {
