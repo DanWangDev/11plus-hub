@@ -65,14 +65,23 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
         logoutSource: async (ctx: { body: string }, form: string) => {
           // Helmet CSP is skipped for /oidc/ routes (see app.ts), so
           // inline scripts and form submissions work without overrides.
+          //
+          // IMPORTANT: oidc-provider's form only includes the xsrf token.
+          // The "logout" field must be added explicitly — without it, the
+          // confirm endpoint only rotates the session ID instead of
+          // destroying it (see end_session.js: `if (params.logout)`).
+          const formWithLogout = form.replace(
+            '</form>',
+            '<input type="hidden" name="logout" value="yes"/></form>',
+          )
           ctx.body = `<!DOCTYPE html>
 <html><head><title>Signing out...</title></head>
 <body>
-  ${form}
+  ${formWithLogout}
   <script>document.forms[0].submit()</script>
   <noscript>
     <p>Your browser does not support JavaScript. Click the button below to sign out.</p>
-    ${form}
+    ${formWithLogout}
   </noscript>
 </body></html>`
         },
