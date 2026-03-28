@@ -206,7 +206,7 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
 <head><title>Error</title></head>
 <body>
   <h1>Authentication Error</h1>
-  <p>${out.error_description ?? out.error ?? 'An unknown error occurred'}</p>
+  <p>${(out.error_description ?? out.error ?? 'An unknown error occurred').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}</p>
   <a href="/">Return to home</a>
 </body>
 </html>`

@@ -136,7 +136,10 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
       const session = await getSession(req, res, sessionSecret)
       session.code_verifier = code_verifier
       session.state = state
-      session.returnTo = (req.query.returnTo as string) ?? '/'
+      // Only allow relative paths — reject absolute URLs to prevent open redirect
+      const rawReturnTo = (req.query.returnTo as string) ?? '/'
+      session.returnTo =
+        rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/'
       await session.save()
 
       const params = new URLSearchParams({
