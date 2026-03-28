@@ -217,6 +217,13 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
     },
   })
 
+  // Trust X-Forwarded-Proto / X-Forwarded-For headers from the reverse proxy
+  // (Cloudflare tunnel). Without this, oidc-provider generates http:// URLs
+  // in discovery metadata and logout forms. When the logout confirmation form
+  // POSTs to http://, Cloudflare's 301 redirect converts POST → GET, so the
+  // provider never processes the confirmation and the session survives.
+  provider.proxy = true
+
   provider.on('grant.success', (...args: unknown[]) => {
     const ctx = args[0] as { oidc?: { client?: { clientId?: string } } }
     logger.info('oidc grant success', {
