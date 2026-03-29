@@ -5,7 +5,13 @@ import { Settings } from 'lucide-react'
 const roleColors: Record<string, string> = {
   admin: 'bg-purple-100 text-purple-700',
   parent: 'bg-blue-100 text-blue-700',
-  student: 'bg-green-100 text-green-700',
+  student: 'bg-emerald-100 text-emerald-700',
+}
+
+const avatarColors: Record<string, string> = {
+  admin: 'bg-purple-500',
+  parent: 'bg-blue-500',
+  student: 'bg-primary-500',
 }
 
 interface ProfileCardProps {
@@ -25,10 +31,13 @@ export function ProfileCard({ onEditClick }: ProfileCardProps) {
     .slice(0, 2)
 
   const roleClass = roleColors[user.role] ?? roleColors.student
+  const avatarClass = avatarColors[user.role] ?? avatarColors.student
 
   return (
     <Card className="flex items-center gap-4 p-5">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-lg font-semibold text-primary-700">
+      <div
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-semibold text-white ${avatarClass}`}
+      >
         {initials}
       </div>
 

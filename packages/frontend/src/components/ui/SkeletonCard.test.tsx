@@ -9,8 +9,9 @@ describe('SkeletonCard', () => {
     expect(skeleton).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('has animate-pulse class', () => {
+  it('has shimmer animation on placeholder elements', () => {
     const { container } = render(<SkeletonCard />)
-    expect(container.firstElementChild?.className).toContain('animate-pulse')
+    const placeholders = container.querySelectorAll('[class*="shimmer"]')
+    expect(placeholders.length).toBeGreaterThan(0)
   })
 })

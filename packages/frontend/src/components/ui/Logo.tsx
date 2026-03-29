@@ -1,5 +1,6 @@
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg'
+  variant?: 'default' | 'light'
   className?: string
 }
 
@@ -9,20 +10,24 @@ const sizeClasses = {
   lg: 'h-10 w-10 text-base',
 }
 
-export function Logo({ size = 'md', className = '' }: LogoProps) {
+export function Logo({ size = 'md', variant = 'default', className = '' }: LogoProps) {
+  const isLight = variant === 'light'
+
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <div
         className={`
-          flex items-center justify-center rounded-lg
-          bg-primary-500 font-bold text-white
+          flex items-center justify-center rounded-lg font-bold
+          ${isLight ? 'bg-white/20 text-white' : 'bg-primary-500 text-white'}
           ${sizeClasses[size]}
         `}
         aria-hidden="true"
       >
         F
       </div>
-      <span className="text-lg font-semibold text-slate-900">Lab F</span>
+      <span className={`text-lg font-semibold ${isLight ? 'text-white' : 'text-slate-900'}`}>
+        Lab F
+      </span>
     </div>
   )
 }
