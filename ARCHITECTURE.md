@@ -140,6 +140,12 @@ password_reset_tokens
 | POST | `/api/auth/forgot-password` | Request reset email |
 | POST | `/api/auth/reset-password` | Reset with token |
 
+### Profile (Self-Service)
+| Method | Path | Description |
+|--------|------|-------------|
+| PATCH | `/api/profile` | Update own display name (authenticated) |
+| PATCH | `/api/profile/password` | Change own password (authenticated) |
+
 ### Audit
 | Method | Path | Description |
 |--------|------|-------------|
@@ -188,6 +194,7 @@ src/
     applications.ts      -- /api/applications CRUD
     subscriptions.ts     -- /api/subscriptions
     password-reset.ts    -- /api/auth/forgot-password, /api/auth/reset-password
+    profile.ts           -- /api/profile (display name), /api/profile/password (password change)
     audit.ts             -- /api/audit
     oidc-interactions.ts -- /auth/interaction/:uid (login/consent UI)
   services/
@@ -204,10 +211,10 @@ src/
   server.ts              -- Server entry point
 
 packages/
-  frontend/              -- React SPA (in progress on feat/frontend-spa)
+  frontend/              -- React SPA
     src/
-      pages/             -- Login, Signup, ForgotPassword, ResetPassword, Interaction, Dashboard
-      components/        -- AuthLayout, DashboardLayout, ui/
+      pages/             -- Login, Signup, ForgotPassword, ResetPassword, Interaction, Dashboard, Admin
+      components/        -- AuthLayout, DashboardLayout, ProfileCard, UserMenu, EditProfileModal, ui/
       api/               -- API client
       hooks/             -- React hooks
 ```

@@ -78,18 +78,10 @@
 - **Depends on:** Hub OIDC Self-Client + Back-Channel Logout TODO above.
 - **Context:** oidc-provider sends a signed JWT with `sub` claim. SDK endpoint verifies signature via JWKS, matches session by `sub`, and destroys it. Version bump to auth-client needed. Apps must update dependency.
 
-### P1: User Profile Self-Service
+### P1: User Profile Self-Service [done]
 
-- **What:** Dashboard profile card + edit modal for self-service display name and password changes. New `PATCH /api/users/me` endpoint. `has_password` OIDC claim for conditional password UI. Session overrides for stale token fix.
-- **Effort:** S-M (human: ~3 days / CC: ~30 min)
-- **Depends on:** Phase A P0 items (all done)
-- **Context:**
-  - Design doc: `~/.gstack/projects/DanWangDev-11plus-hub/danwa-fix-user-update-display-name-design-20260329-095417.md`
-  - Eng review decisions (2026-03-29): (1) endpoint in new `src/routes/profile.ts` not hub-auth.ts, (2) session `profileOverrides` instead of one-shot dirty flag, (3) keep session alive after password change, (4) extract `MIN_PASSWORD_LENGTH` constant from user-service.ts
-  - Frontend: ProfileCard component + EditProfileModal on dashboard, two entry points (card button + header username)
-  - Google-only users see informational message instead of password fields
-  - Email and username are read-only
-  - Hub app card ("My Account") deferred to follow-up
+- **What:** Dashboard profile card + edit modal for self-service display name and password changes. Separate endpoints: `PATCH /api/profile` (display name) and `PATCH /api/profile/password` (password change). `has_password` OIDC claim for conditional password UI. Session overrides for stale token fix. UserMenu dropdown in header with edit profile, dashboard link, and sign out.
+- **Completed:** PRs #39, #41, #42 (2026-03-29)
 
 ## Phase B: App Migrations (planned)
 

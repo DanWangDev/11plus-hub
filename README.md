@@ -134,6 +134,7 @@ src/
 │   ├── applications.ts      # App registry CRUD
 │   ├── subscriptions.ts     # Subscription management
 │   ├── password-reset.ts    # Forgot/reset password
+│   ├── profile.ts           # Profile self-service (display name, password)
 │   ├── audit.ts             # Audit log queries
 │   └── oidc-interactions.ts # Login/consent interaction UI
 ├── services/
@@ -146,8 +147,10 @@ src/
 ├── app.ts                   # Express app factory
 └── server.ts                # Server entry point
 packages/
-└── frontend/                # React SPA (in progress)
-    └── src/pages/           # Login, Signup, Dashboard, etc.
+└── frontend/                # React SPA
+    └── src/
+        pages/               # Login, Signup, Dashboard, Admin
+        components/          # AuthLayout, DashboardLayout, ProfileCard, UserMenu, EditProfileModal, ui/
 ```
 
 ## API Endpoints
@@ -167,6 +170,8 @@ packages/
 | POST | `/api/subscriptions` | Create subscription |
 | GET | `/api/subscriptions/user/:userId` | Get user subscription |
 | PATCH | `/api/subscriptions/:id` | Update subscription |
+| PATCH | `/api/profile` | Update own display name |
+| PATCH | `/api/profile/password` | Change own password |
 | GET | `/api/audit` | Query audit log |
 | GET | `/oidc/.well-known/openid-configuration` | OIDC discovery |
 | GET | `/oidc/jwks` | JSON Web Key Set |
