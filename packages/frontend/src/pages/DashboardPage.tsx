@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card } from '@/components/ui/Card'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { SkeletonCard } from '@/components/ui/SkeletonCard'
+import { ProfileCard } from '@/components/ProfileCard'
+import { EditProfileModal } from '@/components/EditProfileModal'
+import { ToastContainer, type ToastMessage } from '@/components/ui/Toast'
 import { ExternalLink } from 'lucide-react'
 import { listApplications } from '@/api/apps'
 import type { Application } from '@/types/api'
@@ -15,6 +18,16 @@ type PageState =
 
 export function DashboardPage() {
   const [state, setState] = useState<PageState>({ kind: 'loading' })
+  const [editOpen, setEditOpen] = useState(false)
+  const [toasts, setToasts] = useState<ToastMessage[]>([])
+
+  const addToast = useCallback((msg: Omit<ToastMessage, 'id'>) => {
+    setToasts((prev) => [...prev, { ...msg, id: crypto.randomUUID() }])
+  }, [])
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -57,11 +70,14 @@ export function DashboardPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-slate-900">Good morning!</h1>
-        <p className="mt-1 text-sm text-slate-500">Choose an app to get started</p>
+    <DashboardLayout onEditProfile={() => setEditOpen(true)}>
+      <div className="mb-8 space-y-4">
+        <ProfileCard onEditClick={() => setEditOpen(true)} />
+        <p className="text-sm text-slate-500">Choose an app to get started</p>
       </div>
+
+      <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} onToast={addToast} />
+      <ToastContainer messages={toasts} onDismiss={dismissToast} />
 
       {state.kind === 'loading' && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

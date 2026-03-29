@@ -17,7 +17,7 @@ describe('DashboardPage', () => {
   it('shows loading skeletons initially', () => {
     mockListApps.mockReturnValue(new Promise(() => {}))
     render(<DashboardPage />)
-    expect(screen.getByText('Good morning!')).toBeInTheDocument()
+    expect(screen.getByText('Choose an app to get started')).toBeInTheDocument()
   })
 
   it('renders app cards when loaded', async () => {

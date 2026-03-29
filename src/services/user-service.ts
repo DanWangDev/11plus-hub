@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type postgres from 'postgres'
 
 const BCRYPT_ROUNDS = 12
+export const MIN_PASSWORD_LENGTH = 8
 
 // --- Schemas ---
 
@@ -13,7 +14,7 @@ export const createUserSchema = z.object({
     .max(30)
     .regex(/^[a-zA-Z0-9_-]+$/),
   email: z.string().email(),
-  password: z.string().min(8).optional(),
+  password: z.string().min(MIN_PASSWORD_LENGTH).optional(),
   displayName: z.string().min(1).max(100),
   role: z.enum(['student', 'parent', 'admin']).default('student'),
   parentId: z.number().int().positive().optional(),
@@ -282,4 +283,36 @@ export async function countUsers(sql: postgres.Sql, filters: ListUsersInput): Pr
   }
 
   return Number(rows[0]?.count ?? 0)
+}
+
+export async function hasPassword(sql: postgres.Sql, userId: number): Promise<boolean> {
+  const rows = await sql<{ has: boolean }[]>`
+    SELECT (password_hash IS NOT NULL) AS has
+    FROM users
+    WHERE id = ${userId} AND deleted_at IS NULL
+  `
+  return rows[0]?.has ?? false
+}
+
+export async function updatePassword(
+  sql: postgres.Sql,
+  userId: number,
+  newPasswordHash: string,
+): Promise<void> {
+  await sql`
+    UPDATE users SET password_hash = ${newPasswordHash}
+    WHERE id = ${userId} AND deleted_at IS NULL
+  `
+}
+
+export async function findUserWithPasswordHash(
+  sql: postgres.Sql,
+  userId: number,
+): Promise<UserWithPassword | null> {
+  const rows = await sql<UserWithPassword[]>`
+    SELECT *
+    FROM users
+    WHERE id = ${userId} AND deleted_at IS NULL
+  `
+  return rows[0] ?? null
 }

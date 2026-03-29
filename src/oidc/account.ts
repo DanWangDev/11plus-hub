@@ -1,5 +1,5 @@
 import type postgres from 'postgres'
-import { findUserById } from '../services/user-service.js'
+import { findUserById, hasPassword } from '../services/user-service.js'
 import {
   findSubscriptionByUserId,
   getUserAppAccess,
@@ -62,6 +62,8 @@ export function createAccountFinder(sql: postgres.Sql) {
           appSlugs = expectedApps
         }
 
+        const userHasPassword = await hasPassword(sql, user.id)
+
         logger.info('oidc claims generated', {
           operation: 'claims',
           userId: user.id,
@@ -79,6 +81,7 @@ export function createAccountFinder(sql: postgres.Sql) {
           plan,
           features: subscription?.features ?? [],
           apps: appSlugs,
+          has_password: userHasPassword,
           expires_at: subscription?.expires_at
             ? new Date(subscription.expires_at).toISOString()
             : null,

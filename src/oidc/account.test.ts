@@ -14,8 +14,11 @@ const mockFindSubscriptionByUserId = vi.fn()
 const mockGetUserAppAccess = vi.fn()
 const mockSyncAppAccessFromPlan = vi.fn()
 
+const mockHasPassword = vi.fn()
+
 vi.mock('../services/user-service.js', () => ({
   findUserById: (...args: unknown[]) => mockFindUserById(...args),
+  hasPassword: (...args: unknown[]) => mockHasPassword(...args),
 }))
 
 vi.mock('../services/subscription-service.js', () => ({
@@ -44,6 +47,7 @@ function createMockSql(returnValue: unknown[] = []) {
 describe('account finder', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockHasPassword.mockResolvedValue(true)
   })
 
   it('returns undefined for non-numeric sub', async () => {

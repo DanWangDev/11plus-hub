@@ -6,9 +6,10 @@ import { useAuth } from '@/contexts/auth-context'
 
 interface DashboardLayoutProps {
   children: ReactNode
+  onEditProfile?: () => void
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({ children, onEditProfile }: DashboardLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const { user, logout } = useAuth()
 
@@ -32,7 +33,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </Link>
 
           <div className="hidden items-center gap-4 sm:flex">
-            <span className="text-sm text-slate-600">{user?.display_name ?? 'User'}</span>
+            <button
+              onClick={onEditProfile}
+              className="text-sm text-slate-600 hover:text-primary-600 hover:underline"
+              aria-label="Edit profile"
+            >
+              {user?.display_name ?? 'User'}
+            </button>
             <button
               onClick={logout}
               className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700"
@@ -57,7 +64,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {menuOpen && (
           <div id="mobile-menu" className="border-t border-slate-100 px-4 py-3 sm:hidden">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">{user?.display_name ?? 'User'}</span>
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  onEditProfile?.()
+                }}
+                className="text-sm text-slate-600 hover:text-primary-600 hover:underline"
+                aria-label="Edit profile"
+              >
+                {user?.display_name ?? 'User'}
+              </button>
               <button
                 onClick={logout}
                 className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"

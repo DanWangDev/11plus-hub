@@ -13,6 +13,7 @@ const mockCreateResetToken = vi.fn()
 const mockResetPassword = vi.fn()
 
 vi.mock('../services/user-service.js', () => ({
+  MIN_PASSWORD_LENGTH: 8,
   findUserById: vi.fn(),
   findUserByEmail: (...args: unknown[]) => mockFindUserByEmail(...args),
   updateUser: vi.fn(),
@@ -21,7 +22,10 @@ vi.mock('../services/user-service.js', () => ({
   createUser: vi.fn(),
   findUserByUsername: vi.fn(),
   findUserByGoogleId: vi.fn(),
+  findUserWithPasswordHash: vi.fn(),
   verifyPassword: vi.fn(),
+  hasPassword: vi.fn(),
+  updatePassword: vi.fn(),
   listUsersSchema: z.object({
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().positive().max(100).default(20),
@@ -67,6 +71,8 @@ vi.mock('../services/audit-service.js', () => ({
   AuditActions: {
     PASSWORD_RESET_REQUEST: 'password_reset_request',
     PASSWORD_RESET_COMPLETE: 'password_reset_complete',
+    PROFILE_UPDATE: 'profile_update',
+    PASSWORD_CHANGE: 'password_change',
   },
 }))
 

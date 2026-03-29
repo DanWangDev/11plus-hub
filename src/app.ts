@@ -18,6 +18,7 @@ import { createSubscriptionsRouter } from './routes/subscriptions.js'
 import { createInteractionRouter } from './routes/oidc-interactions.js'
 import { createPasswordResetRouter } from './routes/password-reset.js'
 import { createHubAuthRouter, type HubAuthOptions } from './routes/hub-auth.js'
+import { createProfileRouter } from './routes/profile.js'
 import { createSecretAuthMiddleware } from './oidc/secret-auth-middleware.js'
 import { apiLimiter } from './middleware/rate-limit.js'
 
@@ -115,6 +116,7 @@ export function createApp(options: AppOptions = {}): express.Express {
   // Routes — admin-only (require authenticated admin session)
   if (options.hubAuth) {
     const requireAuth = createRequireAuth(options.hubAuth.sessionSecret)
+    app.use('/api/profile', requireAuth)
     app.use('/api/users', requireAuth, requireAdmin)
     // GET /api/apps is readable by any authenticated user (student dashboard needs it)
     // Write operations (POST/PATCH/DELETE) require admin
@@ -124,6 +126,9 @@ export function createApp(options: AppOptions = {}): express.Express {
     })
     app.use('/api/subscriptions', requireAuth, requireAdmin)
     app.use('/api/audit', requireAuth, requireAdmin)
+  }
+  if (options.hubAuth) {
+    app.use(createProfileRouter({ sql: options.sql, sessionSecret: options.hubAuth.sessionSecret }))
   }
   app.use(createUsersRouter({ sql: options.sql }))
   app.use(createApplicationsRouter())

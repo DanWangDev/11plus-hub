@@ -54,12 +54,15 @@ vi.mock('../services/audit-service.js', () => ({
     APP_ACCESS_REVOKE: 'app_access_revoke',
     APP_REGISTER: 'app_register',
     APP_UPDATE: 'app_update',
+    PROFILE_UPDATE: 'profile_update',
+    PASSWORD_CHANGE: 'password_change',
     IMPERSONATE_START: 'impersonate_start',
     IMPERSONATE_END: 'impersonate_end',
   },
 }))
 
 vi.mock('../services/user-service.js', () => ({
+  MIN_PASSWORD_LENGTH: 8,
   findUserById: vi.fn(),
   updateUser: vi.fn(),
   listUsers: vi.fn(),
@@ -68,7 +71,10 @@ vi.mock('../services/user-service.js', () => ({
   findUserByEmail: vi.fn(),
   findUserByUsername: vi.fn(),
   findUserByGoogleId: vi.fn(),
+  findUserWithPasswordHash: vi.fn(),
   verifyPassword: vi.fn(),
+  hasPassword: vi.fn(),
+  updatePassword: vi.fn(),
   listUsersSchema: z.object({
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().positive().max(100).default(20),

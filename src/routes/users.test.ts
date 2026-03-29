@@ -16,6 +16,7 @@ const { mockFindUserById, mockUpdateUser, mockListUsers, mockCountUsers } = vi.h
 }))
 
 vi.mock('../services/user-service.js', () => ({
+  MIN_PASSWORD_LENGTH: 8,
   findUserById: (...args: unknown[]) => mockFindUserById(...args),
   updateUser: (...args: unknown[]) => mockUpdateUser(...args),
   listUsers: (...args: unknown[]) => mockListUsers(...args),
@@ -24,7 +25,10 @@ vi.mock('../services/user-service.js', () => ({
   findUserByEmail: vi.fn(),
   findUserByUsername: vi.fn(),
   findUserByGoogleId: vi.fn(),
+  findUserWithPasswordHash: vi.fn(),
   verifyPassword: vi.fn(),
+  hasPassword: vi.fn(),
+  updatePassword: vi.fn(),
   listUsersSchema: z.object({
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().positive().max(100).default(20),
