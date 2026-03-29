@@ -22,7 +22,7 @@ export interface HubAuthOptions {
   redirectUri: string
 }
 
-interface SessionData {
+export interface SessionData {
   code_verifier?: string
   state?: string
   returnTo?: string
@@ -31,6 +31,8 @@ interface SessionData {
     access_token?: string
     refresh_token?: string
   }
+  /** Profile overrides applied on top of id_token claims in GET /auth/me */
+  profileOverrides?: Record<string, unknown>
 }
 
 interface OidcMetadata {
@@ -40,10 +42,10 @@ interface OidcMetadata {
   jwks_uri: string
 }
 
-const COOKIE_NAME = '__hub_session'
+export const COOKIE_NAME = '__hub_session'
 const SCOPES = 'openid profile email hub'
 
-async function getSession(req: Request, res: Response, password: string) {
+export async function getSession(req: Request, res: Response, password: string) {
   return getIronSession<SessionData>(req, res, {
     password,
     cookieName: COOKIE_NAME,
@@ -327,7 +329,8 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
       }
 
       const claims = decodeIdToken(session.tokens.id_token)
-      res.json({ success: true, data: claims })
+      const merged = session.profileOverrides ? { ...claims, ...session.profileOverrides } : claims
+      res.json({ success: true, data: merged })
     } catch (error) {
       logger.error('hub auth me failed', {
         operation: 'hubMe',

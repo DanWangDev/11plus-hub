@@ -33,9 +33,13 @@ vi.mock('../services/user-service.js', () => ({
   }),
   findUserByUsername: vi.fn(),
   findUserByGoogleId: vi.fn(),
+  findUserWithPasswordHash: vi.fn(),
   updateUser: vi.fn(),
   listUsers: vi.fn(),
   countUsers: vi.fn(),
+  hasPassword: vi.fn(),
+  updatePassword: vi.fn(),
+  MIN_PASSWORD_LENGTH: 8,
   updateUserSchema: z.object({}),
   listUsersSchema: z.object({
     page: z.coerce.number().int().positive().default(1),

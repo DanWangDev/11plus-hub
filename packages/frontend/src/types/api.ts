@@ -82,6 +82,7 @@ export interface HubUser {
   plan: string
   features: string[]
   apps: string[]
+  has_password: boolean
   expires_at: string | null
 }
 

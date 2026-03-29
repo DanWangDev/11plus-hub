@@ -68,6 +68,27 @@ export const passwordResetLimiter = rateLimit({
   keyGenerator: (req) => req.ip ?? 'unknown',
 })
 
+// Profile update: 10 per hour per IP
+export const profileUpdateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTest,
+  message: {
+    success: false,
+    error: 'Too many profile update attempts, please try again later',
+  },
+  handler: (_req, res, _next, options) => {
+    logger.warn('profile update rate limit exceeded', {
+      operation: 'rateLimitExceeded',
+      limiter: 'profileUpdate',
+    })
+    res.status(options.statusCode).json(options.message)
+  },
+  keyGenerator: (req) => req.ip ?? 'unknown',
+})
+
 // General API: 100 requests per minute per IP
 export const apiLimiter = rateLimit({
   windowMs: 60 * 1000,

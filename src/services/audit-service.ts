@@ -26,6 +26,8 @@ export const AuditActions = {
   IMPERSONATE_START: 'impersonate_start',
   IMPERSONATE_END: 'impersonate_end',
   ENTITLEMENT_DENIED: 'entitlement_denied',
+  PROFILE_UPDATE: 'profile_update',
+  PASSWORD_CHANGE: 'password_change',
 } as const
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions]
