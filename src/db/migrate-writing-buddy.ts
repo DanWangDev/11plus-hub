@@ -338,7 +338,7 @@ function parseArgs(): { dbPath: string; dryRun: boolean } {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--db' && args[i + 1]) {
-      dbPath = args[++i]
+      dbPath = args[++i]!
     } else if (arg === '--dry-run') {
       dryRun = true
     } else if (arg === '--help') {

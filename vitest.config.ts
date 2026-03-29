@@ -21,6 +21,7 @@ export default defineConfig({
         'src/test/**',
         'src/db/migrate.ts',
         'src/db/migrate-users.ts',
+        'src/db/migrate-writing-buddy.ts',
         'src/db/seed.ts',
         'src/server.ts',
         'src/types/**',
