@@ -33,7 +33,7 @@ export function createUser(data: {
 
 export function updateUser(
   id: number,
-  data: Partial<Pick<User, 'display_name' | 'email' | 'role'>>,
+  data: { displayName?: string; email?: string; role?: User['role'] },
 ): Promise<ApiResponse<User>> {
   return apiClient.patch(`/api/users/${id}`, data)
 }
