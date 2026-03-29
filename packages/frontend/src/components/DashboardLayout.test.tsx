@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@/test/test-utils'
-import userEvent from '@testing-library/user-event'
 import { DashboardLayout } from './DashboardLayout'
 
 describe('DashboardLayout', () => {
@@ -9,27 +8,18 @@ describe('DashboardLayout', () => {
     expect(screen.getByText('Dashboard content')).toBeInTheDocument()
   })
 
-  it('shows display name from auth context', () => {
-    render(<DashboardLayout>Content</DashboardLayout>)
-    // Default mock user or "User" fallback
-    expect(screen.getAllByText('User').length).toBeGreaterThan(0)
-  })
-
   it('renders skip-to-content link', () => {
     render(<DashboardLayout>Content</DashboardLayout>)
     expect(screen.getByText('Skip to content')).toBeInTheDocument()
   })
 
-  it('renders sign out button', () => {
+  it('renders user menu button', () => {
     render(<DashboardLayout>Content</DashboardLayout>)
-    expect(screen.getByLabelText('Sign out')).toBeInTheDocument()
+    expect(screen.getByLabelText('User menu')).toBeInTheDocument()
   })
 
-  it('toggles mobile menu', async () => {
-    const user = userEvent.setup()
+  it('renders logo linking to dashboard', () => {
     render(<DashboardLayout>Content</DashboardLayout>)
-    const menuButton = screen.getByLabelText('Open menu')
-    await user.click(menuButton)
-    expect(screen.getByLabelText('Close menu')).toBeInTheDocument()
+    expect(screen.getByLabelText('Go to dashboard')).toBeInTheDocument()
   })
 })
