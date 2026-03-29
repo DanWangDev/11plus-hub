@@ -49,11 +49,7 @@ interface MigrationMapping {
 function isDanielUser(user: WbUser): boolean {
   const name = (user.display_name ?? '').toLowerCase()
   const email = (user.email ?? '').toLowerCase()
-  return (
-    name.includes('daniel') ||
-    email === 'bigdaddy' ||
-    name === 'admin'
-  )
+  return name.includes('daniel') || email === 'bigdaddy' || name === 'admin'
 }
 
 function mapRole(role: string): string {
@@ -279,11 +275,7 @@ async function migrate(dbPath: string, dryRun: boolean): Promise<void> {
         // Update the user record itself to store the hub mapping
         sqlite
           .prepare('UPDATE users SET email = ?, display_name = ? WHERE id = ?')
-          .run(
-            `hub:${mapping.hubUserId}`,
-            `${mapping.hubUsername} (migrated to hub)`,
-            oldId,
-          )
+          .run(`hub:${mapping.hubUserId}`, `${mapping.hubUsername} (migrated to hub)`, oldId)
       }
     }
 

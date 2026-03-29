@@ -8,10 +8,7 @@ import { describe, it, expect } from 'vitest'
 
 // --- Replicated pure functions (not exported from source) ---
 
-function isDanielUser(user: {
-  display_name: string
-  email: string
-}): boolean {
+function isDanielUser(user: { display_name: string; email: string }): boolean {
   const name = (user.display_name ?? '').toLowerCase()
   const email = (user.email ?? '').toLowerCase()
   return name.includes('daniel') || email === 'bigdaddy' || name === 'admin'
@@ -49,39 +46,27 @@ function generateUsername(email: string, existing: Set<string>): string {
 describe('migrate-writing-buddy utilities', () => {
   describe('isDanielUser', () => {
     it('returns true when display_name contains "daniel"', () => {
-      expect(
-        isDanielUser({ display_name: 'Daniel Wang', email: 'dan@example.com' }),
-      ).toBe(true)
+      expect(isDanielUser({ display_name: 'Daniel Wang', email: 'dan@example.com' })).toBe(true)
     })
 
     it('is case-insensitive for display_name', () => {
-      expect(
-        isDanielUser({ display_name: 'DANIEL', email: 'other@example.com' }),
-      ).toBe(true)
+      expect(isDanielUser({ display_name: 'DANIEL', email: 'other@example.com' })).toBe(true)
     })
 
     it('returns true when email is "bigdaddy"', () => {
-      expect(
-        isDanielUser({ display_name: 'Some User', email: 'BigDaddy' }),
-      ).toBe(true)
+      expect(isDanielUser({ display_name: 'Some User', email: 'BigDaddy' })).toBe(true)
     })
 
     it('returns true when display_name is "admin"', () => {
-      expect(
-        isDanielUser({ display_name: 'Admin', email: 'admin@example.com' }),
-      ).toBe(true)
+      expect(isDanielUser({ display_name: 'Admin', email: 'admin@example.com' })).toBe(true)
     })
 
     it('returns false for non-matching user', () => {
-      expect(
-        isDanielUser({ display_name: 'Jane Doe', email: 'jane@example.com' }),
-      ).toBe(false)
+      expect(isDanielUser({ display_name: 'Jane Doe', email: 'jane@example.com' })).toBe(false)
     })
 
     it('handles empty display_name gracefully', () => {
-      expect(
-        isDanielUser({ display_name: '', email: 'someone@example.com' }),
-      ).toBe(false)
+      expect(isDanielUser({ display_name: '', email: 'someone@example.com' })).toBe(false)
     })
   })
 
