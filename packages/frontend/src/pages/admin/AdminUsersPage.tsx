@@ -117,7 +117,7 @@ export function AdminUsersPage() {
     setError('')
     try {
       await updateUser(editing.id, {
-        display_name: editing.display_name,
+        displayName: editing.display_name,
         email: editing.email,
         role: editing.role as User['role'],
       })
