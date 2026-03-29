@@ -4,9 +4,10 @@ import { ChevronDown, UserPen, LayoutDashboard, LogOut } from 'lucide-react'
 
 interface UserMenuProps {
   onEditProfile: () => void
+  variant?: 'light' | 'dark'
 }
 
-export function UserMenu({ onEditProfile }: UserMenuProps) {
+export function UserMenu({ onEditProfile, variant = 'light' }: UserMenuProps) {
   const { user, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -61,12 +62,20 @@ export function UserMenu({ onEditProfile }: UserMenuProps) {
       <button
         ref={buttonRef}
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${
+          variant === 'light'
+            ? 'text-white/80 hover:bg-white/10 hover:text-white'
+            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+        }`}
         aria-expanded={open}
         aria-haspopup="true"
         aria-label="User menu"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-xs font-semibold text-white">
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
+            variant === 'light' ? 'bg-white/20 text-white' : 'bg-primary-100 text-primary-700'
+          }`}
+        >
           {initials}
         </span>
         <span className="max-w-[120px] truncate">{user?.display_name ?? 'User'}</span>
