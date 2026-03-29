@@ -14,17 +14,26 @@ export function UserMenu({ onEditProfile }: UserMenuProps) {
 
   const close = useCallback(() => setOpen(false), [])
 
-  // Close on outside click
+  // Close on outside click — use requestAnimationFrame to avoid
+  // catching the same click event that opened the menu
   useEffect(() => {
     if (!open) return
 
+    let id: number | undefined
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         close()
       }
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+
+    id = requestAnimationFrame(() => {
+      document.addEventListener('mousedown', handleClick)
+    })
+
+    return () => {
+      if (id !== undefined) cancelAnimationFrame(id)
+      document.removeEventListener('mousedown', handleClick)
+    }
   }, [open, close])
 
   // Close on Escape
