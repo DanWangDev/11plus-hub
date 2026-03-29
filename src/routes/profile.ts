@@ -25,10 +25,13 @@ const BCRYPT_ROUNDS = 12
 
 // --- Schemas ---
 
-const updateProfileSchema = z.object({
-  displayName: z.string().min(1).max(100).optional(),
-  currentPassword: z.string().optional(),
-  newPassword: z.string().min(MIN_PASSWORD_LENGTH).optional(),
+const updateDisplayNameSchema = z.object({
+  displayName: z.string().min(1).max(100),
+})
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(MIN_PASSWORD_LENGTH),
 })
 
 // --- Router ---
@@ -42,26 +45,32 @@ export function createProfileRouter(options: ProfileRouterOptions): Router {
   const router = Router()
   const { sql, sessionSecret } = options
 
-  // PATCH /api/profile — update own display name and/or password
+  /** Helper: extract and validate the authenticated user ID from the request. */
+  function getAuthUserId(res: Response): number | null {
+    const authUser = res.locals.user as AuthUser | undefined
+    if (!authUser?.sub) {
+      res.status(401).json({ success: false, error: 'Not authenticated' })
+      return null
+    }
+    const userId = Number(authUser.sub)
+    if (Number.isNaN(userId)) {
+      res.status(400).json({ success: false, error: 'Invalid user ID' })
+      return null
+    }
+    return userId
+  }
+
+  // PATCH /api/profile — update display name only
   router.patch('/api/profile', profileUpdateLimiter, async (req: Request, res: Response) => {
     if (!sql) {
       res.status(503).json({ success: false, error: 'Database not available' })
       return
     }
 
-    const authUser = res.locals.user as AuthUser | undefined
-    if (!authUser?.sub) {
-      res.status(401).json({ success: false, error: 'Not authenticated' })
-      return
-    }
+    const userId = getAuthUserId(res)
+    if (userId === null) return
 
-    const userId = Number(authUser.sub)
-    if (Number.isNaN(userId)) {
-      res.status(400).json({ success: false, error: 'Invalid user ID' })
-      return
-    }
-
-    const parsed = updateProfileSchema.safeParse(req.body)
+    const parsed = updateDisplayNameSchema.safeParse(req.body)
     if (!parsed.success) {
       res.status(400).json({
         success: false,
@@ -71,21 +80,83 @@ export function createProfileRouter(options: ProfileRouterOptions): Router {
       return
     }
 
-    const { displayName, currentPassword, newPassword } = parsed.data
-
-    if (!displayName && !newPassword) {
-      res.status(400).json({ success: false, error: 'No fields to update' })
-      return
-    }
+    const { displayName } = parsed.data
 
     try {
-      // Handle password change
-      if (newPassword) {
-        if (!currentPassword) {
-          res.status(400).json({ success: false, error: 'Current password is required' })
-          return
-        }
+      await updateUser(sql, userId, { displayName })
 
+      await logAction(sql, {
+        actorId: userId,
+        action: AuditActions.PROFILE_UPDATE,
+        targetId: userId,
+        details: { field: 'display_name' },
+        ipAddress: req.ip ?? undefined,
+      })
+
+      logger.info('profile display name updated', {
+        operation: 'profileUpdate',
+        userId,
+        displayName,
+      })
+
+      // Store profileOverrides in session so /auth/me reflects the change
+      // without requiring a full re-authentication
+      const session = await getIronSession<SessionData>(req, res, {
+        password: sessionSecret,
+        cookieName: COOKIE_NAME,
+        cookieOptions: {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax' as const,
+          path: '/',
+          maxAge: 7 * 24 * 60 * 60,
+        },
+      })
+
+      session.profileOverrides = {
+        ...(session.profileOverrides ?? {}),
+        display_name: displayName,
+      }
+      await session.save()
+
+      const updatedUser = await findUserById(sql, userId)
+      res.json({ success: true, data: updatedUser })
+    } catch (error) {
+      logger.error('profile display name update failed', {
+        operation: 'profileUpdate',
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      res.status(500).json({ success: false, error: 'Profile update failed' })
+    }
+  })
+
+  // PATCH /api/profile/password — change password only
+  router.patch(
+    '/api/profile/password',
+    profileUpdateLimiter,
+    async (req: Request, res: Response) => {
+      if (!sql) {
+        res.status(503).json({ success: false, error: 'Database not available' })
+        return
+      }
+
+      const userId = getAuthUserId(res)
+      if (userId === null) return
+
+      const parsed = changePasswordSchema.safeParse(req.body)
+      if (!parsed.success) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: parsed.error.flatten().fieldErrors,
+        })
+        return
+      }
+
+      const { currentPassword, newPassword } = parsed.data
+
+      try {
         const userWithHash = await findUserWithPasswordHash(sql, userId)
         if (!userWithHash) {
           res.status(404).json({ success: false, error: 'User not found' })
@@ -103,7 +174,7 @@ export function createProfileRouter(options: ProfileRouterOptions): Router {
         const valid = await verifyPassword(currentPassword, userWithHash.password_hash)
         if (!valid) {
           logger.warn('profile password change: incorrect current password', {
-            operation: 'profileUpdate',
+            operation: 'passwordChange',
             userId,
           })
           res.status(403).json({ success: false, error: 'Current password is incorrect' })
@@ -122,61 +193,21 @@ export function createProfileRouter(options: ProfileRouterOptions): Router {
         })
 
         logger.info('profile password changed', {
-          operation: 'profileUpdate',
+          operation: 'passwordChange',
           userId,
         })
-      }
 
-      // Handle display name update
-      if (displayName) {
-        await updateUser(sql, userId, { displayName })
-
-        await logAction(sql, {
-          actorId: userId,
-          action: AuditActions.PROFILE_UPDATE,
-          targetId: userId,
-          details: { field: 'display_name' },
-          ipAddress: req.ip ?? undefined,
-        })
-
-        logger.info('profile display name updated', {
-          operation: 'profileUpdate',
+        res.json({ success: true })
+      } catch (error) {
+        logger.error('profile password change failed', {
+          operation: 'passwordChange',
           userId,
-          displayName,
+          error: error instanceof Error ? error.message : String(error),
         })
-
-        // Store profileOverrides in session so /auth/me reflects the change
-        // without requiring a full re-authentication
-        const session = await getIronSession<SessionData>(req, res, {
-          password: sessionSecret,
-          cookieName: COOKIE_NAME,
-          cookieOptions: {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax' as const,
-            path: '/',
-            maxAge: 7 * 24 * 60 * 60,
-          },
-        })
-
-        session.profileOverrides = {
-          ...(session.profileOverrides ?? {}),
-          display_name: displayName,
-        }
-        await session.save()
+        res.status(500).json({ success: false, error: 'Password change failed' })
       }
-
-      const updatedUser = await findUserById(sql, userId)
-      res.json({ success: true, data: updatedUser })
-    } catch (error) {
-      logger.error('profile update failed', {
-        operation: 'profileUpdate',
-        userId,
-        error: error instanceof Error ? error.message : String(error),
-      })
-      res.status(500).json({ success: false, error: 'Profile update failed' })
-    }
-  })
+    },
+  )
 
   return router
 }

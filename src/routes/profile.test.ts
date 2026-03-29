@@ -100,7 +100,7 @@ function createTestApp() {
   app.use(cookieParser())
   app.use(express.json())
   // Simulate requireAuth by setting res.locals.user
-  app.use('/api/profile', (req, res, next) => {
+  app.use((req, res, next) => {
     res.locals.user = { sub: '42', username: 'testuser', role: 'student' }
     next()
   })
@@ -118,7 +118,7 @@ describe('profile routes', () => {
     }
   })
 
-  describe('PATCH /api/profile', () => {
+  describe('PATCH /api/profile (display name)', () => {
     it('updates display name', async () => {
       mockUpdateUser.mockResolvedValueOnce({ ...mockUser, display_name: 'New Name' })
       mockFindUserById.mockResolvedValueOnce({ ...mockUser, display_name: 'New Name' })
@@ -146,7 +146,7 @@ describe('profile routes', () => {
       const res = await request(app).patch('/api/profile').send({}).expect(400)
 
       expect(res.body.success).toBe(false)
-      expect(res.body.error).toContain('No fields to update')
+      expect(res.body.error).toContain('Validation failed')
     })
 
     it('rejects invalid display name (too long)', async () => {
@@ -159,6 +159,19 @@ describe('profile routes', () => {
       expect(res.body.error).toContain('Validation failed')
     })
 
+    it('returns 401 when no auth user', async () => {
+      const unauthApp = express()
+      unauthApp.use(cookieParser())
+      unauthApp.use(express.json())
+      unauthApp.use(createProfileRouter({ sql: {} as never, sessionSecret: SESSION_SECRET }))
+
+      const res = await request(unauthApp).patch('/api/profile').send({ displayName: 'Test' })
+
+      expect(res.status).toBe(401)
+    })
+  })
+
+  describe('PATCH /api/profile/password', () => {
     it('changes password with correct current password', async () => {
       mockFindUserWithPasswordHash.mockResolvedValueOnce({
         ...mockUser,
@@ -166,10 +179,9 @@ describe('profile routes', () => {
       })
       mockVerifyPassword.mockResolvedValueOnce(true)
       mockUpdatePassword.mockResolvedValueOnce(undefined)
-      mockFindUserById.mockResolvedValueOnce(mockUser)
 
       const res = await request(app)
-        .patch('/api/profile')
+        .patch('/api/profile/password')
         .send({
           currentPassword: 'OldPassword1',
           newPassword: 'NewPassword1',
@@ -185,16 +197,16 @@ describe('profile routes', () => {
       )
     })
 
-    it('rejects password change without current password', async () => {
+    it('rejects missing current password', async () => {
       const res = await request(app)
-        .patch('/api/profile')
+        .patch('/api/profile/password')
         .send({ newPassword: 'NewPassword1' })
         .expect(400)
 
-      expect(res.body.error).toBe('Current password is required')
+      expect(res.body.error).toContain('Validation failed')
     })
 
-    it('rejects password change with incorrect current password', async () => {
+    it('rejects incorrect current password', async () => {
       mockFindUserWithPasswordHash.mockResolvedValueOnce({
         ...mockUser,
         password_hash: '$2b$12$fakehash',
@@ -202,7 +214,7 @@ describe('profile routes', () => {
       mockVerifyPassword.mockResolvedValueOnce(false)
 
       const res = await request(app)
-        .patch('/api/profile')
+        .patch('/api/profile/password')
         .send({
           currentPassword: 'WrongPassword',
           newPassword: 'NewPassword1',
@@ -219,7 +231,7 @@ describe('profile routes', () => {
       })
 
       const res = await request(app)
-        .patch('/api/profile')
+        .patch('/api/profile/password')
         .send({
           currentPassword: 'SomePassword',
           newPassword: 'NewPassword1',
@@ -231,7 +243,7 @@ describe('profile routes', () => {
 
     it('rejects short new password', async () => {
       const res = await request(app)
-        .patch('/api/profile')
+        .patch('/api/profile/password')
         .send({
           currentPassword: 'OldPassword1',
           newPassword: 'short',
@@ -241,38 +253,15 @@ describe('profile routes', () => {
       expect(res.body.error).toContain('Validation failed')
     })
 
-    it('updates display name and password together', async () => {
-      mockFindUserWithPasswordHash.mockResolvedValueOnce({
-        ...mockUser,
-        password_hash: '$2b$12$fakehash',
-      })
-      mockVerifyPassword.mockResolvedValueOnce(true)
-      mockUpdatePassword.mockResolvedValueOnce(undefined)
-      mockUpdateUser.mockResolvedValueOnce({ ...mockUser, display_name: 'New Name' })
-      mockFindUserById.mockResolvedValueOnce({ ...mockUser, display_name: 'New Name' })
-
-      const res = await request(app)
-        .patch('/api/profile')
-        .send({
-          displayName: 'New Name',
-          currentPassword: 'OldPassword1',
-          newPassword: 'NewPassword1',
-        })
-        .expect(200)
-
-      expect(res.body.success).toBe(true)
-      expect(mockUpdatePassword).toHaveBeenCalled()
-      expect(mockUpdateUser).toHaveBeenCalled()
-      expect(mockLogAction).toHaveBeenCalledTimes(2)
-    })
-
     it('returns 401 when no auth user', async () => {
       const unauthApp = express()
       unauthApp.use(cookieParser())
       unauthApp.use(express.json())
       unauthApp.use(createProfileRouter({ sql: {} as never, sessionSecret: SESSION_SECRET }))
 
-      const res = await request(unauthApp).patch('/api/profile').send({ displayName: 'Test' })
+      const res = await request(unauthApp)
+        .patch('/api/profile/password')
+        .send({ currentPassword: 'Old1', newPassword: 'NewPassword1' })
 
       expect(res.status).toBe(401)
     })
