@@ -329,9 +329,7 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
       }
 
       const claims = decodeIdToken(session.tokens.id_token)
-      const merged = session.profileOverrides
-        ? { ...claims, ...session.profileOverrides }
-        : claims
+      const merged = session.profileOverrides ? { ...claims, ...session.profileOverrides } : claims
       res.json({ success: true, data: merged })
     } catch (error) {
       logger.error('hub auth me failed', {
