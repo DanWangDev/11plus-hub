@@ -114,6 +114,7 @@ src/
 │   ├── connection.ts        # postgres.js connection
 │   ├── migrator.ts          # SQL migration runner
 │   ├── migrate-users.ts     # Vocab-master user import script
+│   ├── migrate-writing-buddy.ts # Writing-buddy user import + data remap
 │   └── migrations/          # 9 SQL migration files
 ├── lib/logger.ts            # Structured logger
 ├── middleware/
