@@ -252,6 +252,24 @@ async function migrate(dbPath: string, dryRun: boolean): Promise<void> {
           .run(newId, oldId)
         logger.info('remapped submissions', { count: subCount.changes })
 
+        // Update revisions.user_id (linked to submissions)
+        const revCount = sqlite
+          .prepare('UPDATE revisions SET user_id = ? WHERE user_id = ?')
+          .run(newId, oldId)
+        logger.info('remapped revisions', { count: revCount.changes })
+
+        // Update coaching_passes.user_id
+        const coachCount = sqlite
+          .prepare('UPDATE coaching_passes SET user_id = ? WHERE user_id = ?')
+          .run(newId, oldId)
+        logger.info('remapped coaching_passes', { count: coachCount.changes })
+
+        // Update rubric_scores.user_id
+        const scoreCount = sqlite
+          .prepare('UPDATE rubric_scores SET user_id = ? WHERE user_id = ?')
+          .run(newId, oldId)
+        logger.info('remapped rubric_scores', { count: scoreCount.changes })
+
         // Update writing_progress.user_id
         const progCount = sqlite
           .prepare('UPDATE writing_progress SET user_id = ? WHERE user_id = ?')
