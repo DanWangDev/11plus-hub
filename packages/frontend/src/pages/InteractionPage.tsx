@@ -227,6 +227,13 @@ function InteractionLoginView({
         disabled={googleLoading}
       />
 
+      <p className="mt-6 text-center text-sm text-slate-500">
+        Don&apos;t have an account?{' '}
+        <a href="/signup" className="text-primary-600 hover:text-primary-700">
+          Create one
+        </a>
+      </p>
+
       {clientId && (
         <p className="mt-4 text-center text-xs text-slate-400">Signing in to {clientId}</p>
       )}
