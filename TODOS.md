@@ -78,6 +78,19 @@
 - **Depends on:** Hub OIDC Self-Client + Back-Channel Logout TODO above.
 - **Context:** oidc-provider sends a signed JWT with `sub` claim. SDK endpoint verifies signature via JWKS, matches session by `sub`, and destroys it. Version bump to auth-client needed. Apps must update dependency.
 
+### P1: User Profile Self-Service
+
+- **What:** Dashboard profile card + edit modal for self-service display name and password changes. New `PATCH /api/users/me` endpoint. `has_password` OIDC claim for conditional password UI. Session overrides for stale token fix.
+- **Effort:** S-M (human: ~3 days / CC: ~30 min)
+- **Depends on:** Phase A P0 items (all done)
+- **Context:**
+  - Design doc: `~/.gstack/projects/DanWangDev-11plus-hub/danwa-fix-user-update-display-name-design-20260329-095417.md`
+  - Eng review decisions (2026-03-29): (1) endpoint in new `src/routes/profile.ts` not hub-auth.ts, (2) session `profileOverrides` instead of one-shot dirty flag, (3) keep session alive after password change, (4) extract `MIN_PASSWORD_LENGTH` constant from user-service.ts
+  - Frontend: ProfileCard component + EditProfileModal on dashboard, two entry points (card button + header username)
+  - Google-only users see informational message instead of password fields
+  - Email and username are read-only
+  - Hub app card ("My Account") deferred to follow-up
+
 ## Phase B: App Migrations (planned)
 
 ### P1: Migrate Vocab-Master to Hub Auth
@@ -104,10 +117,11 @@
 
 ## Phase C: Expansions (planned)
 
-### P1: Hub DESIGN.md
+### P1: Hub DESIGN.md [in progress — included in profile self-service plan]
 
 - **What:** Extract the design system from `docs/designs/hub-idp-app.md` into a standalone `DESIGN.md`.
 - **Context:** Inter typography, slate neutrals, wireframes, interaction states, responsive specs, accessibility.
+- **Note:** Added to profile self-service plan scope via CEO review cherry-pick (2026-03-29).
 
 ### P1: Dynamic OIDC Client Loading
 
@@ -124,9 +138,17 @@
   - Token refresh race: refresh token rotation with 30-second grace period.
   - Signing key protection: startup health check that verifies `OIDC_SIGNING_KEY` can sign/verify.
 
+### P1: Resend API Key Infrastructure
+
+- **What:** Add `RESEND_API_KEY` to env config (`src/config/env.ts`) and `docker-compose.yml`. Plumb through to a minimal `email-service.ts` that wraps the Resend SDK.
+- **Why:** Prerequisite for all email features — email verification, password reset emails, welcome emails, weekly digests. Currently `password-reset.ts` has a `// TODO: Send email` comment. This is the infrastructure gate.
+- **Effort:** S (human: ~30 min / CC: ~5 min)
+- **Depends on:** Resend account creation (manual step, requires domain verification)
+
 ### P1: Email Notifications via Resend
 
 - **What:** Resend integration for welcome, password reset, subscription changes.
+- **Depends on:** Resend API Key Infrastructure (above)
 
 ## Phase D: Cross-app Intelligence (planned)
 

@@ -167,6 +167,7 @@ src/
     migrator.ts          -- SQL migration runner
     migrate.ts           -- CLI migration entry point
     migrate-users.ts     -- Vocab-master user import script
+    migrate-writing-buddy.ts -- Writing-buddy user import + data remap
     seed.ts              -- Development seed data
     migrations/          -- 9 SQL migration files
   lib/logger.ts          -- Structured logger (pino-style)

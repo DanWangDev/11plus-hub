@@ -25,7 +25,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/db/migrate.ts', 'src/db/seed.ts', 'src/db/migrate-users.ts', 'src/server.ts'],
+    files: [
+      'src/db/migrate.ts',
+      'src/db/seed.ts',
+      'src/db/migrate-users.ts',
+      'src/db/migrate-writing-buddy.ts',
+      'src/server.ts',
+    ],
     rules: {
       'n/no-process-exit': 'off',
     },
