@@ -1,8 +1,8 @@
 import { useState, useCallback, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
-import { Menu, X, LogOut, Users, AppWindow, CreditCard, ScrollText } from 'lucide-react'
+import { Menu, X, Users, AppWindow, CreditCard, ScrollText } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
-import { useAuth } from '@/contexts/auth-context'
+import { UserMenu } from '@/components/UserMenu'
 
 const navItems = [
   { to: '/admin/users', label: 'Users', icon: Users },
@@ -18,8 +18,6 @@ interface AdminLayoutProps {
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
-  const { user, logout } = useAuth()
-
   const toggleMenu = useCallback(() => {
     setMenuOpen((prev) => !prev)
   }, [])
@@ -62,16 +60,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
           </div>
 
-          <div className="hidden items-center gap-4 md:flex">
-            <span className="text-sm text-slate-600">{user?.display_name ?? 'Admin'}</span>
-            <button
-              onClick={logout}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-              aria-label="Sign out"
-            >
-              <LogOut size={16} aria-hidden="true" />
-              Sign out
-            </button>
+          <div className="hidden md:block">
+            <UserMenu onEditProfile={() => {}} variant="dark" />
           </div>
 
           <button
@@ -107,15 +97,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 )
               })}
             </div>
-            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-              <span className="text-sm text-slate-600">{user?.display_name ?? 'Admin'}</span>
-              <button
-                onClick={logout}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
-              >
-                <LogOut size={16} aria-hidden="true" />
-                Sign out
-              </button>
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <UserMenu onEditProfile={() => {}} variant="dark" />
             </div>
           </div>
         )}
