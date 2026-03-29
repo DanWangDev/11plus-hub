@@ -51,7 +51,7 @@ function Toast({ message, onDismiss, duration = 4000 }: ToastProps) {
         flex items-center gap-3 rounded-lg border px-4 py-3 shadow-lg
         transition-all duration-300
         ${config.bg} ${config.text}
-        ${exiting ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'}
+        ${exiting ? 'translate-x-full opacity-0' : 'animate-[slideInRight_0.3s_ease-out] translate-x-0 opacity-100'}
       `}
     >
       <Icon size={16} className="shrink-0" aria-hidden="true" />

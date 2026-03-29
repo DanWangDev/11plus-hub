@@ -115,7 +115,7 @@ export function DashboardPage() {
 function AppCard({ app }: { app: Application }) {
   return (
     <a href={app.url} className="group block" aria-label={`Open ${app.name}`}>
-      <Card className="p-6 transition-shadow duration-150 group-hover:shadow-md">
+      <Card className="p-6 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-lg group-hover:shadow-primary-100/50">
         <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-500">
           {app.icon_url ? (
             <img src={app.icon_url} alt="" className="h-6 w-6" aria-hidden="true" />

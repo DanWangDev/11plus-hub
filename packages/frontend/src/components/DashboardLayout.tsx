@@ -23,26 +23,26 @@ export function DashboardLayout({ children, onEditProfile }: DashboardLayoutProp
         Skip to content
       </a>
 
-      <header className="border-b border-slate-200 bg-white" role="banner">
+      <header className="bg-gradient-to-r from-primary-700 to-primary-500 shadow-sm" role="banner">
         <nav
           className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3"
           aria-label="Main navigation"
         >
           <Link to="/dashboard" aria-label="Go to dashboard">
-            <Logo size="md" />
+            <Logo size="md" variant="light" />
           </Link>
 
           <div className="hidden items-center gap-4 sm:flex">
             <button
               onClick={onEditProfile}
-              className="text-sm text-slate-600 hover:text-primary-600 hover:underline"
+              className="text-sm text-white/80 hover:text-white hover:underline"
               aria-label="Edit profile"
             >
               {user?.display_name ?? 'User'}
             </button>
             <button
               onClick={logout}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-white/70 hover:bg-white/10 hover:text-white"
               aria-label="Sign out"
             >
               <LogOut size={16} aria-hidden="true" />
@@ -51,7 +51,7 @@ export function DashboardLayout({ children, onEditProfile }: DashboardLayoutProp
           </div>
 
           <button
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 sm:hidden"
+            className="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white sm:hidden"
             onClick={toggleMenu}
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
@@ -62,21 +62,21 @@ export function DashboardLayout({ children, onEditProfile }: DashboardLayoutProp
         </nav>
 
         {menuOpen && (
-          <div id="mobile-menu" className="border-t border-slate-100 px-4 py-3 sm:hidden">
+          <div id="mobile-menu" className="border-t border-white/20 px-4 py-3 sm:hidden">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => {
                   setMenuOpen(false)
                   onEditProfile?.()
                 }}
-                className="text-sm text-slate-600 hover:text-primary-600 hover:underline"
+                className="text-sm text-white/80 hover:text-white hover:underline"
                 aria-label="Edit profile"
               >
                 {user?.display_name ?? 'User'}
               </button>
               <button
                 onClick={logout}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-white/70 hover:bg-white/10 hover:text-white"
               >
                 <LogOut size={16} aria-hidden="true" />
                 Sign out

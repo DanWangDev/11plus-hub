@@ -51,7 +51,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       ref={dialogRef}
       onClick={handleBackdropClick}
       className="
-        m-auto w-full max-w-md rounded-xl bg-white p-0 shadow-xl
+        m-auto w-full max-w-md rounded-2xl bg-white p-0 shadow-xl
         backdrop:bg-black/40 backdrop:backdrop-blur-sm
         open:animate-in open:fade-in-0 open:zoom-in-95
         max-sm:mt-auto max-sm:mb-0 max-sm:max-w-none max-sm:rounded-b-none
