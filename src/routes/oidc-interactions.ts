@@ -445,6 +445,9 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
         logger.error('google interaction login failed', {
           operation: 'interactionGoogleLogin',
           error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          uid: String(req.params.uid),
+          hasCookies: Boolean(req.headers.cookie),
           duration: Date.now() - start,
         })
         next(error)

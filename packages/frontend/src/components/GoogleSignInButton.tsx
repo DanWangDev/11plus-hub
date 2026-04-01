@@ -4,7 +4,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 
 interface GoogleSignInButtonOAuthProps {
   onSuccess: (token: string) => void
-  onError?: () => void
+  onError?: (message?: string) => void
   disabled?: boolean
   onClick?: never
 }
@@ -23,8 +23,23 @@ export function GoogleSignInButton(props: GoogleSignInButtonProps) {
     onSuccess: (response) => {
       props.onSuccess?.(response.access_token)
     },
-    onError: () => {
-      props.onError?.()
+    onError: (errorResponse) => {
+      console.error('[GoogleSignIn] OAuth error:', errorResponse)
+      props.onError?.('Google sign-in failed. Please try again.')
+    },
+    onNonOAuthError: (nonOAuthError) => {
+      // Fires when popup is closed by user, blocked by browser, or fails to open.
+      // This is the most common "silent failure" — popup closes without a token.
+      console.warn('[GoogleSignIn] non-OAuth error:', nonOAuthError.type)
+      if (nonOAuthError.type === 'popup_closed') {
+        props.onError?.('Google sign-in popup was closed. Please try again.')
+      } else if (nonOAuthError.type === 'popup_failed_to_open') {
+        props.onError?.(
+          'Could not open Google sign-in. Please check your popup blocker settings.',
+        )
+      } else {
+        props.onError?.('Google sign-in failed. Please try again.')
+      }
     },
   })
 
