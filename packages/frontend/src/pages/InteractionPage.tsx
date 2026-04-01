@@ -211,7 +211,7 @@ function InteractionLoginView({ uid, clientId }: { uid: string; clientId: string
 
       <GoogleSignInButton
         onSuccess={handleGoogleSuccess}
-        onError={() => setGoogleError('Google sign-in was cancelled')}
+        onError={(msg) => setGoogleError(msg ?? 'Google sign-in was cancelled')}
         disabled={googleLoading}
       />
 
