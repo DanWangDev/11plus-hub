@@ -1,3 +1,4 @@
+import { useRef, useCallback } from 'react'
 import { useGoogleLogin } from '@react-oauth/google'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
@@ -19,26 +20,45 @@ interface GoogleSignInButtonClickProps {
 type GoogleSignInButtonProps = GoogleSignInButtonOAuthProps | GoogleSignInButtonClickProps
 
 export function GoogleSignInButton(props: GoogleSignInButtonProps) {
-  const login = useGoogleLogin({
-    onSuccess: (response) => {
-      props.onSuccess?.(response.access_token)
-    },
-    onError: (errorResponse) => {
+  // Store callbacks in refs so useGoogleLogin always sees the latest
+  // without re-initializing the GIS token client on every render.
+  // This prevents a race where onNonOAuthError fires prematurely
+  // (popup_closed), triggers a parent re-render, and orphans the
+  // still-open popup's onSuccess callback.
+  const onSuccessRef = useRef(props.onSuccess)
+  onSuccessRef.current = props.onSuccess
+  const onErrorRef = useRef(props.onError)
+  onErrorRef.current = props.onError
+
+  const handleSuccess = useCallback((response: { access_token: string }) => {
+    onSuccessRef.current?.(response.access_token)
+  }, [])
+
+  const handleError = useCallback(
+    (errorResponse: { error?: string; error_description?: string; error_uri?: string }) => {
       console.error('[GoogleSignIn] OAuth error:', errorResponse)
-      props.onError?.('Google sign-in failed. Please try again.')
+      onErrorRef.current?.('Google sign-in failed. Please try again.')
     },
-    onNonOAuthError: (nonOAuthError) => {
-      // Fires when popup is closed by user, blocked by browser, or fails to open.
-      // This is the most common "silent failure" — popup closes without a token.
-      console.warn('[GoogleSignIn] non-OAuth error:', nonOAuthError.type)
-      if (nonOAuthError.type === 'popup_closed') {
-        props.onError?.('Google sign-in popup was closed. Please try again.')
-      } else if (nonOAuthError.type === 'popup_failed_to_open') {
-        props.onError?.('Could not open Google sign-in. Please check your popup blocker settings.')
-      } else {
-        props.onError?.('Google sign-in failed. Please try again.')
-      }
-    },
+    [],
+  )
+
+  const handleNonOAuthError = useCallback((nonOAuthError: { type: string }) => {
+    console.warn('[GoogleSignIn] non-OAuth error:', nonOAuthError.type)
+    if (nonOAuthError.type === 'popup_closed') {
+      onErrorRef.current?.('Google sign-in popup was closed. Please try again.')
+    } else if (nonOAuthError.type === 'popup_failed_to_open') {
+      onErrorRef.current?.(
+        'Could not open Google sign-in. Please check your popup blocker settings.',
+      )
+    } else {
+      onErrorRef.current?.('Google sign-in failed. Please try again.')
+    }
+  }, [])
+
+  const login = useGoogleLogin({
+    onSuccess: handleSuccess,
+    onError: handleError,
+    onNonOAuthError: handleNonOAuthError,
   })
 
   if (!GOOGLE_CLIENT_ID) {
