@@ -34,9 +34,7 @@ export function GoogleSignInButton(props: GoogleSignInButtonProps) {
       if (nonOAuthError.type === 'popup_closed') {
         props.onError?.('Google sign-in popup was closed. Please try again.')
       } else if (nonOAuthError.type === 'popup_failed_to_open') {
-        props.onError?.(
-          'Could not open Google sign-in. Please check your popup blocker settings.',
-        )
+        props.onError?.('Could not open Google sign-in. Please check your popup blocker settings.')
       } else {
         props.onError?.('Google sign-in failed. Please try again.')
       }
