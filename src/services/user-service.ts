@@ -66,6 +66,39 @@ function excludePasswordHash(user: UserWithPassword): User {
   return rest
 }
 
+/**
+ * Generate a unique username from a Google email prefix.
+ * If the base username is taken, appends a random numeric suffix.
+ */
+export async function generateUniqueUsername(
+  sql: postgres.Sql,
+  email: string,
+): Promise<string> {
+  const emailPrefix = email.split('@')[0] ?? email
+  const base = emailPrefix
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .slice(0, 30)
+    .padEnd(3, '_')
+
+  const existing = await findUserByUsername(sql, base)
+  if (!existing) {
+    return base
+  }
+
+  // Append random digits until unique (max 5 attempts)
+  for (let i = 0; i < 5; i++) {
+    const suffix = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
+    const candidate = `${base.slice(0, 25)}_${suffix}`
+    const taken = await findUserByUsername(sql, candidate)
+    if (!taken) {
+      return candidate
+    }
+  }
+
+  // Fallback: timestamp-based suffix
+  return `${base.slice(0, 20)}_${Date.now().toString(36)}`
+}
+
 // --- Service Functions ---
 
 export async function createUser(sql: postgres.Sql, data: CreateUserInput): Promise<User> {
