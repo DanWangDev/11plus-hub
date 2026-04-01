@@ -110,24 +110,10 @@ export function InteractionPage() {
     )
   }
 
-  return (
-    <InteractionLoginView
-      uid={state.uid}
-      clientId={state.clientId}
-      onComplete={() => setState({ kind: 'done' })}
-    />
-  )
+  return <InteractionLoginView uid={state.uid} clientId={state.clientId} />
 }
 
-function InteractionLoginView({
-  uid,
-  clientId,
-  onComplete,
-}: {
-  uid: string
-  clientId: string
-  onComplete: () => void
-}) {
+function InteractionLoginView({ uid, clientId }: { uid: string; clientId: string }) {
   const [googleError, setGoogleError] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
 
@@ -140,7 +126,8 @@ function InteractionLoginView({
           window.location.href = response.redirectTo
           return
         }
-        onComplete()
+        // redirectTo missing — interaction may have expired
+        throw new Error('Session expired. Please refresh the page and try again.')
       } catch (error) {
         if (error instanceof ApiError) {
           throw new Error(error.status === 401 ? 'Invalid email or password' : error.message)
@@ -162,7 +149,8 @@ function InteractionLoginView({
         window.location.href = response.redirectTo
         return
       }
-      onComplete()
+      // redirectTo missing — interaction may have expired
+      setGoogleError('Session expired. Please refresh the page and try again.')
     } catch (error) {
       setGoogleError(error instanceof ApiError ? error.message : 'Google sign-in failed')
     } finally {
@@ -228,9 +216,9 @@ function InteractionLoginView({
       />
 
       <p className="mt-6 text-center text-sm text-slate-500">
-        Don&apos;t have an account?{' '}
+        Don&apos;t have an account? Use Google above or{' '}
         <a href="/signup" className="text-primary-600 hover:text-primary-700">
-          Create one
+          sign up with email
         </a>
       </p>
 

@@ -2,19 +2,29 @@ import { useGoogleLogin } from '@react-oauth/google'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 
-interface GoogleSignInButtonProps {
+interface GoogleSignInButtonOAuthProps {
   onSuccess: (token: string) => void
   onError?: () => void
   disabled?: boolean
+  onClick?: never
 }
 
-export function GoogleSignInButton({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
+interface GoogleSignInButtonClickProps {
+  onClick: () => void
+  onSuccess?: never
+  onError?: never
+  disabled?: boolean
+}
+
+type GoogleSignInButtonProps = GoogleSignInButtonOAuthProps | GoogleSignInButtonClickProps
+
+export function GoogleSignInButton(props: GoogleSignInButtonProps) {
   const login = useGoogleLogin({
     onSuccess: (response) => {
-      onSuccess(response.access_token)
+      props.onSuccess?.(response.access_token)
     },
     onError: () => {
-      onError?.()
+      props.onError?.()
     },
   })
 
@@ -22,11 +32,13 @@ export function GoogleSignInButton({ onSuccess, onError, disabled }: GoogleSignI
     return null
   }
 
+  const handleClick = props.onClick ?? (() => login())
+
   return (
     <button
       type="button"
-      onClick={() => login()}
-      disabled={disabled}
+      onClick={handleClick}
+      disabled={props.disabled}
       className="flex w-full items-center justify-center gap-3 rounded-lg border-2 border-slate-200 bg-white px-4 py-3 font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100"
     >
       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">

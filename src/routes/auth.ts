@@ -10,6 +10,7 @@ import {
   findUserByEmail,
   findUserByGoogleId,
   findUserByUsername,
+  generateUniqueUsername,
   verifyPassword,
 } from '../services/user-service.js'
 import { verifyGoogleToken, isGoogleConfigured } from '../services/google-auth-service.js'
@@ -292,11 +293,7 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
           })
         } else {
           // Create new user from Google profile
-          const emailPrefix = googleUser.email.split('@')[0] ?? googleUser.email
-          const username = emailPrefix
-            .replace(/[^a-zA-Z0-9_-]/g, '_')
-            .slice(0, 30)
-            .padEnd(3, '_')
+          const username = await generateUniqueUsername(sql, googleUser.email)
 
           user = await createUser(sql, {
             username,

@@ -8,15 +8,13 @@ import { GoogleSignInButton } from '@/components/GoogleSignInButton'
 import { TurnstileWidget, isTurnstileEnabled } from '@/components/TurnstileWidget'
 import { useForm } from '@/hooks/use-form'
 import { signupSchema, type SignupFormData } from '@/lib/validation'
-import { register, googleAuth } from '@/api/auth'
+import { register } from '@/api/auth'
 import { ApiError } from '@/lib/api-client'
 
 export function SignupPage() {
   const navigate = useNavigate()
   const [success, setSuccess] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
-  const [googleError, setGoogleError] = useState<string | null>(null)
-  const [googleLoading, setGoogleLoading] = useState(false)
 
   const form = useForm<SignupFormData>({
     schema: signupSchema,
@@ -43,24 +41,10 @@ export function SignupPage() {
     },
   })
 
-  const handleGoogleSuccess = async (accessToken: string) => {
-    setGoogleError(null)
-    setGoogleLoading(true)
-    try {
-      const response = await googleAuth({
-        token: accessToken,
-        tokenType: 'access_token',
-        turnstileToken: turnstileToken ?? undefined,
-      })
-      if (response.success && response.data) {
-        // Registration via Google creates the account — redirect to OIDC login to establish session
-        window.location.href = '/auth/login?returnTo=/dashboard'
-      }
-    } catch (error) {
-      setGoogleError(error instanceof ApiError ? error.message : 'Google sign-up failed')
-    } finally {
-      setGoogleLoading(false)
-    }
+  const handleGoogleSignup = () => {
+    // Redirect to OIDC login flow — the InteractionPage handles Google-based
+    // account creation and OIDC session establishment in a single step.
+    window.location.href = '/auth/login?returnTo=/dashboard'
   }
 
   if (success) {
@@ -83,17 +67,8 @@ export function SignupPage() {
           {form.serverError}
         </Alert>
       )}
-      {googleError && (
-        <Alert variant="error" className="mb-4">
-          {googleError}
-        </Alert>
-      )}
 
-      <GoogleSignInButton
-        onSuccess={handleGoogleSuccess}
-        onError={() => setGoogleError('Google sign-up was cancelled')}
-        disabled={googleLoading || (isTurnstileEnabled && !turnstileToken)}
-      />
+      <GoogleSignInButton onClick={handleGoogleSignup} />
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
