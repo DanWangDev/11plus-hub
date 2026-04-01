@@ -6,6 +6,7 @@ import {
   findUserByEmail,
   findUserByUsername,
   findUserByGoogleId,
+  generateUniqueUsername,
   verifyPassword,
   updateUser,
   listUsers,
@@ -372,6 +373,58 @@ describe('user-service', () => {
       })
 
       expect(result).toBe(1)
+    })
+  })
+
+  describe('generateUniqueUsername', () => {
+    it('returns base username when not taken', async () => {
+      const mockSql = createMockSql([])
+
+      const result = await generateUniqueUsername(mockSql as never, 'alice@example.com')
+
+      expect(result).toBe('alice')
+    })
+
+    it('sanitises special characters', async () => {
+      const mockSql = createMockSql([])
+
+      const result = await generateUniqueUsername(mockSql as never, 'ali.ce+test@example.com')
+
+      expect(result).toBe('ali_ce_test')
+    })
+
+    it('pads short prefixes to 3 characters', async () => {
+      const mockSql = createMockSql([])
+
+      const result = await generateUniqueUsername(mockSql as never, 'ab@example.com')
+
+      expect(result).toBe('ab_')
+    })
+
+    it('appends numeric suffix when base is taken', async () => {
+      const existingUser = createMockUser({ username: 'alice' })
+      const { password_hash: _, ...userWithout } = existingUser
+      // First call (findUserByUsername for base 'alice') returns existing user
+      // Second call (findUserByUsername for candidate) returns empty
+      const mockSql = vi.fn() as unknown as ReturnType<typeof vi.fn>
+      ;(mockSql as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([userWithout]) // base username taken
+        .mockResolvedValueOnce([]) // suffixed candidate available
+
+      const result = await generateUniqueUsername(mockSql as never, 'alice@example.com')
+
+      expect(result).toMatch(/^alice_\d{4}$/)
+    })
+
+    it('truncates long email prefixes', async () => {
+      const mockSql = createMockSql([])
+
+      const result = await generateUniqueUsername(
+        mockSql as never,
+        'a_very_long_email_prefix_that_exceeds_limit@example.com',
+      )
+
+      expect(result.length).toBeLessThanOrEqual(30)
     })
   })
 

@@ -110,21 +110,10 @@ export function InteractionPage() {
     )
   }
 
-  return (
-    <InteractionLoginView
-      uid={state.uid}
-      clientId={state.clientId}
-    />
-  )
+  return <InteractionLoginView uid={state.uid} clientId={state.clientId} />
 }
 
-function InteractionLoginView({
-  uid,
-  clientId,
-}: {
-  uid: string
-  clientId: string
-}) {
+function InteractionLoginView({ uid, clientId }: { uid: string; clientId: string }) {
   const [googleError, setGoogleError] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
 
