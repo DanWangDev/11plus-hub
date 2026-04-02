@@ -733,7 +733,7 @@ function renderLoginPage(uid: string, clientId?: string, error?: string): string
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Sign In — Lab F</title>
+  <title>Sign In — 11+ Hub</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#f8fafc;color:#334155;display:flex;justify-content:center;align-items:center;min-height:100vh}
@@ -775,7 +775,7 @@ function renderConsentPage(uid: string, clientName: string, scope: string): stri
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Authorize — Lab F</title>
+  <title>Authorize — 11+ Hub</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#f8fafc;color:#334155;display:flex;justify-content:center;align-items:center;min-height:100vh}
@@ -815,7 +815,7 @@ function renderAccessDeniedPage(appName: string): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Access Denied — Lab F</title>
+  <title>Access Denied — 11+ Hub</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#f8fafc;color:#334155;display:flex;justify-content:center;align-items:center;min-height:100vh}

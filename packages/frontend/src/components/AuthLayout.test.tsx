@@ -27,8 +27,8 @@ describe('AuthLayout', () => {
     expect(screen.getByText('Skip to content')).toBeInTheDocument()
   })
 
-  it('renders Lab F logo', () => {
+  it('renders 11+ Hub logo', () => {
     render(<AuthLayout title="Test">Content</AuthLayout>)
-    expect(screen.getByText('Lab F')).toBeInTheDocument()
+    expect(screen.getByText('11+ Hub')).toBeInTheDocument()
   })
 })
