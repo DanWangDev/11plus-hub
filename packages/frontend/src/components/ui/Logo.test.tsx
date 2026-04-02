@@ -3,13 +3,13 @@ import { render, screen } from '@/test/test-utils'
 import { Logo } from './Logo'
 
 describe('Logo', () => {
-  it('renders Lab F text', () => {
+  it('renders 11+ Hub text', () => {
     render(<Logo />)
-    expect(screen.getByText('Lab F')).toBeInTheDocument()
+    expect(screen.getByText('11+ Hub')).toBeInTheDocument()
   })
 
-  it('renders the F icon', () => {
+  it('renders the 11+ icon', () => {
     render(<Logo />)
-    expect(screen.getByText('F')).toBeInTheDocument()
+    expect(screen.getByText('11+')).toBeInTheDocument()
   })
 })

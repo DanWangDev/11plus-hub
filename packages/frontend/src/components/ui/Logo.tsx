@@ -23,10 +23,10 @@ export function Logo({ size = 'md', variant = 'default', className = '' }: LogoP
         `}
         aria-hidden="true"
       >
-        F
+        11+
       </div>
       <span className={`text-lg font-semibold ${isLight ? 'text-white' : 'text-slate-900'}`}>
-        Lab F
+        11+ Hub
       </span>
     </div>
   )
