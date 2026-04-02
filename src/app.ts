@@ -43,6 +43,11 @@ export function createApp(options: AppOptions = {}): express.Express {
   // that conflict with the SPA's strict CSP. The provider sets its own
   // security headers via logoutSource/postLogoutSuccessSource callbacks.
   const helmetWithCsp = helmet({
+    // Allow popups to retain their opener reference so Google Identity
+    // Services can poll popupWindow.closed and postMessage back the token.
+    // Without this, COOP: same-origin severs the link and GIS immediately
+    // fires error_callback with popup_closed.
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
