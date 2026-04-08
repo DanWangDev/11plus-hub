@@ -8,6 +8,7 @@ import { createOidcProvider } from './oidc/provider.js'
 import { createAccountFinder } from './oidc/account.js'
 import { generateDevSigningKey } from './oidc/dev-keys.js'
 import { startOidcPayloadCleanup } from './jobs/oidc-cleanup.js'
+import { startBclRetryJob } from './oidc/bcl-retry.js'
 import { createLogger } from './lib/logger.js'
 
 const logger = createLogger({ service: 'server' })
@@ -45,6 +46,9 @@ async function main(): Promise<void> {
 
   // Clean up expired OIDC payloads hourly
   startOidcPayloadCleanup(sql)
+
+  // Retry failed backchannel logout notifications with exponential backoff
+  startBclRetryJob(sql, env.OIDC_ISSUER, signingKey)
 
   app.listen(env.PORT, env.HOST, () => {
     logger.info('hub server started', {
