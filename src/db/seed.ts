@@ -92,7 +92,7 @@ async function main(): Promise<void> {
       VALUES (
         'Vocab Master', 'vocab-master', 'https://vocab-master.labf.app',
         'vocab-master-client', ${vocabSecretHash}, ${vocabSecretSha256},
-        ARRAY['https://vocab-master.labf.app/auth/callback', 'http://localhost:5174/auth/callback'],
+        ARRAY['https://vocab-master.labf.app/auth/callback', 'http://localhost:5174/auth/callback', 'http://localhost:5173/auth/callback'],
         'http://localhost:5174/auth/backchannel-logout',
         'https://vocab-master.labf.app/api/stats'
       )
