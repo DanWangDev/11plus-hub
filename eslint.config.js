@@ -41,9 +41,16 @@ export default tseslint.config(
       'src/services/google-auth-service.ts',
       'src/services/turnstile-service.ts',
       'src/routes/hub-auth.ts',
+      'src/oidc/bcl-retry.ts',
     ],
     rules: {
       'n/no-unsupported-features/node-builtins': ['error', { ignores: ['fetch'] }],
+    },
+  },
+  {
+    files: ['src/**/*.test.ts'],
+    rules: {
+      'n/no-unsupported-features/node-builtins': ['error', { ignores: ['Response'] }],
     },
   },
   {
