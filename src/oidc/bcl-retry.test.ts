@@ -135,18 +135,12 @@ describe('retryPendingBcl', () => {
     }
     const appRow = { backchannel_logout_uri: 'http://localhost:5174/auth/bcl' }
 
-    const callResults = [
-      [pendingEntry],
-      [appRow],
-      [],
-    ]
+    const callResults = [[pendingEntry], [appRow], []]
     let callIndex = 0
     const sql = createMockSql()
     sql.mockImplementation(() => Promise.resolve(callResults[callIndex++]))
 
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(null, { status: 200 }),
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }))
 
     const { retryPendingBcl } = await import('./bcl-retry.js')
     await retryPendingBcl(sql as never, 'https://hub.example.com', signingKey)
@@ -166,18 +160,12 @@ describe('retryPendingBcl', () => {
     }
     const appRow = { backchannel_logout_uri: 'http://localhost:5174/auth/bcl' }
 
-    const callResults = [
-      [pendingEntry],
-      [appRow],
-      [],
-    ]
+    const callResults = [[pendingEntry], [appRow], []]
     let callIndex = 0
     const sql = createMockSql()
     sql.mockImplementation(() => Promise.resolve(callResults[callIndex++]))
 
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(null, { status: 204 }),
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
 
     const { retryPendingBcl } = await import('./bcl-retry.js')
     await retryPendingBcl(sql as never, 'https://hub.example.com', signingKey)
@@ -197,11 +185,7 @@ describe('retryPendingBcl', () => {
     }
     const appRow = { backchannel_logout_uri: 'http://localhost:5174/auth/bcl' }
 
-    const callResults = [
-      [pendingEntry],
-      [appRow],
-      [],
-    ]
+    const callResults = [[pendingEntry], [appRow], []]
     let callIndex = 0
     const sql = createMockSql()
     sql.mockImplementation(() => Promise.resolve(callResults[callIndex++]))
@@ -229,11 +213,7 @@ describe('retryPendingBcl', () => {
     }
     const appRow = { backchannel_logout_uri: 'http://localhost:5174/auth/bcl' }
 
-    const callResults = [
-      [pendingEntry],
-      [appRow],
-      [],
-    ]
+    const callResults = [[pendingEntry], [appRow], []]
     let callIndex = 0
     const sql = createMockSql()
     sql.mockImplementation(() => Promise.resolve(callResults[callIndex++]))
@@ -260,11 +240,7 @@ describe('retryPendingBcl', () => {
     }
     const appRow = { backchannel_logout_uri: null }
 
-    const callResults = [
-      [pendingEntry],
-      [appRow],
-      [],
-    ]
+    const callResults = [[pendingEntry], [appRow], []]
     let callIndex = 0
     const sql = createMockSql()
     sql.mockImplementation(() => Promise.resolve(callResults[callIndex++]))
@@ -286,11 +262,7 @@ describe('retryPendingBcl', () => {
       attempts: 0,
     }
 
-    const callResults = [
-      [pendingEntry],
-      [],
-      [],
-    ]
+    const callResults = [[pendingEntry], [], []]
     let callIndex = 0
     const sql = createMockSql()
     sql.mockImplementation(() => Promise.resolve(callResults[callIndex++]))
