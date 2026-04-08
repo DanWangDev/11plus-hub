@@ -95,9 +95,19 @@ export function createApp(options: AppOptions = {}): express.Express {
         // Allow requests with no origin (same-origin, server-to-server, curl)
         if (!origin || corsAllowedOrigins.has(origin)) {
           callback(null, true)
-        } else {
-          callback(null, false)
+          return
         }
+        // Allow *.labf.app subdomains (child apps on NAS or cloud)
+        try {
+          const hostname = new URL(origin).hostname
+          if (hostname.endsWith('.labf.app')) {
+            callback(null, true)
+            return
+          }
+        } catch {
+          // Invalid origin URL, fall through to reject
+        }
+        callback(null, false)
       },
       credentials: true,
     }),

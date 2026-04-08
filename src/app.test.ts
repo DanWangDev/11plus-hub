@@ -47,4 +47,20 @@ describe('createApp', () => {
 
     expect(res.headers).toHaveProperty('access-control-allow-origin')
   })
+
+  it('allows CORS from *.labf.app subdomains', async () => {
+    const res = await request(app)
+      .get('/health')
+      .set('Origin', 'https://writing-buddy.labf.app')
+
+    expect(res.headers['access-control-allow-origin']).toBe('https://writing-buddy.labf.app')
+  })
+
+  it('rejects CORS from unknown origins', async () => {
+    const res = await request(app)
+      .get('/health')
+      .set('Origin', 'https://evil.example.com')
+
+    expect(res.headers['access-control-allow-origin']).toBeUndefined()
+  })
 })
