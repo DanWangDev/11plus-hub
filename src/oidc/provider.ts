@@ -1,6 +1,7 @@
 import Provider from 'oidc-provider'
 import type postgres from 'postgres'
 import { createPgAdapter } from './pg-adapter.js'
+import { queueBclRetry } from './bcl-retry.js'
 import { createLogger } from '../lib/logger.js'
 
 const logger = createLogger({ service: 'oidc-provider' })
@@ -262,11 +263,27 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
   provider.on('backchannel.error', (...args: unknown[]) => {
     const ctx = args[0] as { oidc?: { client?: { clientId?: string } } }
     const error = args[1] as Error
-    logger.warn('backchannel logout failed', {
+    const client = args[2] as { clientId?: string } | undefined
+    const accountId = args[3] as string | undefined
+    const sid = args[4] as string | undefined
+
+    const clientId = client?.clientId ?? ctx.oidc?.client?.clientId
+
+    logger.warn('backchannel logout failed, queuing retry', {
       operation: 'backchannel.error',
-      clientId: ctx.oidc?.client?.clientId,
+      clientId,
       error: error.message,
     })
+
+    if (clientId && accountId && sid) {
+      queueBclRetry(sql, accountId, sid, clientId).catch((queueError) => {
+        logger.error('failed to queue bcl retry', {
+          operation: 'queueBclRetry',
+          clientId,
+          error: queueError instanceof Error ? queueError.message : String(queueError),
+        })
+      })
+    }
   })
 
   provider.on('server_error', (...args: unknown[]) => {

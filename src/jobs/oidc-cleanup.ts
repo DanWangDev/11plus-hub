@@ -23,6 +23,18 @@ export function startOidcPayloadCleanup(sql: postgres.Sql): NodeJS.Timeout {
           deletedCount: count,
         })
       }
+
+      const bclResult = await sql`
+        DELETE FROM bcl_retry_queue
+        WHERE status = 'failed' AND updated_at < now() - interval '1 hour'
+      `
+      const bclCount = bclResult.count
+      if (bclCount > 0) {
+        logger.info('bcl retry queue cleanup completed', {
+          operation: 'bclCleanup',
+          deletedCount: bclCount,
+        })
+      }
     } catch (error) {
       logger.error('oidc payload cleanup failed', {
         operation: 'oidcCleanup',
