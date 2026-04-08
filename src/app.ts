@@ -23,6 +23,7 @@ import { createSecretAuthMiddleware } from './oidc/secret-auth-middleware.js'
 import { apiLimiter } from './middleware/rate-limit.js'
 import { createStripeWebhookRouter, type StripeWebhookOptions } from './routes/stripe-webhook.js'
 import { createStripeCheckoutRouter, type StripeCheckoutOptions } from './routes/stripe-checkout.js'
+import { createEntitlementRouter } from './routes/entitlement.js'
 
 export interface AppOptions {
   skipDbCheck?: boolean
@@ -139,6 +140,9 @@ export function createApp(options: AppOptions = {}): express.Express {
   app.use(createHealthRouter({ skipDbCheck: options.skipDbCheck }))
   app.use(createAuthRouter({ sql: options.sql }))
   app.use(createPasswordResetRouter({ sql: options.sql }))
+  if (options.sql) {
+    app.use(createEntitlementRouter({ sql: options.sql }))
+  }
 
   // Routes — admin-only (require authenticated admin session)
   if (options.hubAuth) {
