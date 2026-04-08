@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
+  createStripeClient,
+  createCheckoutSession,
+  createPortalSession,
+  constructWebhookEvent,
   isEventProcessed,
   handleCheckoutCompleted,
   handleSubscriptionUpdated,
@@ -65,6 +69,103 @@ function createStripeEvent(type: string, data: Record<string, unknown>): Record<
 describe('stripe-service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  describe('createStripeClient', () => {
+    it('returns a Stripe instance', () => {
+      const client = createStripeClient('sk_test_fake_key')
+      // Stripe client exposes checkout, billingPortal, webhooks
+      expect(client.checkout).toBeDefined()
+      expect(client.billingPortal).toBeDefined()
+      expect(client.webhooks).toBeDefined()
+    })
+  })
+
+  describe('createCheckoutSession', () => {
+    it('calls stripe.checkout.sessions.create with correct params', async () => {
+      const mockCreate = vi.fn().mockResolvedValue({
+        id: 'cs_test_123',
+        url: 'https://checkout.stripe.com/pay/cs_test_123',
+      })
+      const mockStripe = {
+        checkout: { sessions: { create: mockCreate } },
+      } as never
+
+      const url = await createCheckoutSession(mockStripe, {
+        priceId: 'price_test_abc',
+        userId: 42,
+        userEmail: 'parent@example.com',
+        successUrl: 'http://localhost:3009/dashboard?payment=success',
+        cancelUrl: 'http://localhost:3009/pricing',
+      })
+
+      expect(url).toBe('https://checkout.stripe.com/pay/cs_test_123')
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: 'subscription',
+          payment_method_types: ['card'],
+          line_items: [{ price: 'price_test_abc', quantity: 1 }],
+          customer_email: 'parent@example.com',
+          client_reference_id: '42',
+          success_url: 'http://localhost:3009/dashboard?payment=success',
+          cancel_url: 'http://localhost:3009/pricing',
+          automatic_tax: { enabled: true },
+          metadata: { hub_user_id: '42' },
+        }),
+      )
+    })
+  })
+
+  describe('createPortalSession', () => {
+    it('calls stripe.billingPortal.sessions.create and returns URL', async () => {
+      const mockCreate = vi.fn().mockResolvedValue({
+        url: 'https://billing.stripe.com/session/portal_abc',
+      })
+      const mockStripe = {
+        billingPortal: { sessions: { create: mockCreate } },
+      } as never
+
+      const url = await createPortalSession(
+        mockStripe,
+        'cus_test_xyz',
+        'http://localhost:3009/dashboard',
+      )
+
+      expect(url).toBe('https://billing.stripe.com/session/portal_abc')
+      expect(mockCreate).toHaveBeenCalledWith({
+        customer: 'cus_test_xyz',
+        return_url: 'http://localhost:3009/dashboard',
+      })
+    })
+  })
+
+  describe('constructWebhookEvent', () => {
+    it('delegates to stripe.webhooks.constructEvent', () => {
+      const fakeEvent = { id: 'evt_123', type: 'checkout.session.completed' }
+      const mockConstruct = vi.fn().mockReturnValue(fakeEvent)
+      const mockStripe = {
+        webhooks: { constructEvent: mockConstruct },
+      } as never
+
+      const body = Buffer.from('{"test":true}')
+      const result = constructWebhookEvent(mockStripe, body, 'sig_abc', 'whsec_test')
+
+      expect(result).toBe(fakeEvent)
+      expect(mockConstruct).toHaveBeenCalledWith(body, 'sig_abc', 'whsec_test')
+    })
+
+    it('throws when signature is invalid', () => {
+      const mockConstruct = vi.fn().mockImplementation(() => {
+        throw new Error('No signatures found matching the expected signature')
+      })
+      const mockStripe = {
+        webhooks: { constructEvent: mockConstruct },
+      } as never
+
+      expect(() =>
+        constructWebhookEvent(mockStripe, Buffer.from('{}'), 'bad_sig', 'whsec_test'),
+      ).toThrow('No signatures found matching the expected signature')
+    })
   })
 
   describe('isEventProcessed', () => {
