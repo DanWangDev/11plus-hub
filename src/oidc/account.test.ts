@@ -137,6 +137,37 @@ describe('account finder', () => {
     expect(claims.expires_at).toBeNull()
   })
 
+  it('strips extra apps when user has more access than plan allows', async () => {
+    const user = {
+      id: 42,
+      username: 'emma',
+      display_name: 'Emma Wang',
+      email: 'emma@example.com',
+      email_verified: true,
+      role: 'student',
+    }
+
+    mockFindUserById.mockResolvedValue(user)
+    // User has free plan but still has writing-buddy access (stale)
+    mockFindSubscriptionByUserId.mockResolvedValue(null)
+    mockGetUserAppAccess.mockResolvedValue([{ app_id: 1 }])
+
+    const mockSql = createMockSql([{ slug: 'writing-buddy' }])
+    const findAccount = createAccountFinder(mockSql as never)
+
+    const result = await findAccount(null, '42')
+    const claims = await result!.claims()
+
+    // Auto-sync should have been called to strip extra apps
+    expect(mockSyncAppAccessFromPlan).toHaveBeenCalledWith(
+      expect.anything(),
+      42,
+      'free',
+    )
+    // After sync, apps should match plan (empty for free)
+    expect(claims.apps).toEqual([])
+  })
+
   it('includes expires_at from subscription', async () => {
     const user = {
       id: 42,

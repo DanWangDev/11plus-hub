@@ -22,9 +22,10 @@ import {
 } from '../services/subscription-service.js'
 import type postgres from 'postgres'
 
-function getActorId(req: Request): number | null {
-  const header = req.headers['x-user-id']
-  const id = Number(header)
+function getActorId(_req: Request, res: Response): number | null {
+  const user = res.locals.user as { sub?: string } | undefined
+  if (!user?.sub) return null
+  const id = Number(user.sub)
   return Number.isFinite(id) && id > 0 ? id : null
 }
 
@@ -58,7 +59,7 @@ export function createSubscriptionsRouter(options: SubscriptionsRouterOptions = 
       })
 
       await logAction(sql, {
-        actorId: getActorId(req),
+        actorId: getActorId(req, res),
         action: AuditActions.SUBSCRIPTION_CREATE,
         targetId: data.userId,
         details: { subscriptionId: subscription.id, plan: data.plan },
@@ -192,7 +193,7 @@ export function createSubscriptionsRouter(options: SubscriptionsRouterOptions = 
         })
 
         await logAction(sql, {
-          actorId: getActorId(req),
+          actorId: getActorId(req, res),
           action: AuditActions.SUBSCRIPTION_UPDATE,
           targetId: subscription.user_id,
           details: { subscriptionId: id, fields: Object.keys(data) },
@@ -248,7 +249,7 @@ export function createSubscriptionsRouter(options: SubscriptionsRouterOptions = 
         })
 
         await logAction(sql, {
-          actorId: getActorId(req),
+          actorId: getActorId(req, res),
           action: AuditActions.SUBSCRIPTION_CANCEL,
           targetId: subscription.user_id,
           details: { subscriptionId: id },
@@ -332,7 +333,7 @@ export function createSubscriptionsRouter(options: SubscriptionsRouterOptions = 
         })
 
         await logAction(sql, {
-          actorId: getActorId(req),
+          actorId: getActorId(req, res),
           action: AuditActions.APP_ACCESS_GRANT,
           targetId: userId,
           details: { appId },
@@ -384,7 +385,7 @@ export function createSubscriptionsRouter(options: SubscriptionsRouterOptions = 
         })
 
         await logAction(sql, {
-          actorId: getActorId(req),
+          actorId: getActorId(req, res),
           action: AuditActions.APP_ACCESS_REVOKE,
           targetId: userId,
           details: { appId },

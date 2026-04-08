@@ -25,18 +25,21 @@ export const PLAN_APP_SLUGS: Record<string, string[]> = {
 
 // --- Schemas ---
 
+const PLAN_ENUM = z.enum(['free', 'writing', 'vocab', 'bundle', 'family'])
+const STATUS_ENUM = z.enum(['active', 'trial', 'expired', 'cancelled', 'past_due', 'incomplete'])
+
 export const createSubscriptionSchema = z.object({
   userId: z.number().int().positive(),
-  plan: z.enum(['free', 'writing', 'vocab', 'bundle', 'family']).default('free'),
-  status: z.enum(['active', 'trial', 'expired', 'cancelled']).default('active'),
+  plan: PLAN_ENUM.default('free'),
+  status: STATUS_ENUM.default('active'),
   features: z.array(z.string()).optional(),
   expiresAt: z.string().datetime().optional(),
   assignedBy: z.number().int().positive().optional(),
 })
 
 export const updateSubscriptionSchema = z.object({
-  plan: z.enum(['free', 'writing', 'vocab', 'bundle', 'family']).optional(),
-  status: z.enum(['active', 'trial', 'expired', 'cancelled']).optional(),
+  plan: PLAN_ENUM.optional(),
+  status: STATUS_ENUM.optional(),
   features: z.array(z.string()).optional(),
   expiresAt: z.string().datetime().nullable().optional(),
 })
@@ -44,8 +47,8 @@ export const updateSubscriptionSchema = z.object({
 export const listSubscriptionsSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
-  plan: z.enum(['free', 'writing', 'vocab', 'bundle', 'family']).optional(),
-  status: z.enum(['active', 'trial', 'expired', 'cancelled']).optional(),
+  plan: PLAN_ENUM.optional(),
+  status: STATUS_ENUM.optional(),
   userId: z.coerce.number().int().positive().optional(),
 })
 
@@ -189,9 +192,17 @@ export async function updateSubscription(
 
   const subscription = rows[0] ?? null
 
-  // Re-sync app access when plan changes
-  if (subscription && validated.plan) {
-    await syncAppAccessFromPlan(sql, subscription.user_id, subscription.plan)
+  if (subscription) {
+    const planChanged = validated.plan && validated.plan !== existing.plan
+    const statusRevokedAccess =
+      validated.status &&
+      validated.status !== existing.status &&
+      ['cancelled', 'expired', 'incomplete'].includes(validated.status)
+
+    if (planChanged || statusRevokedAccess) {
+      const effectivePlan = statusRevokedAccess ? 'free' : subscription.plan
+      await syncAppAccessFromPlan(sql, subscription.user_id, effectivePlan)
+    }
   }
 
   return subscription
@@ -207,6 +218,8 @@ export async function cancelSubscription(sql: Sql, id: number): Promise<Subscrip
 
   const subscription = rows[0] ?? null
   if (subscription) {
+    await syncAppAccessFromPlan(sql, subscription.user_id, 'free')
+
     logger.info('subscription cancelled', {
       operation: 'cancelSubscription',
       subscriptionId: id,
@@ -329,25 +342,23 @@ export async function getUserAppAccess(sql: Sql, userId: number): Promise<UserAp
 export async function syncAppAccessFromPlan(sql: Sql, userId: number, plan: string): Promise<void> {
   const slugs = PLAN_APP_SLUGS[plan] ?? []
 
-  // Remove all existing access
-  await sql`
-    DELETE FROM user_app_access WHERE user_id = ${userId}
-  `
-
-  // Grant access based on plan
-  for (const slug of slugs) {
-    const appRows = await sql<{ id: number }[]>`
-      SELECT id FROM applications WHERE slug = ${slug}
-    `
-    const app = appRows[0]
-    if (app) {
-      await sql`
-        INSERT INTO user_app_access (user_id, app_id)
-        VALUES (${userId}, ${app.id})
-        ON CONFLICT (user_id, app_id) DO NOTHING
-      `
-    }
+  // Single atomic CTE: delete all existing access, then insert new grants.
+  // No intermediate state where the user has zero access.
+  if (slugs.length === 0) {
+    await sql`DELETE FROM user_app_access WHERE user_id = ${userId}`
+    return
   }
+
+  await sql`
+    WITH deleted AS (
+      DELETE FROM user_app_access WHERE user_id = ${userId}
+    )
+    INSERT INTO user_app_access (user_id, app_id)
+    SELECT ${userId}, a.id
+    FROM applications a
+    WHERE a.slug = ANY(${slugs})
+    ON CONFLICT (user_id, app_id) DO NOTHING
+  `
 }
 
 export async function checkEntitlement(

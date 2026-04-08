@@ -79,9 +79,7 @@ describe('subscription-service', () => {
       const mockSql = vi.fn() as unknown as ReturnType<typeof vi.fn>
       ;(mockSql as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce([mockSub]) // INSERT subscription
-        .mockResolvedValueOnce([]) // DELETE user_app_access (syncAppAccessFromPlan)
-        .mockResolvedValueOnce([{ id: 1 }]) // SELECT writing-buddy app
-        .mockResolvedValueOnce([]) // INSERT user_app_access
+        .mockResolvedValueOnce([]) // syncAppAccessFromPlan CTE
 
       const result = await createSubscription(mockSql as never, {
         userId: 10,
@@ -93,8 +91,8 @@ describe('subscription-service', () => {
         user_id: 10,
         plan: 'writing',
       })
-      // 1 INSERT + 3 syncAppAccessFromPlan calls (DELETE + SELECT app + INSERT access)
-      expect(mockSql).toHaveBeenCalledTimes(4)
+      // 1 INSERT + 1 syncAppAccessFromPlan CTE
+      expect(mockSql).toHaveBeenCalledTimes(2)
     })
 
     it('creates a subscription with custom features override', async () => {
@@ -102,11 +100,7 @@ describe('subscription-service', () => {
       const mockSql = vi.fn() as unknown as ReturnType<typeof vi.fn>
       ;(mockSql as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce([mockSub]) // INSERT subscription
-        .mockResolvedValueOnce([]) // DELETE user_app_access
-        .mockResolvedValueOnce([{ id: 1 }]) // SELECT writing-buddy
-        .mockResolvedValueOnce([]) // INSERT writing-buddy access
-        .mockResolvedValueOnce([{ id: 2 }]) // SELECT vocab-master
-        .mockResolvedValueOnce([]) // INSERT vocab-master access
+        .mockResolvedValueOnce([]) // syncAppAccessFromPlan CTE (bundle = both apps)
 
       const result = await createSubscription(mockSql as never, {
         userId: 10,
@@ -122,7 +116,7 @@ describe('subscription-service', () => {
       const mockSql = vi.fn() as unknown as ReturnType<typeof vi.fn>
       ;(mockSql as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce([mockSub]) // INSERT subscription
-        .mockResolvedValueOnce([]) // DELETE user_app_access (free plan = no grants)
+        .mockResolvedValueOnce([]) // syncAppAccessFromPlan DELETE (free = no grants)
 
       const result = await createSubscription(mockSql as never, {
         userId: 10,
@@ -192,31 +186,61 @@ describe('subscription-service', () => {
       ;(mockSql as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce([existing]) // findSubscriptionById
         .mockResolvedValueOnce([updated]) // UPDATE subscription
-        .mockResolvedValueOnce([]) // DELETE user_app_access (syncAppAccessFromPlan)
-        .mockResolvedValueOnce([{ id: 1 }]) // SELECT writing-buddy
-        .mockResolvedValueOnce([]) // INSERT writing-buddy access
-        .mockResolvedValueOnce([{ id: 2 }]) // SELECT vocab-master
-        .mockResolvedValueOnce([]) // INSERT vocab-master access
+        .mockResolvedValueOnce([]) // syncAppAccessFromPlan CTE
 
       const result = await updateSubscription(mockSql as never, 1, { plan: 'bundle' })
 
       expect(result).toMatchObject({ plan: 'bundle', features: ['writing', 'vocab'] })
+      expect(mockSql).toHaveBeenCalledTimes(3)
     })
 
-    it('updates status only without syncing app access', async () => {
+    it('updates status to active without syncing app access', async () => {
       const existing = createMockSubscription()
-      const updated = createMockSubscription({ status: 'expired' })
+      const updated = createMockSubscription({ status: 'active' })
 
-      const mockSql = createMockSql([existing])
+      const mockSql = vi.fn() as unknown as ReturnType<typeof vi.fn>
       ;(mockSql as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce([existing])
         .mockResolvedValueOnce([updated])
 
+      const result = await updateSubscription(mockSql as never, 1, { status: 'active' })
+
+      expect(result).toMatchObject({ status: 'active' })
+      // No syncAppAccessFromPlan when status change doesn't revoke access
+      expect(mockSql).toHaveBeenCalledTimes(2)
+    })
+
+    it('revokes app access when status changes to cancelled', async () => {
+      const existing = createMockSubscription({ status: 'active' })
+      const updated = createMockSubscription({ status: 'cancelled' })
+
+      const mockSql = vi.fn() as unknown as ReturnType<typeof vi.fn>
+      ;(mockSql as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([existing]) // findSubscriptionById
+        .mockResolvedValueOnce([updated]) // UPDATE subscription
+        .mockResolvedValueOnce([]) // syncAppAccessFromPlan (DELETE for free plan)
+
+      const result = await updateSubscription(mockSql as never, 1, { status: 'cancelled' })
+
+      expect(result).toMatchObject({ status: 'cancelled' })
+      // findById + UPDATE + syncAppAccessFromPlan(free) = 3 calls
+      expect(mockSql).toHaveBeenCalledTimes(3)
+    })
+
+    it('revokes app access when status changes to expired', async () => {
+      const existing = createMockSubscription({ status: 'active' })
+      const updated = createMockSubscription({ status: 'expired' })
+
+      const mockSql = vi.fn() as unknown as ReturnType<typeof vi.fn>
+      ;(mockSql as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([existing])
+        .mockResolvedValueOnce([updated])
+        .mockResolvedValueOnce([]) // syncAppAccessFromPlan (DELETE for free plan)
+
       const result = await updateSubscription(mockSql as never, 1, { status: 'expired' })
 
       expect(result).toMatchObject({ status: 'expired' })
-      // No syncAppAccessFromPlan call when plan doesn't change
-      expect(mockSql).toHaveBeenCalledTimes(2)
+      expect(mockSql).toHaveBeenCalledTimes(3)
     })
 
     it('returns null when subscription not found', async () => {
@@ -229,13 +253,18 @@ describe('subscription-service', () => {
   })
 
   describe('cancelSubscription', () => {
-    it('sets status to cancelled', async () => {
+    it('sets status to cancelled and revokes app access', async () => {
       const cancelled = createMockSubscription({ status: 'cancelled' })
-      const mockSql = createMockSql([cancelled])
+      const mockSql = vi.fn() as unknown as ReturnType<typeof vi.fn>
+      ;(mockSql as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([cancelled]) // UPDATE subscription
+        .mockResolvedValueOnce([]) // syncAppAccessFromPlan (DELETE for free plan)
 
       const result = await cancelSubscription(mockSql as never, 1)
 
       expect(result).toMatchObject({ status: 'cancelled' })
+      // UPDATE + syncAppAccessFromPlan(free) = 2 calls
+      expect(mockSql).toHaveBeenCalledTimes(2)
     })
 
     it('returns null when subscription not found', async () => {
@@ -408,30 +437,22 @@ describe('subscription-service', () => {
   })
 
   describe('syncAppAccessFromPlan', () => {
-    it('grants access to writing-buddy for writing plan', async () => {
+    it('syncs access for writing plan in single CTE', async () => {
       const mockSql = createMockSql([])
-      ;(mockSql as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce([]) // DELETE
-        .mockResolvedValueOnce([{ id: 1 }]) // SELECT app by slug
-        .mockResolvedValueOnce([]) // INSERT
 
       await syncAppAccessFromPlan(mockSql as never, 10, 'writing')
 
-      expect(mockSql).toHaveBeenCalledTimes(3)
+      // Single CTE: DELETE + INSERT in one statement
+      expect(mockSql).toHaveBeenCalledTimes(1)
     })
 
-    it('grants access to both apps for bundle plan', async () => {
+    it('syncs access for bundle plan in single CTE', async () => {
       const mockSql = createMockSql([])
-      ;(mockSql as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce([]) // DELETE
-        .mockResolvedValueOnce([{ id: 1 }]) // SELECT writing-buddy
-        .mockResolvedValueOnce([]) // INSERT writing-buddy
-        .mockResolvedValueOnce([{ id: 2 }]) // SELECT vocab-master
-        .mockResolvedValueOnce([]) // INSERT vocab-master
 
       await syncAppAccessFromPlan(mockSql as never, 10, 'bundle')
 
-      expect(mockSql).toHaveBeenCalledTimes(5)
+      // Single CTE for both apps
+      expect(mockSql).toHaveBeenCalledTimes(1)
     })
 
     it('removes all access for free plan', async () => {
@@ -439,34 +460,25 @@ describe('subscription-service', () => {
 
       await syncAppAccessFromPlan(mockSql as never, 10, 'free')
 
-      // Only the DELETE call
+      // Just DELETE (no CTE needed for empty slug list)
       expect(mockSql).toHaveBeenCalledTimes(1)
     })
 
-    it('grants access to both apps for family plan', async () => {
+    it('syncs access for family plan in single CTE', async () => {
       const mockSql = createMockSql([])
-      ;(mockSql as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce([]) // DELETE
-        .mockResolvedValueOnce([{ id: 1 }]) // SELECT writing-buddy
-        .mockResolvedValueOnce([]) // INSERT writing-buddy
-        .mockResolvedValueOnce([{ id: 2 }]) // SELECT vocab-master
-        .mockResolvedValueOnce([]) // INSERT vocab-master
 
       await syncAppAccessFromPlan(mockSql as never, 10, 'family')
 
-      expect(mockSql).toHaveBeenCalledTimes(5)
+      expect(mockSql).toHaveBeenCalledTimes(1)
     })
 
-    it('skips insert when app not found in db', async () => {
+    it('handles unknown plan by removing all access', async () => {
       const mockSql = createMockSql([])
-      ;(mockSql as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce([]) // DELETE
-        .mockResolvedValueOnce([]) // SELECT writing-buddy (not found)
 
-      await syncAppAccessFromPlan(mockSql as never, 10, 'writing')
+      await syncAppAccessFromPlan(mockSql as never, 10, 'unknown')
 
-      // DELETE + SELECT (no INSERT since app not found)
-      expect(mockSql).toHaveBeenCalledTimes(2)
+      // Unknown plan → empty slugs → DELETE only
+      expect(mockSql).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -507,6 +519,22 @@ describe('subscription-service', () => {
       ).toThrow()
     })
 
+    it('accepts past_due status in createSubscriptionSchema', () => {
+      const result = createSubscriptionSchema.parse({
+        userId: 1,
+        status: 'past_due',
+      })
+      expect(result.status).toBe('past_due')
+    })
+
+    it('accepts incomplete status in createSubscriptionSchema', () => {
+      const result = createSubscriptionSchema.parse({
+        userId: 1,
+        status: 'incomplete',
+      })
+      expect(result.status).toBe('incomplete')
+    })
+
     it('rejects negative userId', () => {
       expect(() =>
         createSubscriptionSchema.parse({
@@ -527,6 +555,11 @@ describe('subscription-service', () => {
 
     it('rejects invalid status in updateSubscriptionSchema', () => {
       expect(() => updateSubscriptionSchema.parse({ status: 'paused' })).toThrow()
+    })
+
+    it('accepts past_due and incomplete in updateSubscriptionSchema', () => {
+      expect(updateSubscriptionSchema.parse({ status: 'past_due' }).status).toBe('past_due')
+      expect(updateSubscriptionSchema.parse({ status: 'incomplete' }).status).toBe('incomplete')
     })
 
     it('validates listSubscriptionsSchema with defaults', () => {
