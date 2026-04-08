@@ -5,6 +5,7 @@ import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { SkeletonCard } from '@/components/ui/SkeletonCard'
 import { ProfileCard } from '@/components/ProfileCard'
+import { SubscriptionCard } from '@/components/SubscriptionCard'
 import { EditProfileModal } from '@/components/EditProfileModal'
 import { ToastContainer, type ToastMessage } from '@/components/ui/Toast'
 import { ExternalLink } from 'lucide-react'
@@ -73,6 +74,7 @@ export function DashboardPage() {
     <DashboardLayout onEditProfile={() => setEditOpen(true)}>
       <div className="mb-8 space-y-4">
         <ProfileCard onEditClick={() => setEditOpen(true)} />
+        <SubscriptionCard />
         <p className="text-sm text-slate-500">Choose an app to get started</p>
       </div>
 
