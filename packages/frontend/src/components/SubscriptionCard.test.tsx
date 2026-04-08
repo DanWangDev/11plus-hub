@@ -63,7 +63,8 @@ describe('SubscriptionCard', () => {
     it('calls checkout API on upgrade click', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ success: true, data: { url: 'https://checkout.stripe.com/test' } }),
+        json: () =>
+          Promise.resolve({ success: true, data: { url: 'https://checkout.stripe.com/test' } }),
       })
 
       const user = userEvent.setup()
@@ -110,7 +111,8 @@ describe('SubscriptionCard', () => {
     it('calls portal API on manage click', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ success: true, data: { url: 'https://billing.stripe.com/test' } }),
+        json: () =>
+          Promise.resolve({ success: true, data: { url: 'https://billing.stripe.com/test' } }),
       })
 
       const user = userEvent.setup()

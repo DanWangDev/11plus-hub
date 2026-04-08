@@ -8,11 +8,7 @@ import { apiClient } from '@/lib/api-client'
 import type { ApiResponse } from '@/types/api'
 import { Check, ArrowLeft } from 'lucide-react'
 
-const FREE_FEATURES = [
-  'Hub SSO account',
-  'Dashboard access',
-  'Profile management',
-]
+const FREE_FEATURES = ['Hub SSO account', 'Dashboard access', 'Profile management']
 
 const WRITING_FEATURES = [
   'Everything in Free',
@@ -69,9 +65,7 @@ export function PricingPage() {
       <main className="flex-1 px-4 py-12">
         <div className="mx-auto max-w-4xl">
           <div className="mb-10 text-center">
-            <h1 className="text-3xl font-bold text-slate-900">
-              Simple, transparent pricing
-            </h1>
+            <h1 className="text-3xl font-bold text-slate-900">Simple, transparent pricing</h1>
             <p className="mt-2 text-slate-500">
               Help your child ace the 11+ with AI-powered practice
             </p>

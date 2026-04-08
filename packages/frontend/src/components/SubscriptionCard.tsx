@@ -73,27 +73,25 @@ export function SubscriptionCard() {
     <Card className="p-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${isPaid ? 'bg-amber-50 text-amber-500' : 'bg-slate-50 text-slate-400'}`}>
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-lg ${isPaid ? 'bg-amber-50 text-amber-500' : 'bg-slate-50 text-slate-400'}`}
+          >
             {isPaid ? <Crown size={20} /> : <Sparkles size={20} />}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-slate-900">
-                {planLabels[plan] ?? plan}
-              </h3>
-              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${status.color}`}>
+              <h3 className="text-sm font-semibold text-slate-900">{planLabels[plan] ?? plan}</h3>
+              <span
+                className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${status.color}`}
+              >
                 {status.label}
               </span>
             </div>
             {isPaid && user.features.length > 0 && (
-              <p className="mt-0.5 text-xs text-slate-500">
-                {user.features.join(', ')}
-              </p>
+              <p className="mt-0.5 text-xs text-slate-500">{user.features.join(', ')}</p>
             )}
             {!isPaid && (
-              <p className="mt-0.5 text-xs text-slate-500">
-                Upgrade to unlock Writing Buddy
-              </p>
+              <p className="mt-0.5 text-xs text-slate-500">Upgrade to unlock Writing Buddy</p>
             )}
           </div>
         </div>

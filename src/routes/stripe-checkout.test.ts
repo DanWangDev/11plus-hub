@@ -23,9 +23,7 @@ vi.mock('../services/stripe-service.js', () => ({
 type TaggedTemplateArgs = [TemplateStringsArray, ...unknown[]]
 
 function createMockSql(returnValue: unknown[] = []) {
-  return vi.fn((..._args: TaggedTemplateArgs) =>
-    Promise.resolve(returnValue),
-  )
+  return vi.fn((..._args: TaggedTemplateArgs) => Promise.resolve(returnValue))
 }
 
 /** Fake auth middleware that sets res.locals.user */
@@ -120,10 +118,7 @@ describe('POST /api/stripe/portal', () => {
   it('returns portal URL on success', async () => {
     mockCreatePortalSession.mockResolvedValue('https://billing.stripe.com/portal_123')
 
-    const app = createTestApp(
-      { sub: '42' },
-      [{ stripe_customer_id: 'cus_test_abc' }],
-    )
+    const app = createTestApp({ sub: '42' }, [{ stripe_customer_id: 'cus_test_abc' }])
 
     const res = await request(app).post('/api/stripe/portal')
     expect(res.status).toBe(200)

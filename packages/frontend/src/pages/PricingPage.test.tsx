@@ -86,7 +86,8 @@ describe('PricingPage', () => {
     it('calls checkout API on CTA click', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ success: true, data: { url: 'https://checkout.stripe.com/test' } }),
+        json: () =>
+          Promise.resolve({ success: true, data: { url: 'https://checkout.stripe.com/test' } }),
       })
 
       const user = userEvent.setup()

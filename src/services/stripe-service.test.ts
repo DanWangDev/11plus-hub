@@ -48,9 +48,7 @@ function createMockSql(returnValue: unknown[] = []) {
 
   // Add begin() for transaction support
   const beginFn = vi.fn(async (callback: (tx: unknown) => Promise<void>) => {
-    const txFn = vi.fn((..._args: TaggedTemplateArgs) =>
-      Promise.resolve([]),
-    )
+    const txFn = vi.fn((..._args: TaggedTemplateArgs) => Promise.resolve([]))
     await callback(txFn)
   })
   ;(sqlFn as Record<string, unknown>).begin = beginFn

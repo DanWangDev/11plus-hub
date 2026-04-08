@@ -32,21 +32,13 @@ export function PaymentSuccessOverlay() {
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
           <CheckCircle size={32} className="text-emerald-500" />
         </div>
-        <h2
-          id="payment-success-title"
-          className="text-xl font-bold text-slate-900"
-        >
+        <h2 id="payment-success-title" className="text-xl font-bold text-slate-900">
           You're all set!
         </h2>
         <p className="mt-2 text-sm text-slate-500">
-          Writing Buddy is now active. Your child can start practising
-          11+ essays right away.
+          Writing Buddy is now active. Your child can start practising 11+ essays right away.
         </p>
-        <Button
-          variant="primary"
-          className="mt-6 w-full"
-          onClick={() => setVisible(false)}
-        >
+        <Button variant="primary" className="mt-6 w-full" onClick={() => setVisible(false)}>
           Go to Dashboard
         </Button>
       </Card>

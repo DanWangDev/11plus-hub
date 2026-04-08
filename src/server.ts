@@ -48,7 +48,9 @@ async function main(): Promise<void> {
       redirectUri: `${env.OIDC_ISSUER}/auth/callback`,
     },
     stripeWebhook: stripe ? { stripe, sql, webhookSecret: env.STRIPE_WEBHOOK_SECRET! } : undefined,
-    stripeCheckout: stripe ? { stripe, sql, priceId: env.STRIPE_PRICE_ID!, hubOrigin: env.OIDC_ISSUER } : undefined,
+    stripeCheckout: stripe
+      ? { stripe, sql, priceId: env.STRIPE_PRICE_ID!, hubOrigin: env.OIDC_ISSUER }
+      : undefined,
   })
 
   // Clean up expired OIDC payloads hourly

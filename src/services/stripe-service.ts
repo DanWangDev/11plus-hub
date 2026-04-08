@@ -2,10 +2,7 @@ import Stripe from 'stripe'
 import type postgres from 'postgres'
 import { createLogger } from '../lib/logger.js'
 import { logAction, AuditActions } from './audit-service.js'
-import {
-  syncAppAccessFromPlan,
-  getFeatures,
-} from './subscription-service.js'
+import { syncAppAccessFromPlan, getFeatures } from './subscription-service.js'
 
 const logger = createLogger({ service: 'stripe-service' })
 
@@ -115,14 +112,13 @@ async function markEventProcessed(sql: Sql, eventId: string): Promise<void> {
 
 // --- Webhook handlers ---
 
-export async function handleCheckoutCompleted(
-  sql: Sql,
-  event: Stripe.Event,
-): Promise<void> {
+export async function handleCheckoutCompleted(sql: Sql, event: Stripe.Event): Promise<void> {
   const session = event.data.object as Stripe.Checkout.Session
   const userId = session.client_reference_id
     ? Number(session.client_reference_id)
-    : (session.metadata?.hub_user_id ? Number(session.metadata.hub_user_id) : null)
+    : session.metadata?.hub_user_id
+      ? Number(session.metadata.hub_user_id)
+      : null
 
   if (!userId) {
     logger.error('checkout.session.completed: no user ID found', {
@@ -178,10 +174,7 @@ export async function handleCheckoutCompleted(
   })
 }
 
-export async function handleSubscriptionUpdated(
-  sql: Sql,
-  event: Stripe.Event,
-): Promise<void> {
+export async function handleSubscriptionUpdated(sql: Sql, event: Stripe.Event): Promise<void> {
   const subscription = event.data.object as Stripe.Subscription
   const stripeSubscriptionId = subscription.id
   const hubStatus = mapStripeStatus(subscription.status)
@@ -241,10 +234,7 @@ export async function handleSubscriptionUpdated(
   })
 }
 
-export async function handleSubscriptionDeleted(
-  sql: Sql,
-  event: Stripe.Event,
-): Promise<void> {
+export async function handleSubscriptionDeleted(sql: Sql, event: Stripe.Event): Promise<void> {
   const subscription = event.data.object as Stripe.Subscription
   const stripeSubscriptionId = subscription.id
 

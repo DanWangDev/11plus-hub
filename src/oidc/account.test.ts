@@ -159,11 +159,7 @@ describe('account finder', () => {
     const claims = await result!.claims()
 
     // Auto-sync should have been called to strip extra apps
-    expect(mockSyncAppAccessFromPlan).toHaveBeenCalledWith(
-      expect.anything(),
-      42,
-      'free',
-    )
+    expect(mockSyncAppAccessFromPlan).toHaveBeenCalledWith(expect.anything(), 42, 'free')
     // After sync, apps should match plan (empty for free)
     expect(claims.apps).toEqual([])
   })
