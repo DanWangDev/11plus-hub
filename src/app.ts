@@ -21,6 +21,8 @@ import { createHubAuthRouter, type HubAuthOptions } from './routes/hub-auth.js'
 import { createProfileRouter } from './routes/profile.js'
 import { createSecretAuthMiddleware } from './oidc/secret-auth-middleware.js'
 import { apiLimiter } from './middleware/rate-limit.js'
+import { createStripeWebhookRouter, type StripeWebhookOptions } from './routes/stripe-webhook.js'
+import { createStripeCheckoutRouter, type StripeCheckoutOptions } from './routes/stripe-checkout.js'
 
 export interface AppOptions {
   skipDbCheck?: boolean
@@ -28,6 +30,8 @@ export interface AppOptions {
   oidcProvider?: Provider
   frontendDir?: string
   hubAuth?: HubAuthOptions
+  stripeWebhook?: StripeWebhookOptions
+  stripeCheckout?: StripeCheckoutOptions
 }
 
 export function createApp(options: AppOptions = {}): express.Express {
@@ -114,6 +118,14 @@ export function createApp(options: AppOptions = {}): express.Express {
   )
   app.use(compression())
   app.use(cookieParser())
+
+  // Stripe webhook route — mounted BEFORE express.json() because Stripe
+  // signature verification requires the raw request body. Also exempt from
+  // rate limiting (Stripe controls the rate of webhook deliveries).
+  if (options.stripeWebhook) {
+    app.use(createStripeWebhookRouter(options.stripeWebhook))
+  }
+
   app.use(express.json({ limit: '1mb' }))
   app.use(express.urlencoded({ extended: true }))
 
@@ -141,6 +153,11 @@ export function createApp(options: AppOptions = {}): express.Express {
     })
     app.use('/api/subscriptions', requireAuth, requireAdmin)
     app.use('/api/audit', requireAuth, requireAdmin)
+    // Stripe checkout/portal — any authenticated user can create checkout sessions
+    if (options.stripeCheckout) {
+      app.use('/api/stripe/checkout', requireAuth)
+      app.use('/api/stripe/portal', requireAuth)
+    }
   }
   if (options.hubAuth) {
     app.use(createProfileRouter({ sql: options.sql, sessionSecret: options.hubAuth.sessionSecret }))
@@ -149,6 +166,9 @@ export function createApp(options: AppOptions = {}): express.Express {
   app.use(createApplicationsRouter())
   app.use(createSubscriptionsRouter({ sql: options.sql }))
   app.use(createAuditRouter({ sql: options.sql }))
+  if (options.stripeCheckout) {
+    app.use(createStripeCheckoutRouter(options.stripeCheckout))
+  }
 
   // OIDC Provider
   if (options.oidcProvider && options.sql) {

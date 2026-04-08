@@ -28,6 +28,9 @@ export const AuditActions = {
   ENTITLEMENT_DENIED: 'entitlement_denied',
   PROFILE_UPDATE: 'profile_update',
   PASSWORD_CHANGE: 'password_change',
+  STRIPE_WEBHOOK_CHECKOUT: 'stripe_webhook_checkout',
+  STRIPE_WEBHOOK_UPDATED: 'stripe_webhook_updated',
+  STRIPE_WEBHOOK_CANCELLED: 'stripe_webhook_cancelled',
 } as const
 
 export type AuditAction = (typeof AuditActions)[keyof typeof AuditActions]
