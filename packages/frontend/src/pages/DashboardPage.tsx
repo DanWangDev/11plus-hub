@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { SkeletonCard } from '@/components/ui/SkeletonCard'
 import { ProfileCard } from '@/components/ProfileCard'
 import { SubscriptionCard } from '@/components/SubscriptionCard'
+import { PaymentSuccessOverlay } from '@/components/PaymentSuccessOverlay'
 import { EditProfileModal } from '@/components/EditProfileModal'
 import { ToastContainer, type ToastMessage } from '@/components/ui/Toast'
 import { ExternalLink } from 'lucide-react'
@@ -72,6 +73,7 @@ export function DashboardPage() {
 
   return (
     <DashboardLayout onEditProfile={() => setEditOpen(true)}>
+      <PaymentSuccessOverlay />
       <div className="mb-8 space-y-4">
         <ProfileCard onEditClick={() => setEditOpen(true)} />
         <SubscriptionCard />
