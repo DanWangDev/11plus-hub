@@ -291,6 +291,113 @@ describe('hub-auth routes', () => {
     })
   })
 
+  describe('GET /auth/refresh', () => {
+    it('returns 401 when no refresh_token in session', async () => {
+      const { getIronSession } = await import('iron-session')
+      vi.mocked(getIronSession).mockResolvedValueOnce({
+        tokens: { id_token: 'some-id-token' },
+        save: vi.fn(),
+        destroy: vi.fn(),
+        updateConfig: vi.fn(),
+      } as never)
+
+      const app = createTestApp()
+      const res = await request(app).get('/auth/refresh')
+
+      expect(res.status).toBe(401)
+      expect(res.body).toMatchObject({
+        success: false,
+        error: 'No refresh token available',
+      })
+    })
+
+    it('exchanges refresh_token for fresh tokens', async () => {
+      const freshClaims = {
+        sub: '42',
+        username: 'emma',
+        plan: 'writing',
+        apps: ['writing-buddy'],
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iss: 'http://localhost:3009',
+        aud: 'hub',
+      }
+      const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url')
+      const payload = Buffer.from(JSON.stringify(freshClaims)).toString('base64url')
+      const freshIdToken = `${header}.${payload}.fake-signature`
+
+      const mockSave = vi.fn()
+      const { getIronSession } = await import('iron-session')
+      vi.mocked(getIronSession).mockResolvedValueOnce({
+        tokens: {
+          id_token: 'old-id-token',
+          access_token: 'old-access-token',
+          refresh_token: 'test-refresh-token',
+        },
+        save: mockSave,
+        destroy: vi.fn(),
+        updateConfig: vi.fn(),
+      } as never)
+
+      // Discovery + token exchange
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => MOCK_OIDC_METADATA,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            id_token: freshIdToken,
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+          }),
+        })
+
+      const app = createTestApp()
+      const res = await request(app).get('/auth/refresh')
+
+      expect(res.status).toBe(200)
+      expect(res.body.success).toBe(true)
+      expect(res.body.data.sub).toBe('42')
+      expect(res.body.data.plan).toBe('writing')
+      expect(mockSave).toHaveBeenCalled()
+    })
+
+    it('returns 502 when token exchange fails', async () => {
+      const { getIronSession } = await import('iron-session')
+      vi.mocked(getIronSession).mockResolvedValueOnce({
+        tokens: {
+          id_token: 'old-id-token',
+          refresh_token: 'test-refresh-token',
+        },
+        save: vi.fn(),
+        destroy: vi.fn(),
+        updateConfig: vi.fn(),
+      } as never)
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => MOCK_OIDC_METADATA,
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          text: async () => '{"error":"invalid_grant"}',
+        })
+
+      const app = createTestApp()
+      const res = await request(app).get('/auth/refresh')
+
+      expect(res.status).toBe(502)
+      expect(res.body).toMatchObject({
+        success: false,
+        error: 'Token refresh failed',
+      })
+    })
+  })
+
   describe('POST /auth/backchannel-logout', () => {
     it('returns 400 when logout_token is missing', async () => {
       const app = createTestApp()
