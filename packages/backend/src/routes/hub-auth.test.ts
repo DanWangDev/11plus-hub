@@ -302,7 +302,9 @@ describe('hub-auth routes', () => {
 
     it('returns 400 when logout_token is not a string', async () => {
       const app = createTestApp()
-      const res = await request(app).post('/api/auth/backchannel-logout').send({ logout_token: 123 })
+      const res = await request(app)
+        .post('/api/auth/backchannel-logout')
+        .send({ logout_token: 123 })
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Missing logout_token')
