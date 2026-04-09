@@ -22,6 +22,9 @@ const ACTION_BADGES: Record<string, string> = {
   app_register: 'bg-blue-100 text-blue-700',
   app_update: 'bg-purple-100 text-purple-700',
   app_delete: 'bg-red-100 text-red-700',
+  stripe_webhook_checkout: 'bg-emerald-100 text-emerald-700',
+  stripe_webhook_updated: 'bg-purple-100 text-purple-700',
+  stripe_webhook_cancelled: 'bg-red-100 text-red-700',
 }
 
 type PageState =
@@ -97,6 +100,11 @@ export function AdminAuditPage() {
               <option value="subscription_create">Subscription Create</option>
               <option value="subscription_update">Subscription Update</option>
               <option value="subscription_cancel">Subscription Cancel</option>
+            </optgroup>
+            <optgroup label="Stripe Webhooks">
+              <option value="stripe_webhook_checkout">Stripe Checkout</option>
+              <option value="stripe_webhook_updated">Stripe Updated</option>
+              <option value="stripe_webhook_cancelled">Stripe Cancelled</option>
             </optgroup>
             <optgroup label="Applications">
               <option value="app_register">App Register</option>

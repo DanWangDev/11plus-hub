@@ -20,12 +20,17 @@ import { createHubAuthRouter, type HubAuthOptions } from './routes/hub-auth.js'
 import { createProfileRouter } from './routes/profile.js'
 import { createSecretAuthMiddleware } from './oidc/secret-auth-middleware.js'
 import { apiLimiter } from './middleware/rate-limit.js'
+import { createStripeWebhookRouter, type StripeWebhookOptions } from './routes/stripe-webhook.js'
+import { createStripeCheckoutRouter, type StripeCheckoutOptions } from './routes/stripe-checkout.js'
+import { createEntitlementRouter } from './routes/entitlement.js'
 
 export interface AppOptions {
   skipDbCheck?: boolean
   sql?: postgres.Sql
   oidcProvider?: Provider
   hubAuth?: HubAuthOptions
+  stripeWebhook?: StripeWebhookOptions
+  stripeCheckout?: StripeCheckoutOptions
 }
 
 export function createApp(options: AppOptions = {}): express.Express {
@@ -93,15 +98,33 @@ export function createApp(options: AppOptions = {}): express.Express {
         // Allow requests with no origin (same-origin, server-to-server, curl)
         if (!origin || corsAllowedOrigins.has(origin)) {
           callback(null, true)
-        } else {
-          callback(null, false)
+          return
         }
+        // Allow *.labf.app subdomains (child apps on NAS or cloud)
+        try {
+          const hostname = new URL(origin).hostname
+          if (hostname.endsWith('.labf.app')) {
+            callback(null, true)
+            return
+          }
+        } catch {
+          // Invalid origin URL, fall through to reject
+        }
+        callback(null, false)
       },
       credentials: true,
     }),
   )
   app.use(compression())
   app.use(cookieParser())
+
+  // Stripe webhook route — mounted BEFORE express.json() because Stripe
+  // signature verification requires the raw request body. Also exempt from
+  // rate limiting (Stripe controls the rate of webhook deliveries).
+  if (options.stripeWebhook) {
+    app.use(createStripeWebhookRouter(options.stripeWebhook))
+  }
+
   app.use(express.json({ limit: '1mb' }))
   app.use(express.urlencoded({ extended: true }))
 
@@ -115,6 +138,9 @@ export function createApp(options: AppOptions = {}): express.Express {
   app.use(createHealthRouter({ skipDbCheck: options.skipDbCheck }))
   app.use(createAuthRouter({ sql: options.sql }))
   app.use(createPasswordResetRouter({ sql: options.sql }))
+  if (options.sql) {
+    app.use(createEntitlementRouter({ sql: options.sql }))
+  }
 
   // Routes — admin-only (require authenticated admin session)
   if (options.hubAuth) {
@@ -129,6 +155,11 @@ export function createApp(options: AppOptions = {}): express.Express {
     })
     app.use('/api/subscriptions', requireAuth, requireAdmin)
     app.use('/api/audit', requireAuth, requireAdmin)
+    // Stripe checkout/portal — any authenticated user can create checkout sessions
+    if (options.stripeCheckout) {
+      app.use('/api/stripe/checkout', requireAuth)
+      app.use('/api/stripe/portal', requireAuth)
+    }
   }
   if (options.hubAuth) {
     app.use(createProfileRouter({ sql: options.sql, sessionSecret: options.hubAuth.sessionSecret }))
@@ -137,6 +168,9 @@ export function createApp(options: AppOptions = {}): express.Express {
   app.use(createApplicationsRouter())
   app.use(createSubscriptionsRouter({ sql: options.sql }))
   app.use(createAuditRouter({ sql: options.sql }))
+  if (options.stripeCheckout) {
+    app.use(createStripeCheckoutRouter(options.stripeCheckout))
+  }
 
   // OIDC Provider
   if (options.oidcProvider && options.sql) {

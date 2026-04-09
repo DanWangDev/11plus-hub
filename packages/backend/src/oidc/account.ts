@@ -49,14 +49,16 @@ export function createAccountFinder(sql: postgres.Sql) {
           appSlugs = apps.map((a) => a.slug)
         }
 
-        // Auto-sync if user_app_access is stale (e.g. migrated users)
+        // Auto-sync if user_app_access is stale (missing or extra apps)
         const missing = expectedApps.filter((slug) => !appSlugs.includes(slug))
-        if (missing.length > 0) {
+        const extra = appSlugs.filter((slug) => !expectedApps.includes(slug))
+        if (missing.length > 0 || extra.length > 0) {
           logger.info('auto-syncing stale user_app_access', {
             operation: 'claims',
             userId: user.id,
             plan,
             missing,
+            extra,
           })
           await syncAppAccessFromPlan(sql, user.id, plan)
           appSlugs = expectedApps

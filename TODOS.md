@@ -83,6 +83,109 @@
 - **What:** Dashboard profile card + edit modal for self-service display name and password changes. Separate endpoints: `PATCH /api/profile` (display name) and `PATCH /api/profile/password` (password change). `has_password` OIDC claim for conditional password UI. Session overrides for stale token fix. UserMenu dropdown in header with edit profile, dashboard link, and sign out.
 - **Completed:** PRs #39, #41, #42 (2026-03-29)
 
+## Phase 1: Revenue Pipeline (planned)
+
+> Source of truth: [Staged Revenue Pipeline design](~/.gstack/projects/DanWangDev-11plus-hub/danwa-main-design-20260408-094737.md)
+> CEO review: [2026-04-08](~/.gstack/projects/DanWangDev-11plus-hub/ceo-plans/2026-04-08-staged-revenue-pipeline.md)
+> Design review: [2026-04-08](~/.gstack/projects/DanWangDev-11plus-hub/danwa-main-design-review-20260408-120000.md)
+
+### P0: Stripe Billing Integration [planned]
+
+- **What:** Stripe Checkout Sessions for new subscriptions. Webhook handler for `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`. Stripe Customer Portal for self-service cancel/update.
+- **Effort:** S (human: ~3 days / CC: ~30 min)
+- **Depends on:** Hub cloud deployment (below)
+- **Schema migration:** Add `stripe_customer_id TEXT UNIQUE` and `stripe_subscription_id TEXT UNIQUE` to subscriptions. Add `stripe_processed_events` table for webhook idempotency. Extend status CHECK to include `past_due` and `incomplete`.
+- **Env vars:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` added to env.ts Zod schema. Validated on startup.
+- **Stripe status mapping:** `trialing` → `trial`, `active` → `active`, `canceled` → `cancelled`
+- **Webhook idempotency:** Check `stripe_processed_events` by event_id, skip duplicates. Record written AFTER subscription update in same transaction.
+- **UPSERT constraint:** Partial unique index extended to `ON (user_id) WHERE status IN ('active', 'trial', 'past_due')` — webhook must UPDATE existing row, not INSERT.
+
+### P0: Hub Cloud Deployment [planned]
+
+- **What:** Deploy hub to Fly.io or Railway with managed PostgreSQL. Migrate hub data via `pg_dump`/`pg_restore` (or fresh seed if no real users).
+- **Effort:** S (human: ~1 day / CC: ~15 min)
+- **Highest risk:** DNS/SSO reconfiguration. Session cookie is `Domain=.labf.app`, cloud hub must serve from same domain. Allow half-day buffer for DNS propagation + SSO smoke testing.
+- **OIDC_ISSUER verification:** Startup check that `OIDC_ISSUER` matches the public domain. Must verify before going live.
+- **Cloudflare Tunnel:** Stays running for NAS-hosted child apps (Writing Buddy, Vocab Master).
+
+### P0: Writing Buddy Paywall Gate [planned]
+
+- **What:** Two-layer gate in Writing Buddy backend: (1) check `apps` JWT claim for `writing-buddy` slug, (2) 7-day free trial with full access then paywall.
+- **Effort:** S (human: ~1 day / CC: ~15 min)
+- **Gate on `apps` claim, not `plan`** — uses canonical entitlement source, supports admin overrides.
+- **JWT staleness:** 15-min TTL acceptable. Force refresh via `?payment=success` redirect param.
+- **Trial activation:** Lazy — starts on first Writing Buddy visit, NOT at signup. `trial_start` claim set on first app access.
+- **Paywall screen:** Full-page block with trial stats recap (essays completed, score improvement). Falls back to generic value prop if no learning_events data. Links to `/pricing` or direct Stripe Checkout.
+
+### P0: Pricing Page [planned]
+
+- **What:** Branded landing page at `/pricing` with full-width hero section. One plan, one price, one CTA. Stripe Tax enabled from day one.
+- **Effort:** XS (human: ~2 hours / CC: ~10 min)
+- **Layout:** Hero section with Lab F branding, product value prop (outcomes, not features), single "Subscribe" button that creates Stripe Checkout Session.
+- **Subscribed users:** If JWT shows active plan, show plan status + "Manage Billing" link instead of subscribe button.
+- **Copy direction:** Speak to parent anxiety ("Will my child pass the 11+ creative writing section?"), not generic AI features.
+
+### P0: Bug Fixes (must-fix before billing goes live) [planned]
+
+- `cancelSubscription()` must call `syncAppAccessFromPlan(sql, userId, 'free')` after setting status to cancelled
+- `syncAppAccessFromPlan()` refactored to single CTE (DELETE + INSERT in one atomic statement)
+- `updateSubscription()` must re-sync app access when status changes to cancelled/expired/incomplete (not just when plan changes)
+- `account.ts` auto-sync must strip EXTRA apps (not just repair MISSING ones). If plan is 'free' but user_app_access has writing-buddy, remove it.
+- Audit trail `actorId` must use `res.locals.user.sub` (from verified session), not forgeable `x-user-id` header
+- Migration 014 must also update the partial unique index to cover `active/trial/past_due` (not just active/trial)
+- Zod status enums must accept `past_due` and `incomplete`
+
+### P0: Hub Auth Refresh Endpoint [planned]
+
+- **What:** Add `GET /auth/refresh` route to hub-auth.ts. Re-fetches claims from OIDC provider, gets fresh id_token via refresh_token exchange, updates iron-session. Called client-side after Stripe payment redirect.
+- **Why:** Hub stores id_token once in iron-session and never refreshes it. After payment, the parent's session still has `plan: 'free'` until they fully re-login. This endpoint allows a silent refresh.
+- **Effort:** XS (human: ~1 hour / CC: ~10 min)
+- **Context:** The ?payment=success redirect param triggers a client-side fetch to this endpoint. Also useful for any future claim staleness scenario.
+
+### P0: Post-Payment Success Overlay [planned]
+
+- **What:** Full-screen success overlay shown when `?payment=success` is in URL. Triggers `GET /auth/refresh`, shows checkmark animation + "Open Writing Buddy" CTA. Auto-dismisses to dashboard after 10s.
+- **Effort:** XS (human: ~1 hour / CC: ~10 min)
+- **Graceful degradation:** Spinner during JWT refresh. If refresh fails: "Payment confirmed! Access may take a few minutes to activate." URL param consumed on first render (prevents duplicate overlay on page refresh).
+- **Accessibility:** Focus trap (Modal pattern), Escape to dismiss, auto-dismiss pauses on keyboard focus.
+
+### P0: Subscription Card (Parent Dashboard) [planned]
+
+- **What:** SubscriptionCard component on parent dashboard showing plan status, price, renewal date, and CTAs. 5 state variants: free (upgrade CTA), trial (days remaining + subscribe), active (plan details + manage billing), past_due (warning + update payment), cancelled (end date + resubscribe).
+- **Effort:** XS (human: ~1 hour / CC: ~10 min)
+- **Manage Billing** link opens Stripe Customer Portal. Status conveyed via text labels (not color alone) for accessibility.
+
+### P0: CORS Update for Child App Origins [planned]
+
+- **What:** Allow *.labf.app subdomains as CORS origins in app.ts. Currently only hub origin + localhost.
+- **Why:** Child apps on NAS have different origins. Browser-based calls to hub APIs will fail CORS. Future-proofs for browser-based child app integrations.
+- **Effort:** XS (human: ~15 min / CC: ~5 min)
+
+### P1: Trial Expiry Banner [planned]
+
+- **What:** Top-of-layout sticky strip with countdown. Shows on days 5-7 of trial. Escalating copy: "3 days left to keep the streak going" -> "Last day!" CTA links to `/pricing`.
+- **Effort:** XS (human: ~1 hour / CC: ~10 min)
+- **Design:** Amber/warning palette (bg-amber-50, border-amber-200, text-amber-800). Extends Alert component with `warning` variant. Dismiss button persists dismissal for current session.
+- **Accessibility:** `role="status"` + `aria-live="polite"` (NOT `role="alert"`). Countdown uses JWT `iat` as reference (handles client clock skew).
+
+### P1: Efficacy Tracking Endpoint [planned]
+
+- **What:** POST `/api/learning-events` endpoint (~50 lines). Writing Buddy pushes learning events (before-score, after-score, time-spent, topic) via service-to-service token.
+- **Effort:** XS (human: ~2 hours / CC: ~10 min)
+- **Context:** `learning_events` table already exists. Only 12% of AI ed-tech has efficacy data.
+
+### P1: NAS Downtime Page [planned]
+
+- **What:** Branded static HTML maintenance page for Writing Buddy subdomain when NAS is down. Lab F branding (inline SVG logo), message: "Writing Buddy is temporarily unavailable. We're working to restore access. Your subscription is not affected." Link back to hub dashboard.
+- **Effort:** XS (human: ~15 min / CC: ~5 min)
+- **Hosting:** Cloudflare custom error page (recommended, works even if hub is also down). No JavaScript, no interactive elements. Semantic HTML, accessible without JS.
+
+### P1: Subscription Audit Trail [planned]
+
+- **What:** New AuditActions: `STRIPE_WEBHOOK_CHECKOUT`, `STRIPE_WEBHOOK_UPDATED`, `STRIPE_WEBHOOK_CANCELLED`. Logged in webhook handler.
+- **Effort:** XS (human: ~20 min / CC: ~5 min)
+- **Context:** Audit infrastructure already exists. Extends existing AuditActions enum.
+
 ## Phase B: App Migrations (planned)
 
 ### P1: Migrate Vocab-Master to Hub Auth
@@ -115,12 +218,9 @@
 - **Context:** Inter typography, slate neutrals, wireframes, interaction states, responsive specs, accessibility.
 - **Note:** Added to profile self-service plan scope via CEO review cherry-pick (2026-03-29).
 
-### P1: Dynamic OIDC Client Loading
+### P1: Dynamic OIDC Client Loading [done]
 
-- **What:** Replace static client registration with dynamic DB lookup so that client metadata changes (secret rotation, redirect_uri updates) take effect without restarting the hub.
-- **Why:** Currently `loadClientsFromDb` runs once at startup and passes clients to oidc-provider's static config. Rotating a client secret via the admin panel requires a hub restart. This caught us during writing-buddy's session-auth migration (2026-03-26).
-- **Effort:** S (human: ~2 days / CC: ~20 min)
-- **Context:** oidc-provider supports a `Client` model in its Adapter interface. The pg-adapter already handles sessions/tokens/codes dynamically — extend it to handle `Client` lookups too. The adapter's `find(id)` method would query the `applications` table by `client_id`, returning `ClientMetadata`. Cache with short TTL (e.g. 60s) to avoid per-request DB queries.
+- **Completed:** Already implemented in `src/oidc/pg-adapter.ts` with 60-second TTL cache. Client model queries `applications` table dynamically. Identified as already-done during CEO review (2026-04-08).
 
 ### P1: Hub Resilience Hardening
 
@@ -144,21 +244,18 @@
 
 ## Phase D: Cross-app Intelligence (planned)
 
-### P2: Learning Events API
+### P2: Learning Events API [promoted to Phase 1]
 
-- **What:** Hub-side storage + REST endpoint for apps to push learning events (fire-and-forget).
-- **Context:** DB table exists (learning_events). Apps authenticate with service-to-service tokens.
+- **Moved to:** Phase 1 > P1: Efficacy Tracking Endpoint
 
 ### P2: Parent Dashboard
 
 - **What:** Cross-app progress aggregation. Hub calls each app's stats API endpoint.
 - **Context:** Per-app stat blocks with 2-3 key numbers each.
 
-### P2: Stripe Billing Integration
+### P2: Stripe Billing Integration [promoted to Phase 1]
 
-- **What:** Stripe Checkout for new subscriptions, Customer Portal for management, webhook handler for lifecycle events.
-- **Effort:** M (human: ~1 week / CC: ~45 min)
-- **Depends on:** Phase B stable, subscription types and admin assignment working first.
+- **Moved to:** Phase 1 > P0: Stripe Billing Integration
 
 ### P3: Weekly Parent Email Digest
 

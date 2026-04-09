@@ -340,6 +340,77 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     }
   })
 
+  // GET /api/auth/refresh — refresh id_token via refresh_token exchange
+  // Called client-side after Stripe payment to get fresh JWT claims (updated plan/apps)
+  router.get('/api/auth/refresh', async (req: Request, res: Response) => {
+    try {
+      const session = await getSession(req, res, sessionSecret)
+
+      if (!session.tokens?.refresh_token) {
+        logger.warn('auth refresh: no refresh_token in session', {
+          operation: 'hubRefresh',
+          hasIdToken: Boolean(session.tokens?.id_token),
+        })
+        res.status(401).json({ success: false, error: 'No refresh token available' })
+        return
+      }
+
+      const metadata = await discoverOidc(issuer, internalIssuer)
+
+      const tokenResponse = await fetch(metadata.token_endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: session.tokens.refresh_token,
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
+      })
+
+      if (!tokenResponse.ok) {
+        const body = await tokenResponse.text()
+        logger.error('auth refresh: token exchange failed', {
+          operation: 'hubRefresh',
+          status: tokenResponse.status,
+          body,
+        })
+        res.status(502).json({ success: false, error: 'Token refresh failed' })
+        return
+      }
+
+      const tokens = (await tokenResponse.json()) as {
+        id_token?: string
+        access_token?: string
+        refresh_token?: string
+      }
+
+      // Update session with fresh tokens (keep old refresh_token if new one not issued)
+      session.tokens = {
+        id_token: tokens.id_token ?? session.tokens.id_token,
+        access_token: tokens.access_token ?? session.tokens.access_token,
+        refresh_token: tokens.refresh_token ?? session.tokens.refresh_token,
+      }
+      session.profileOverrides = undefined
+      await session.save()
+
+      const claims = decodeIdToken(session.tokens.id_token!)
+      logger.info('auth refresh success', {
+        operation: 'hubRefresh',
+        sub: claims.sub,
+        plan: claims.plan,
+      })
+
+      res.json({ success: true, data: claims })
+    } catch (error) {
+      logger.error('auth refresh failed', {
+        operation: 'hubRefresh',
+        error: error instanceof Error ? error.message : String(error),
+      })
+      res.status(500).json({ success: false, error: 'Token refresh failed' })
+    }
+  })
+
   // POST /api/auth/backchannel-logout — receive logout_token from oidc-provider
   router.post('/api/auth/backchannel-logout', async (req: Request, res: Response) => {
     try {

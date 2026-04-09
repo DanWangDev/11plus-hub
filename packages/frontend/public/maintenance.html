@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>11+ Hub - Maintenance</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: #f8fafc;
+        color: #334155;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      }
+
+      .container {
+        max-width: 420px;
+        width: 100%;
+        text-align: center;
+      }
+
+      .logo {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+      }
+
+      .logo-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: #6366f1;
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .logo-text {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #0f172a;
+      }
+
+      .card {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid #f1f5f9;
+        box-shadow: 0 1px 2px rgba(148, 163, 184, 0.1);
+        padding: 2.5rem 2rem;
+      }
+
+      .icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 1.5rem;
+        border-radius: 50%;
+        background: #fef3c7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+      }
+
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        font-size: 0.875rem;
+        color: #64748b;
+        line-height: 1.5;
+      }
+
+      .status {
+        margin-top: 1.5rem;
+        padding: 0.75rem 1rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        color: #94a3b8;
+      }
+
+      .retry-btn {
+        display: inline-block;
+        margin-top: 1.5rem;
+        padding: 0.625rem 1.25rem;
+        background: #6366f1;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      .retry-btn:hover {
+        background: #4f46e5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">
+        <div class="logo-icon">11+</div>
+        <span class="logo-text">11+ Hub</span>
+      </div>
+
+      <div class="card">
+        <div class="icon">&#128736;</div>
+        <h1>We'll be right back</h1>
+        <p>
+          11+ Hub is undergoing scheduled maintenance. We're upgrading things to make your
+          experience even better.
+        </p>
+        <div class="status">Estimated downtime: a few minutes</div>
+        <a href="/" class="retry-btn">Try again</a>
+      </div>
+    </div>
+  </body>
+</html>

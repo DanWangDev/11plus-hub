@@ -6,6 +6,7 @@ import { createAccountFinder } from './oidc/account.js'
 import { generateDevSigningKey } from './oidc/dev-keys.js'
 import { startOidcPayloadCleanup } from './jobs/oidc-cleanup.js'
 import { startBclRetryJob } from './oidc/bcl-retry.js'
+import { createStripeClient } from './services/stripe-service.js'
 import { createLogger } from './lib/logger.js'
 
 const logger = createLogger({ service: 'server' })
@@ -24,6 +25,10 @@ async function main(): Promise<void> {
     findAccount: createAccountFinder(sql),
   })
 
+  // Stripe billing (optional — disabled when env vars not set)
+  const stripeEnabled = env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_ID
+  const stripe = stripeEnabled ? createStripeClient(env.STRIPE_SECRET_KEY!) : undefined
+
   const app = createApp({
     sql,
     oidcProvider,
@@ -34,6 +39,10 @@ async function main(): Promise<void> {
       sessionSecret: env.HUB_SESSION_SECRET,
       redirectUri: `${env.OIDC_ISSUER}/api/auth/hub-callback`,
     },
+    stripeWebhook: stripe ? { stripe, sql, webhookSecret: env.STRIPE_WEBHOOK_SECRET! } : undefined,
+    stripeCheckout: stripe
+      ? { stripe, sql, priceId: env.STRIPE_PRICE_ID!, hubOrigin: env.OIDC_ISSUER }
+      : undefined,
   })
 
   // Clean up expired OIDC payloads hourly
