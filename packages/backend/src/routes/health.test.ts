@@ -8,11 +8,11 @@ vi.mock('../db/connection.js', () => ({
 }))
 
 describe('health routes', () => {
-  describe('GET /health', () => {
+  describe('GET /api/health', () => {
     const app = createApp({ skipDbCheck: true })
 
     it('returns healthy status', async () => {
-      const res = await request(app).get('/health')
+      const res = await request(app).get('/api/health')
 
       expect(res.status).toBe(200)
       expect(res.body).toMatchObject({
@@ -25,16 +25,16 @@ describe('health routes', () => {
     })
 
     it('includes version', async () => {
-      const res = await request(app).get('/health')
+      const res = await request(app).get('/api/health')
       expect(res.body.data).toHaveProperty('version')
     })
   })
 
-  describe('GET /ready (skipDbCheck)', () => {
+  describe('GET /api/ready (skipDbCheck)', () => {
     const app = createApp({ skipDbCheck: true })
 
     it('returns ready with database skipped', async () => {
-      const res = await request(app).get('/ready')
+      const res = await request(app).get('/api/ready')
 
       expect(res.status).toBe(200)
       expect(res.body).toMatchObject({
@@ -47,13 +47,13 @@ describe('health routes', () => {
     })
   })
 
-  describe('GET /ready (with DB check)', () => {
+  describe('GET /api/ready (with DB check)', () => {
     it('returns ready when DB is connected', async () => {
       const { checkDbConnection } = await import('../db/connection.js')
       vi.mocked(checkDbConnection).mockResolvedValue(true)
 
       const app = createApp()
-      const res = await request(app).get('/ready')
+      const res = await request(app).get('/api/ready')
 
       expect(res.status).toBe(200)
       expect(res.body).toMatchObject({
@@ -70,7 +70,7 @@ describe('health routes', () => {
       vi.mocked(checkDbConnection).mockResolvedValue(false)
 
       const app = createApp()
-      const res = await request(app).get('/ready')
+      const res = await request(app).get('/api/ready')
 
       expect(res.status).toBe(503)
       expect(res.body).toMatchObject({

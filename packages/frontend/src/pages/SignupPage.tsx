@@ -44,7 +44,7 @@ export function SignupPage() {
   const handleGoogleSignup = () => {
     // Redirect to OIDC login flow — the InteractionPage handles Google-based
     // account creation and OIDC session establishment in a single step.
-    window.location.href = '/auth/login?returnTo=/dashboard'
+    window.location.href = '/api/auth/hub-login?returnTo=/dashboard'
   }
 
   if (success) {

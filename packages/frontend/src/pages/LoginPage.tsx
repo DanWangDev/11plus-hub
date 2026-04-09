@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/auth-context'
  * LoginPage — redirects to the OIDC login flow.
  *
  * If the user is already authenticated (has a valid session cookie),
- * redirects to the dashboard instead. Otherwise, redirects to /auth/login
+ * redirects to the dashboard instead. Otherwise, redirects to /api/auth/hub-login
  * which initiates the OIDC authorization flow with the hub's own provider.
  */
 export function LoginPage() {
@@ -26,7 +26,7 @@ export function LoginPage() {
     // Not logged in — redirect to OIDC login flow
     // The returnTo param tells the hub where to redirect after login
     const returnTo = new URLSearchParams(window.location.search).get('returnTo') ?? '/dashboard'
-    window.location.href = `/auth/login?returnTo=${encodeURIComponent(returnTo)}`
+    window.location.href = `/api/auth/hub-login?returnTo=${encodeURIComponent(returnTo)}`
   }, [user, loading, navigate])
 
   return (

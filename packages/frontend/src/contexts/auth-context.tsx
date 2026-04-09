@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchMe = useCallback(async () => {
     try {
-      const res = await fetch('/auth/me', { credentials: 'include' })
+      const res = await fetch('/api/auth/me', { credentials: 'include' })
       if (res.ok) {
         const body = (await res.json()) as { success: boolean; data?: HubUser }
         setUser(body.data ?? null)
@@ -35,10 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchMe])
 
   const logout = useCallback(() => {
-    // GET /auth/logout — backend destroys session and redirects to OIDC end_session.
+    // GET /api/auth/hub-logout — backend destroys session and redirects to OIDC end_session.
     // Uses navigation instead of form POST to avoid CSP form-action blocking
     // behind Cloudflare tunnel / reverse proxies.
-    window.location.href = '/auth/logout'
+    window.location.href = '/api/auth/hub-logout'
   }, [])
 
   return (

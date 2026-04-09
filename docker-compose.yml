@@ -17,16 +17,15 @@ services:
       timeout: 5s
       retries: 5
 
-  app:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
-      target: development
-      args:
-        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-        VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
-    container_name: hub-app
+      target: production
+    container_name: hub-backend
     restart: unless-stopped
+    command: >
+      sh -c "node dist/db/migrate.js up && node dist/db/seed.js && node dist/server.js"
     ports:
       - '3009:3009'
     environment:
@@ -47,9 +46,6 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
-    volumes:
-      - ./src:/app/src
-      - ./package.json:/app/package.json
     depends_on:
       db:
         condition: service_healthy
