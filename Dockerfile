@@ -12,7 +12,6 @@ RUN npm ci -w packages/backend --ignore-scripts
 # ── Build ────────────────────────────────────────────
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/backend/node_modules ./packages/backend/node_modules
 COPY packages/backend/ packages/backend/
 COPY package.json ./
 RUN npm -w packages/backend run build
