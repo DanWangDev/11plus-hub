@@ -62,10 +62,16 @@ async function main(): Promise<void> {
     // production issuer. This ensures post_logout_redirect_uri validation works.
     const hubIssuer = process.env.OIDC_ISSUER ?? 'http://localhost:3009'
     const hubRedirectUris = [
+      `${hubIssuer}/api/auth/hub-callback`,
+      // Backward-compat: keep old redirect_uri for in-flight auth flows (remove after 2 weeks)
       `${hubIssuer}/auth/callback`,
       // Include both dev and prod so the same seed works everywhere
-      ...(hubIssuer !== 'http://localhost:3009' ? ['http://localhost:3009/auth/callback'] : []),
-      ...(hubIssuer !== 'https://hub.labf.app' ? ['https://hub.labf.app/auth/callback'] : []),
+      ...(hubIssuer !== 'http://localhost:3009'
+        ? ['http://localhost:3009/api/auth/hub-callback', 'http://localhost:3009/auth/callback']
+        : []),
+      ...(hubIssuer !== 'https://hub.labf.app'
+        ? ['https://hub.labf.app/api/auth/hub-callback', 'https://hub.labf.app/auth/callback']
+        : []),
     ]
 
     // ON CONFLICT: update url and redirect_uris so re-running seed fixes

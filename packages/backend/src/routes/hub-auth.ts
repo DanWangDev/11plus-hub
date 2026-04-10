@@ -31,7 +31,7 @@ export interface SessionData {
     access_token?: string
     refresh_token?: string
   }
-  /** Profile overrides applied on top of id_token claims in GET /auth/me */
+  /** Profile overrides applied on top of id_token claims in GET /api/auth/me */
   profileOverrides?: Record<string, unknown>
 }
 
@@ -128,8 +128,8 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
   const router = Router()
   const { issuer, internalIssuer, clientId, clientSecret, sessionSecret, redirectUri } = options
 
-  // GET /auth/login — redirect to hub's own OIDC authorization endpoint
-  router.get('/auth/login', async (req: Request, res: Response) => {
+  // GET /api/auth/hub-login — redirect to hub's own OIDC authorization endpoint
+  router.get('/api/auth/hub-login', async (req: Request, res: Response) => {
     try {
       const metadata = await discoverOidc(issuer, internalIssuer)
       const { code_verifier, code_challenge } = generatePkce()
@@ -169,8 +169,8 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     }
   })
 
-  // GET /auth/callback — handle OIDC callback, exchange code for tokens
-  router.get('/auth/callback', async (req: Request, res: Response) => {
+  // GET /api/auth/hub-callback — handle OIDC callback, exchange code for tokens
+  router.get('/api/auth/hub-callback', async (req: Request, res: Response) => {
     try {
       const { code, state, error, error_description } = req.query as Record<string, string>
 
@@ -263,9 +263,9 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     }
   })
 
-  // GET|POST /auth/logout — clear session and redirect to OIDC end_session
+  // GET|POST /api/auth/hub-logout — clear session and redirect to OIDC end_session
   // GET supported because CSP form-action blocks POST behind Cloudflare tunnel
-  router.all('/auth/logout', async (req: Request, res: Response) => {
+  router.all('/api/auth/hub-logout', async (req: Request, res: Response) => {
     if (req.method !== 'GET' && req.method !== 'POST') {
       res.status(405).end()
       return
@@ -318,8 +318,8 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     }
   })
 
-  // GET /auth/me — return current user claims from session
-  router.get('/auth/me', async (req: Request, res: Response) => {
+  // GET /api/auth/me — return current user claims from session
+  router.get('/api/auth/me', async (req: Request, res: Response) => {
     try {
       const session = await getSession(req, res, sessionSecret)
 
@@ -340,9 +340,9 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     }
   })
 
-  // GET /auth/refresh — refresh id_token via refresh_token exchange
+  // GET /api/auth/refresh — refresh id_token via refresh_token exchange
   // Called client-side after Stripe payment to get fresh JWT claims (updated plan/apps)
-  router.get('/auth/refresh', async (req: Request, res: Response) => {
+  router.get('/api/auth/refresh', async (req: Request, res: Response) => {
     try {
       const session = await getSession(req, res, sessionSecret)
 
@@ -411,8 +411,8 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     }
   })
 
-  // POST /auth/backchannel-logout — receive logout_token from oidc-provider
-  router.post('/auth/backchannel-logout', async (req: Request, res: Response) => {
+  // POST /api/auth/backchannel-logout — receive logout_token from oidc-provider
+  router.post('/api/auth/backchannel-logout', async (req: Request, res: Response) => {
     try {
       const logoutToken = req.body?.logout_token ?? (req as Request & { body: string }).body
 
@@ -462,6 +462,27 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
       })
       res.status(400).json({ error: 'Invalid logout_token' })
     }
+  })
+
+  // ── Backward-compat redirects (remove after 2 weeks) ──────────────
+  // Users with cached old frontend JS still reference the old paths.
+  // 302 for browser navigations, 307 to preserve HTTP method for fetch/POST.
+  router.get('/auth/login', (req: Request, res: Response) => {
+    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''
+    res.redirect(302, `/api/auth/hub-login${qs}`)
+  })
+  router.get('/auth/callback', (req: Request, res: Response) => {
+    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''
+    res.redirect(302, `/api/auth/hub-callback${qs}`)
+  })
+  router.all('/auth/logout', (_req: Request, res: Response) => {
+    res.redirect(307, '/api/auth/hub-logout')
+  })
+  router.get('/auth/me', (_req: Request, res: Response) => {
+    res.redirect(307, '/api/auth/me')
+  })
+  router.post('/auth/backchannel-logout', (_req: Request, res: Response) => {
+    res.redirect(307, '/api/auth/backchannel-logout')
   })
 
   return router

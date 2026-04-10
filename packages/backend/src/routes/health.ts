@@ -4,7 +4,7 @@ import { checkDbConnection } from '../db/connection.js'
 export function createHealthRouter(options: { skipDbCheck?: boolean } = {}): Router {
   const router = Router()
 
-  router.get('/health', (_req, res) => {
+  router.get('/api/health', (_req, res) => {
     res.json({
       success: true,
       data: {
@@ -15,7 +15,7 @@ export function createHealthRouter(options: { skipDbCheck?: boolean } = {}): Rou
     })
   })
 
-  router.get('/ready', async (_req, res) => {
+  router.get('/api/ready', async (_req, res) => {
     if (options.skipDbCheck) {
       res.json({
         success: true,

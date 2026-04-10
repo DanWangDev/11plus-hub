@@ -99,7 +99,7 @@ export function createProfileRouter(options: ProfileRouterOptions): Router {
         displayName,
       })
 
-      // Store profileOverrides in session so /auth/me reflects the change
+      // Store profileOverrides in session so /api/auth/me reflects the change
       // without requiring a full re-authentication
       const session = await getIronSession<SessionData>(req, res, {
         password: sessionSecret,

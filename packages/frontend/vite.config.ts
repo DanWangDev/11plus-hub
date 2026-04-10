@@ -17,11 +17,11 @@ export default defineConfig({
         target: 'http://localhost:3009',
         changeOrigin: true,
       },
-      '/auth/interaction': {
+      '/oidc': {
         target: 'http://localhost:3009',
         changeOrigin: true,
       },
-      '/oidc': {
+      '/.well-known': {
         target: 'http://localhost:3009',
         changeOrigin: true,
       },

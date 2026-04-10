@@ -26,11 +26,11 @@ export default tseslint.config(
   },
   {
     files: [
-      'src/db/migrate.ts',
-      'src/db/seed.ts',
-      'src/db/migrate-users.ts',
-      'src/db/migrate-writing-buddy.ts',
-      'src/server.ts',
+      'packages/backend/src/db/migrate.ts',
+      'packages/backend/src/db/seed.ts',
+      'packages/backend/src/db/migrate-users.ts',
+      'packages/backend/src/db/migrate-writing-buddy.ts',
+      'packages/backend/src/server.ts',
     ],
     rules: {
       'n/no-process-exit': 'off',
@@ -38,17 +38,17 @@ export default tseslint.config(
   },
   {
     files: [
-      'src/services/google-auth-service.ts',
-      'src/services/turnstile-service.ts',
-      'src/routes/hub-auth.ts',
-      'src/oidc/bcl-retry.ts',
+      'packages/backend/src/services/google-auth-service.ts',
+      'packages/backend/src/services/turnstile-service.ts',
+      'packages/backend/src/routes/hub-auth.ts',
+      'packages/backend/src/oidc/bcl-retry.ts',
     ],
     rules: {
       'n/no-unsupported-features/node-builtins': ['error', { ignores: ['fetch'] }],
     },
   },
   {
-    files: ['src/**/*.test.ts'],
+    files: ['packages/backend/src/**/*.test.ts'],
     rules: {
       'n/no-unsupported-features/node-builtins': ['error', { ignores: ['Response'] }],
     },
@@ -62,13 +62,12 @@ export default tseslint.config(
   },
   {
     ignores: [
-      'dist/',
-      'node_modules/',
-      'coverage/',
+      '**/dist/',
+      '**/node_modules/',
+      '**/coverage/',
       '*.config.js',
       '*.config.ts',
       '**/*.d.ts',
-      'packages/frontend/dist/',
     ],
   },
 )

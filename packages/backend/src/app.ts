@@ -1,4 +1,3 @@
-import { join } from 'node:path'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -29,7 +28,6 @@ export interface AppOptions {
   skipDbCheck?: boolean
   sql?: postgres.Sql
   oidcProvider?: Provider
-  frontendDir?: string
   hubAuth?: HubAuthOptions
   stripeWebhook?: StripeWebhookOptions
   stripeCheckout?: StripeCheckoutOptions
@@ -176,14 +174,6 @@ export function createApp(options: AppOptions = {}): express.Express {
 
   // OIDC Provider
   if (options.oidcProvider && options.sql) {
-    // When SPA is available, serve it for interaction pages instead of the HTML fallback.
-    // The SPA uses fetch() (JSON API) which avoids CSP form-action restrictions that
-    // block HTML form submissions behind Cloudflare tunnels / reverse proxies.
-    if (options.frontendDir) {
-      app.get('/auth/interaction/:uid', (_req, res) => {
-        res.sendFile(join(options.frontendDir!, 'index.html'))
-      })
-    }
     app.use(
       createInteractionRouter({
         provider: options.oidcProvider,
@@ -195,34 +185,15 @@ export function createApp(options: AppOptions = {}): express.Express {
     app.use('/oidc', options.oidcProvider.callback())
   }
 
-  // Hub's own OIDC client routes (login/callback/logout/me/backchannel-logout)
+  // Hub's own OIDC client routes (hub-login/hub-callback/hub-logout/me/backchannel-logout)
   if (options.hubAuth) {
     app.use(createHubAuthRouter(options.hubAuth))
   }
 
-  // Serve frontend SPA in production
-  if (options.frontendDir) {
-    app.use(express.static(options.frontendDir))
-    // OIDC discovery redirect: provider is mounted at /oidc but issuer is the root
-    app.get('/.well-known/openid-configuration', (_req, res) => {
-      res.redirect(301, '/oidc/.well-known/openid-configuration')
-    })
-    // SPA fallback: serve index.html for non-API, non-OIDC routes
-    app.get('{*path}', (req, res, next) => {
-      if (
-        req.path.startsWith('/api/') ||
-        req.path.startsWith('/oidc/') ||
-        req.path.startsWith('/health') ||
-        req.path.startsWith('/ready') ||
-        (req.path.startsWith('/auth/') && !req.path.startsWith('/auth/interaction/')) ||
-        req.path.startsWith('/.well-known/')
-      ) {
-        next()
-        return
-      }
-      res.sendFile(join(options.frontendDir!, 'index.html'))
-    })
-  }
+  // OIDC discovery redirect: provider is mounted at /oidc but issuer is the root
+  app.get('/.well-known/openid-configuration', (_req, res) => {
+    res.redirect(301, '/oidc/.well-known/openid-configuration')
+  })
 
   // Error handling
   app.use(notFoundHandler)

@@ -40,7 +40,7 @@ const HUB_AUTH_OPTIONS = {
   clientId: 'hub',
   clientSecret: 'hub-dev-client-secret',
   sessionSecret: 'hub-session-secret-minimum-32-characters-long!!',
-  redirectUri: 'http://localhost:3009/auth/callback',
+  redirectUri: 'http://localhost:3009/api/auth/hub-callback',
 }
 
 const MOCK_OIDC_METADATA = {
@@ -73,7 +73,7 @@ describe('hub-auth routes', () => {
     vi.restoreAllMocks()
   })
 
-  describe('GET /auth/login', () => {
+  describe('GET /api/auth/hub-login', () => {
     it('redirects to OIDC authorization endpoint', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -81,7 +81,7 @@ describe('hub-auth routes', () => {
       })
 
       const app = createTestApp()
-      const res = await request(app).get('/auth/login')
+      const res = await request(app).get('/api/auth/hub-login')
 
       expect(res.status).toBe(302)
       expect(res.headers.location).toContain('http://localhost:3009/oidc/auth?')
@@ -97,7 +97,7 @@ describe('hub-auth routes', () => {
       })
 
       const app = createTestApp()
-      const res = await request(app).get('/auth/login')
+      const res = await request(app).get('/api/auth/hub-login')
 
       expect(res.headers.location).toContain('code_challenge=')
     })
@@ -109,7 +109,7 @@ describe('hub-auth routes', () => {
       })
 
       const app = createTestApp()
-      await request(app).get('/auth/login?returnTo=/dashboard')
+      await request(app).get('/api/auth/hub-login?returnTo=/dashboard')
 
       // returnTo is saved in session, not in the redirect URL
       // Just ensure the redirect happened successfully
@@ -120,7 +120,7 @@ describe('hub-auth routes', () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500 })
 
       const app = createTestApp()
-      const res = await request(app).get('/auth/login')
+      const res = await request(app).get('/api/auth/hub-login')
 
       expect(res.status).toBe(500)
       expect(res.body).toMatchObject({
@@ -130,10 +130,10 @@ describe('hub-auth routes', () => {
     })
   })
 
-  describe('GET /auth/callback', () => {
+  describe('GET /api/auth/hub-callback', () => {
     it('returns 400 if code is missing', async () => {
       const app = createTestApp()
-      const res = await request(app).get('/auth/callback?state=test')
+      const res = await request(app).get('/api/auth/hub-callback?state=test')
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Missing code or state')
@@ -141,7 +141,7 @@ describe('hub-auth routes', () => {
 
     it('returns 400 if state is missing', async () => {
       const app = createTestApp()
-      const res = await request(app).get('/auth/callback?code=test')
+      const res = await request(app).get('/api/auth/hub-callback?code=test')
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Missing code or state')
@@ -149,7 +149,7 @@ describe('hub-auth routes', () => {
 
     it('returns redirect on error=access_denied', async () => {
       const app = createTestApp()
-      const res = await request(app).get('/auth/callback?error=access_denied')
+      const res = await request(app).get('/api/auth/hub-callback?error=access_denied')
 
       expect(res.status).toBe(302)
       expect(res.headers.location).toBe('/login?error=access_denied')
@@ -158,7 +158,7 @@ describe('hub-auth routes', () => {
     it('returns 400 for other OIDC errors', async () => {
       const app = createTestApp()
       const res = await request(app).get(
-        '/auth/callback?error=invalid_request&error_description=bad+request',
+        '/api/auth/hub-callback?error=invalid_request&error_description=bad+request',
       )
 
       expect(res.status).toBe(400)
@@ -166,10 +166,10 @@ describe('hub-auth routes', () => {
     })
   })
 
-  describe('GET /auth/me', () => {
+  describe('GET /api/auth/me', () => {
     it('returns 401 when no session exists', async () => {
       const app = createTestApp()
-      const res = await request(app).get('/auth/me')
+      const res = await request(app).get('/api/auth/me')
 
       expect(res.status).toBe(401)
       expect(res.body).toMatchObject({
@@ -215,7 +215,7 @@ describe('hub-auth routes', () => {
       } as never)
 
       const app = createTestApp()
-      const res = await request(app).get('/auth/me')
+      const res = await request(app).get('/api/auth/me')
 
       expect(res.status).toBe(200)
       expect(res.body.success).toBe(true)
@@ -225,7 +225,7 @@ describe('hub-auth routes', () => {
     })
   })
 
-  describe('POST /auth/logout', () => {
+  describe('POST /api/auth/hub-logout', () => {
     it('redirects to OIDC end_session_endpoint', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -241,7 +241,7 @@ describe('hub-auth routes', () => {
       } as never)
 
       const app = createTestApp()
-      const res = await request(app).post('/auth/logout')
+      const res = await request(app).post('/api/auth/hub-logout')
 
       expect(res.status).toBe(302)
       expect(res.headers.location).toContain('http://localhost:3009/oidc/session/end?')
@@ -266,7 +266,7 @@ describe('hub-auth routes', () => {
       } as never)
 
       const app = createTestApp()
-      const res = await request(app).post('/auth/logout')
+      const res = await request(app).post('/api/auth/hub-logout')
 
       expect(res.status).toBe(302)
       expect(res.headers.location).toBe('/')
@@ -284,14 +284,14 @@ describe('hub-auth routes', () => {
       } as never)
 
       const app = createTestApp()
-      const res = await request(app).post('/auth/logout')
+      const res = await request(app).post('/api/auth/hub-logout')
 
       expect(res.status).toBe(302)
       expect(res.headers.location).toBe('/')
     })
   })
 
-  describe('GET /auth/refresh', () => {
+  describe('GET /api/auth/refresh', () => {
     it('returns 401 when no refresh_token in session', async () => {
       const { getIronSession } = await import('iron-session')
       vi.mocked(getIronSession).mockResolvedValueOnce({
@@ -302,7 +302,7 @@ describe('hub-auth routes', () => {
       } as never)
 
       const app = createTestApp()
-      const res = await request(app).get('/auth/refresh')
+      const res = await request(app).get('/api/auth/refresh')
 
       expect(res.status).toBe(401)
       expect(res.body).toMatchObject({
@@ -355,7 +355,7 @@ describe('hub-auth routes', () => {
         })
 
       const app = createTestApp()
-      const res = await request(app).get('/auth/refresh')
+      const res = await request(app).get('/api/auth/refresh')
 
       expect(res.status).toBe(200)
       expect(res.body.success).toBe(true)
@@ -388,7 +388,7 @@ describe('hub-auth routes', () => {
         })
 
       const app = createTestApp()
-      const res = await request(app).get('/auth/refresh')
+      const res = await request(app).get('/api/auth/refresh')
 
       expect(res.status).toBe(502)
       expect(res.body).toMatchObject({
@@ -398,10 +398,10 @@ describe('hub-auth routes', () => {
     })
   })
 
-  describe('POST /auth/backchannel-logout', () => {
+  describe('POST /api/auth/backchannel-logout', () => {
     it('returns 400 when logout_token is missing', async () => {
       const app = createTestApp()
-      const res = await request(app).post('/auth/backchannel-logout').send({})
+      const res = await request(app).post('/api/auth/backchannel-logout').send({})
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Missing logout_token')
@@ -409,7 +409,9 @@ describe('hub-auth routes', () => {
 
     it('returns 400 when logout_token is not a string', async () => {
       const app = createTestApp()
-      const res = await request(app).post('/auth/backchannel-logout').send({ logout_token: 123 })
+      const res = await request(app)
+        .post('/api/auth/backchannel-logout')
+        .send({ logout_token: 123 })
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Missing logout_token')
@@ -428,7 +430,7 @@ describe('hub-auth routes', () => {
 
       const app = createTestApp()
       const res = await request(app)
-        .post('/auth/backchannel-logout')
+        .post('/api/auth/backchannel-logout')
         .send({ logout_token: 'invalid.jwt.token' })
 
       expect(res.status).toBe(400)
@@ -446,9 +448,9 @@ describe('hub-auth routes', () => {
       const app = createTestApp()
 
       // First request triggers discovery
-      await request(app).get('/auth/login')
+      await request(app).get('/api/auth/hub-login')
       // Second request uses cache
-      await request(app).get('/auth/login')
+      await request(app).get('/api/auth/hub-login')
 
       // fetch should only be called once for discovery (cache hit on second)
       expect(mockFetch).toHaveBeenCalledTimes(1)

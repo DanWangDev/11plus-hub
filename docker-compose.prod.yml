@@ -17,9 +17,9 @@ services:
     networks:
       - hub
 
-  app:
-    image: ghcr.io/danwangdev/11plus-hub:latest
-    container_name: hub-app
+  backend:
+    image: ghcr.io/danwangdev/11plus-hub-backend:latest
+    container_name: hub-backend
     restart: unless-stopped
     command: >
       sh -c "node dist/db/migrate.js up && node dist/db/seed.js && node dist/server.js"
@@ -28,21 +28,20 @@ services:
       NODE_ENV: production
       DB_HOST: db
       DB_PORT: 5432
+    ports:
+      - '3009:3009'
     depends_on:
       db:
         condition: service_healthy
     networks:
       - hub
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: hub-tunnel
+  frontend:
+    image: ghcr.io/danwangdev/11plus-hub-frontend:latest
+    container_name: hub-frontend
     restart: unless-stopped
-    command: tunnel run
-    environment:
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
-    depends_on:
-      - app
+    ports:
+      - '3010:80'
     networks:
       - hub
 
@@ -50,15 +49,14 @@ services:
   # Usage:
   #   1. Place vocab-master.db and writing-buddy.db in ./data/
   #   2. docker compose -f docker-compose.prod.yml --profile migration run --rm migrate-users
-  #   3. Add --dry-run to preview: override command with sh -c "npx tsx src/db/migrate-users.ts --vocab-master /data/vocab-master.db --writing-buddy /data/writing-buddy.db --dry-run"
   migrate-users:
     build:
       context: .
       dockerfile: Dockerfile
-      target: development
+      target: production
     container_name: hub-migrate
     command: >
-      sh -c "npx tsx src/db/migrate-users.ts
+      sh -c "node dist/db/migrate-users.js
       --vocab-master /data/vocab-master.db
       --writing-buddy /data/writing-buddy.db"
     env_file: .env

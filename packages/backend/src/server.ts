@@ -1,6 +1,3 @@
-import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { createApp } from './app.js'
 import { env } from './config/env.js'
 import { createDb } from './db/connection.js'
@@ -28,10 +25,6 @@ async function main(): Promise<void> {
     findAccount: createAccountFinder(sql),
   })
 
-  const __dirname = fileURLToPath(new URL('.', import.meta.url))
-  const frontendDist = resolve(__dirname, '..', 'packages', 'frontend', 'dist')
-  const frontendDir = existsSync(frontendDist) ? frontendDist : undefined
-
   // Stripe billing (optional — disabled when env vars not set)
   const stripeEnabled = env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_ID
   const stripe = stripeEnabled ? createStripeClient(env.STRIPE_SECRET_KEY!) : undefined
@@ -39,13 +32,12 @@ async function main(): Promise<void> {
   const app = createApp({
     sql,
     oidcProvider,
-    frontendDir,
     hubAuth: {
       issuer: env.OIDC_ISSUER,
       clientId: env.HUB_CLIENT_ID,
       clientSecret: env.HUB_CLIENT_SECRET,
       sessionSecret: env.HUB_SESSION_SECRET,
-      redirectUri: `${env.OIDC_ISSUER}/auth/callback`,
+      redirectUri: `${env.OIDC_ISSUER}/api/auth/hub-callback`,
     },
     stripeWebhook: stripe ? { stripe, sql, webhookSecret: env.STRIPE_WEBHOOK_SECRET! } : undefined,
     stripeCheckout: stripe
