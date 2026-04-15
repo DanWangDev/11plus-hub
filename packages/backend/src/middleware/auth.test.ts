@@ -10,6 +10,18 @@ vi.mock('../lib/logger.js', () => ({
   }),
 }))
 
+vi.mock('../db/connection.js', () => ({
+  db: {},
+}))
+
+const { mockUpdateLastActive } = vi.hoisted(() => ({
+  mockUpdateLastActive: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('../services/user-service.js', () => ({
+  updateLastActive: (...args: unknown[]) => mockUpdateLastActive(...args),
+}))
+
 // Mock iron-session
 const mockSession: Record<string, unknown> = {}
 vi.mock('iron-session', () => ({
@@ -55,6 +67,7 @@ describe('createRequireAuth', () => {
   beforeEach(() => {
     // Reset mock session
     Object.keys(mockSession).forEach((k) => delete mockSession[k])
+    mockUpdateLastActive.mockClear()
   })
 
   it('returns 401 when no session tokens exist', async () => {
@@ -103,6 +116,22 @@ describe('createRequireAuth', () => {
       role: 'admin',
       email: 'test@example.com',
     })
+    // Every authenticated request bumps last_active_at (throttled in SQL)
+    expect(mockUpdateLastActive).toHaveBeenCalledWith(expect.anything(), 42)
+  })
+
+  it('does not call updateLastActive when sub is not a number', async () => {
+    const token = fakeJwt({ sub: 'not-numeric', username: 'x' })
+    mockSession.tokens = { id_token: token }
+
+    const req = createMockReq()
+    const res = createMockRes()
+    const next = vi.fn()
+
+    await requireAuth(req, res, next)
+
+    expect(next).toHaveBeenCalledOnce()
+    expect(mockUpdateLastActive).not.toHaveBeenCalled()
   })
 
   it('defaults role to student when not in claims', async () => {

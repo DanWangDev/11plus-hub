@@ -2,6 +2,7 @@ import Provider from 'oidc-provider'
 import type postgres from 'postgres'
 import { createPgAdapter } from './pg-adapter.js'
 import { queueBclRetry } from './bcl-retry.js'
+import { updateLastActive } from '../services/user-service.js'
 import { createLogger } from '../lib/logger.js'
 
 const logger = createLogger({ service: 'oidc-provider' })
@@ -235,11 +236,44 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
   provider.proxy = true
 
   provider.on('grant.success', (...args: unknown[]) => {
-    const ctx = args[0] as { oidc?: { client?: { clientId?: string } } }
+    const ctx = args[0] as {
+      oidc?: {
+        client?: { clientId?: string }
+        session?: { accountId?: string }
+        entities?: {
+          Grant?: { accountId?: string }
+          RefreshToken?: { accountId?: string }
+          AccessToken?: { accountId?: string }
+        }
+      }
+    }
+    const clientId = ctx.oidc?.client?.clientId
+
     logger.info('oidc grant success', {
       operation: 'grant.success',
-      clientId: ctx.oidc?.client?.clientId,
+      clientId,
     })
+
+    // Bump last_active_at so downstream-app activity (initial auth code exchange
+    // AND refresh-token grants) surfaces in the admin "Last Active" column.
+    // The service layer throttles to once per 5 min per user, so it's cheap
+    // to call on every grant event.
+    const accountId =
+      ctx.oidc?.entities?.Grant?.accountId ??
+      ctx.oidc?.entities?.RefreshToken?.accountId ??
+      ctx.oidc?.entities?.AccessToken?.accountId ??
+      ctx.oidc?.session?.accountId
+    const userIdNum = accountId ? Number.parseInt(accountId, 10) : NaN
+    if (Number.isFinite(userIdNum)) {
+      updateLastActive(sql, userIdNum).catch((err) => {
+        logger.warn('failed to update last_active_at on grant.success', {
+          operation: 'grant.success',
+          clientId,
+          userId: userIdNum,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      })
+    }
   })
 
   provider.on('grant.error', (...args: unknown[]) => {

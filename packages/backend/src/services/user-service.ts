@@ -53,6 +53,7 @@ export interface User {
   created_at: Date
   updated_at: Date
   deleted_at: Date | null
+  last_active_at: Date | null
 }
 
 export interface UserWithPassword extends User {
@@ -129,7 +130,7 @@ export async function createUser(sql: postgres.Sql, data: CreateUserInput): Prom
 
 export async function findUserById(sql: postgres.Sql, id: number): Promise<User | null> {
   const rows = await sql<User[]>`
-    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
+    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at, last_active_at
     FROM users
     WHERE id = ${id} AND deleted_at IS NULL
   `
@@ -179,7 +180,7 @@ export async function findUserByGoogleId(
   googleId: string,
 ): Promise<User | null> {
   const rows = await sql<User[]>`
-    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
+    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at, last_active_at
     FROM users
     WHERE google_id = ${googleId} AND deleted_at IS NULL
   `
@@ -242,7 +243,7 @@ export async function listUsers(sql: postgres.Sql, filters: ListUsersInput): Pro
 
   if (validated.role && validated.search) {
     return sql<User[]>`
-      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
+      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at, last_active_at
       FROM users
       WHERE deleted_at IS NULL AND role = ${validated.role}
         AND (username ILIKE ${'%' + validated.search + '%'} OR email ILIKE ${'%' + validated.search + '%'} OR display_name ILIKE ${'%' + validated.search + '%'})
@@ -254,7 +255,7 @@ export async function listUsers(sql: postgres.Sql, filters: ListUsersInput): Pro
 
   if (validated.role) {
     return sql<User[]>`
-      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
+      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at, last_active_at
       FROM users
       WHERE deleted_at IS NULL AND role = ${validated.role}
       ORDER BY created_at DESC
@@ -265,7 +266,7 @@ export async function listUsers(sql: postgres.Sql, filters: ListUsersInput): Pro
 
   if (validated.search) {
     return sql<User[]>`
-      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
+      SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at, last_active_at
       FROM users
       WHERE deleted_at IS NULL AND (username ILIKE ${'%' + validated.search + '%'} OR email ILIKE ${'%' + validated.search + '%'} OR display_name ILIKE ${'%' + validated.search + '%'})
       ORDER BY created_at DESC
@@ -275,7 +276,7 @@ export async function listUsers(sql: postgres.Sql, filters: ListUsersInput): Pro
   }
 
   return sql<User[]>`
-    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
+    SELECT id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at, last_active_at
     FROM users
     WHERE deleted_at IS NULL
     ORDER BY created_at DESC
@@ -332,6 +333,20 @@ export async function updatePassword(
   await sql`
     UPDATE users SET password_hash = ${newPasswordHash}
     WHERE id = ${userId} AND deleted_at IS NULL
+  `
+}
+
+// Throttle last_active_at updates to at most once per 5 minutes per user.
+// The throttle lives in the WHERE clause so callers (auth middleware, OIDC
+// grant.success, login routes) can fire-and-forget without coordinating.
+export const LAST_ACTIVE_THROTTLE_MINUTES = 5
+
+export async function updateLastActive(sql: postgres.Sql, userId: number): Promise<void> {
+  await sql`
+    UPDATE users SET last_active_at = now()
+    WHERE id = ${userId}
+      AND deleted_at IS NULL
+      AND (last_active_at IS NULL OR last_active_at < now() - interval '5 minutes')
   `
 }
 

@@ -9,6 +9,7 @@ import {
   generateUniqueUsername,
   verifyPassword,
   updateUser,
+  updateLastActive,
   listUsers,
   countUsers,
   createUserSchema,
@@ -497,6 +498,34 @@ describe('user-service', () => {
 
     it('rejects limit over 100', () => {
       expect(() => listUsersSchema.parse({ limit: 200 })).toThrow()
+    })
+  })
+
+  describe('updateLastActive', () => {
+    it('issues a throttled UPDATE with the user id', async () => {
+      const mockSql = createMockSql([])
+
+      await updateLastActive(mockSql as never, 42)
+
+      expect(mockSql).toHaveBeenCalledOnce()
+      // Extract the tagged-template call: first arg is the strings array,
+      // remaining args are the interpolated values. We expect exactly one
+      // interpolation — the user id.
+      const call = (mockSql as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]
+      const strings = call?.[0] as readonly string[]
+      const values = call?.slice(1) ?? []
+      const joined = strings.join('$')
+      expect(joined).toContain('UPDATE users')
+      expect(joined).toContain('SET last_active_at = now()')
+      expect(joined).toContain('deleted_at IS NULL')
+      // Throttle clause: skip the update when already recent
+      expect(joined).toContain("last_active_at < now() - interval '5 minutes'")
+      expect(values).toEqual([42])
+    })
+
+    it('resolves without throwing when the update matches zero rows', async () => {
+      const mockSql = createMockSql([])
+      await expect(updateLastActive(mockSql as never, 999)).resolves.toBeUndefined()
     })
   })
 })
