@@ -8,6 +8,7 @@ import {
   findUserByGoogleId,
   findUserByUsername,
   generateUniqueUsername,
+  updateLastActive,
   verifyPassword,
 } from '../services/user-service.js'
 import { verifyGoogleToken, isGoogleConfigured } from '../services/google-auth-service.js'
@@ -191,6 +192,14 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           ipAddress: req.ip,
         }).catch(() => {})
 
+        await updateLastActive(sql, user.id).catch((err) => {
+          logger.warn('failed to update last_active_at', {
+            operation: 'login',
+            userId: user.id,
+            error: err instanceof Error ? err.message : 'Unknown error',
+          })
+        })
+
         const result = {
           login: {
             accountId: String(user.id),
@@ -348,12 +357,13 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
                 created_at: Date
                 updated_at: Date
                 deleted_at: Date | null
+                last_active_at: Date | null
               }[]
             >`
               UPDATE users
               SET google_id = ${googleUser.googleId}, email_verified = true, updated_at = now()
               WHERE id = ${existingByEmail.id}
-              RETURNING id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
+              RETURNING id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at, last_active_at
             `
             user = rows[0] ?? null
 
@@ -431,6 +441,14 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           details: { source: 'google' },
           ipAddress: req.ip,
         }).catch(() => {})
+
+        await updateLastActive(sql, user.id).catch((err) => {
+          logger.warn('failed to update last_active_at', {
+            operation: 'interactionGoogleLogin',
+            userId: user.id,
+            error: err instanceof Error ? err.message : 'Unknown error',
+          })
+        })
 
         const result = {
           login: {

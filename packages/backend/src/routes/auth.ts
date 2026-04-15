@@ -11,6 +11,7 @@ import {
   findUserByGoogleId,
   findUserByUsername,
   generateUniqueUsername,
+  updateLastActive,
   verifyPassword,
 } from '../services/user-service.js'
 import { verifyGoogleToken, isGoogleConfigured } from '../services/google-auth-service.js'
@@ -202,6 +203,14 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
         ipAddress: req.ip,
       }).catch(() => {})
 
+      await updateLastActive(sql, user.id).catch((err) => {
+        logger.warn('failed to update last_active_at', {
+          operation: 'login',
+          userId: user.id,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        })
+      })
+
       res.json({
         success: true,
         data: {
@@ -278,12 +287,13 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
               created_at: Date
               updated_at: Date
               deleted_at: Date | null
+              last_active_at: Date | null
             }[]
           >`
             UPDATE users
             SET google_id = ${googleUser.googleId}, email_verified = true, updated_at = now()
             WHERE id = ${existingByEmail.id}
-            RETURNING id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at
+            RETURNING id, username, email, display_name, role, parent_id, google_id, email_verified, created_at, updated_at, deleted_at, last_active_at
           `
           user = rows[0] ?? null
           logger.info('linked google account to existing user', {
@@ -329,6 +339,14 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
         details: { source: 'google' },
         ipAddress: req.ip,
       }).catch(() => {})
+
+      await updateLastActive(sql, user.id).catch((err) => {
+        logger.warn('failed to update last_active_at', {
+          operation: 'google-auth',
+          userId: user.id,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        })
+      })
 
       res.status(isNewUser ? 201 : 200).json({
         success: true,

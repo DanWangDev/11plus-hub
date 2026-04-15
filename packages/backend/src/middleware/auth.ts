@@ -1,6 +1,8 @@
 import type { Request, Response, NextFunction } from 'express'
 import { getIronSession } from 'iron-session'
 import { decodeJwt } from 'jose'
+import { db } from '../db/connection.js'
+import { updateLastActive } from '../services/user-service.js'
 import { createLogger } from '../lib/logger.js'
 
 const logger = createLogger({ service: 'auth-middleware' })
@@ -61,6 +63,21 @@ export function createRequireAuth(sessionSecret: string) {
       }
 
       res.locals.user = user
+
+      // Fire-and-forget activity bump. updateLastActive throttles to once
+      // per 5 min per user via its SQL WHERE clause, so calling it on every
+      // request is cheap (a single indexed conditional UPDATE).
+      const userIdNum = Number.parseInt(user.sub, 10)
+      if (Number.isFinite(userIdNum)) {
+        updateLastActive(db, userIdNum).catch((err) => {
+          logger.warn('failed to update last_active_at in auth middleware', {
+            operation: 'requireAuth',
+            userId: userIdNum,
+            error: err instanceof Error ? err.message : String(err),
+          })
+        })
+      }
+
       next()
     } catch (error) {
       logger.error('auth middleware failed', {

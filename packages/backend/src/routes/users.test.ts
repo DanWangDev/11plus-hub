@@ -95,8 +95,9 @@ describe('users routes', () => {
           parent_id: null,
           google_id: null,
           email_verified: false,
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: new Date('2026-01-01T00:00:00Z'),
+          updated_at: new Date('2026-01-01T00:00:00Z'),
+          last_active_at: new Date('2026-04-15T10:30:00Z'),
         },
       ]
       mockListUsers.mockResolvedValueOnce(users)
@@ -107,6 +108,10 @@ describe('users routes', () => {
       expect(res.status).toBe(200)
       expect(res.body.success).toBe(true)
       expect(res.body.data).toHaveLength(1)
+      expect(res.body.data[0]).toMatchObject({
+        id: 1,
+        last_active_at: '2026-04-15T10:30:00.000Z',
+      })
       expect(res.body.meta).toMatchObject({
         total: 1,
         page: 1,

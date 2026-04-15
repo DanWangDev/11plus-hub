@@ -22,6 +22,7 @@ export interface User {
   email_verified: boolean
   created_at: string
   updated_at: string
+  last_active_at: string | null
 }
 
 export interface LoginResponse {

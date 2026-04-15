@@ -77,6 +77,7 @@ describe('LoginPage', () => {
           email_verified: false,
           created_at: '2024-01-01',
           updated_at: '2024-01-01',
+          last_active_at: null,
         },
         token: 'jwt-token',
       },

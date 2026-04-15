@@ -8,16 +8,19 @@ vi.mock('../db/connection.js', () => ({
   db: {},
 }))
 
-const { mockCreateUser, mockFindUserByEmail, mockVerifyPassword } = vi.hoisted(() => ({
-  mockCreateUser: vi.fn(),
-  mockFindUserByEmail: vi.fn(),
-  mockVerifyPassword: vi.fn(),
-}))
+const { mockCreateUser, mockFindUserByEmail, mockVerifyPassword, mockUpdateLastActive } =
+  vi.hoisted(() => ({
+    mockCreateUser: vi.fn(),
+    mockFindUserByEmail: vi.fn(),
+    mockVerifyPassword: vi.fn(),
+    mockUpdateLastActive: vi.fn().mockResolvedValue(undefined),
+  }))
 
 vi.mock('../services/user-service.js', () => ({
   createUser: (...args: unknown[]) => mockCreateUser(...args),
   findUserByEmail: (...args: unknown[]) => mockFindUserByEmail(...args),
   verifyPassword: (...args: unknown[]) => mockVerifyPassword(...args),
+  updateLastActive: (...args: unknown[]) => mockUpdateLastActive(...args),
   createUserSchema: z.object({
     username: z
       .string()
@@ -34,6 +37,7 @@ vi.mock('../services/user-service.js', () => ({
   findUserByUsername: vi.fn(),
   findUserByGoogleId: vi.fn(),
   findUserWithPasswordHash: vi.fn(),
+  generateUniqueUsername: vi.fn(),
   updateUser: vi.fn(),
   listUsers: vi.fn(),
   countUsers: vi.fn(),
@@ -182,6 +186,32 @@ describe('auth routes', () => {
       })
       expect(res.body.data.user).not.toHaveProperty('password_hash')
       expect(res.body.data.token).toBe('placeholder-jwt-token')
+      // Successful login must bump last_active_at for admin visibility
+      expect(mockUpdateLastActive).toHaveBeenCalledWith(expect.anything(), 1)
+    })
+
+    it('does not bump last_active_at on failed login', async () => {
+      mockUpdateLastActive.mockClear()
+      mockFindUserByEmail.mockResolvedValueOnce({
+        id: 1,
+        username: 'testuser',
+        email: 'test@example.com',
+        password_hash: '$2b$12$hash',
+        display_name: 'Test User',
+        role: 'student',
+        parent_id: null,
+        google_id: null,
+        email_verified: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      mockVerifyPassword.mockResolvedValueOnce(false)
+
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'wrongpass' })
+
+      expect(mockUpdateLastActive).not.toHaveBeenCalled()
     })
 
     it('returns 401 for wrong password', async () => {

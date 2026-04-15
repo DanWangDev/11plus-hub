@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { listUsers, createUser, updateUser, deleteUser } from '@/api/admin'
 import type { User } from '@/types/api'
+import { formatRelative, formatAbsolute } from '@/lib/format-date'
 import { Pencil, X, Check, Plus, Trash2 } from 'lucide-react'
 
 const ROLE_BADGES: Record<string, string> = {
@@ -285,6 +286,9 @@ export function AdminUsersPage() {
                       Verified
                     </th>
                     <th scope="col" className="px-4 py-3 font-medium text-slate-700">
+                      Last Active
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium text-slate-700">
                       Actions
                     </th>
                   </tr>
@@ -343,6 +347,18 @@ export function AdminUsersPage() {
                         ) : (
                           <span className="text-slate-400">No</span>
                         )}
+                      </td>
+                      <td
+                        className="px-4 py-3"
+                        title={formatAbsolute(user.last_active_at)}
+                      >
+                        <span
+                          className={
+                            user.last_active_at ? 'text-slate-600' : 'text-slate-400'
+                          }
+                        >
+                          {formatRelative(user.last_active_at)}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         {editing?.id === user.id ? (
