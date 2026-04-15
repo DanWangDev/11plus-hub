@@ -348,15 +348,8 @@ export function AdminUsersPage() {
                           <span className="text-slate-400">No</span>
                         )}
                       </td>
-                      <td
-                        className="px-4 py-3"
-                        title={formatAbsolute(user.last_active_at)}
-                      >
-                        <span
-                          className={
-                            user.last_active_at ? 'text-slate-600' : 'text-slate-400'
-                          }
-                        >
+                      <td className="px-4 py-3" title={formatAbsolute(user.last_active_at)}>
+                        <span className={user.last_active_at ? 'text-slate-600' : 'text-slate-400'}>
                           {formatRelative(user.last_active_at)}
                         </span>
                       </td>
