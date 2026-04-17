@@ -35,6 +35,7 @@ services:
         condition: service_healthy
     networks:
       - hub
+      - labf-net
 
   frontend:
     image: ghcr.io/danwangdev/11plus-hub-frontend:latest
@@ -78,3 +79,9 @@ volumes:
 
 networks:
   hub:
+  # Shared cross-app network. Other apps (story-sleuth, vocab-master,
+  # writing-buddy) attach their backends here to reach hub-backend.
+  # Create once per host via the suite's bootstrap.sh.
+  labf-net:
+    external: true
+    name: labf-net
