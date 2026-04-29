@@ -94,7 +94,12 @@ npm run dev
 
 ### Docker
 
+The hub joins the shared `labf-net` Docker network so other app backends (vocab-master, writing-buddy, story-sleuth) can reach it by container name. The network must exist before starting:
+
 ```bash
+# First time: create the shared network (from story-sleuth repo)
+./bootstrap.sh
+
 # Full stack (app + database)
 docker compose up
 
