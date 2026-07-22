@@ -255,3 +255,32 @@ The SDK stores tokens in encrypted httpOnly session cookies on the app's domain.
 - **Session cookie:** `Domain=.labf.app`, HttpOnly, Secure, SameSite=Lax. All apps must be on `*.labf.app` subdomains for SSO to work.
 - **Subscriptions:** Admin-assigned in Phase 1. Stripe self-service deferred until SSO is stable.
 - **Learning events:** Fire-and-forget from apps to hub. Acceptable event loss at current scale.
+- **Shared Docker network:** All app backends join `labf-net`, an external Docker bridge created once per host via `bootstrap.sh` (kept in this repo). Hub owns the network bootstrap; each consumer app also carries an idempotent copy for self-service setup. Backends reach each other by container name (e.g., `hub-backend:3009`) for OIDC discovery, JWKS, back-channel logout, and stats API calls. Only backends join — databases stay on app-private networks.
+
+## Deployment Architecture
+
+```
+                    labf-net (shared, external)
+                   ┌──────────────────────────┐
+                   │                          │
+    hub-backend ───┤    vocab-master-backend ─┼── vocab-master-network
+    (port 3009)    │    (port 9876)           │   (db + frontend)
+                   │                          │
+    writing-buddy──┤    story-sleuth-backend ─┼── story-sleuth default
+    backend        │    (port 5060)           │   (db + frontend)
+    (port 5050)    │                          │
+                   └──────────────────────────┘
+
+    Each app's internal network:
+    ┌─ hub ──────────────┐  ┌─ vocab-network ───┐
+    │ db, backend,       │  │ db, backend,       │
+    │ frontend           │  │ frontend           │
+    └────────────────────┘  └────────────────────┘
+```
+
+**Network rules:**
+- `labf-net` is `external: true` in every compose file — it must exist before `docker compose up`
+- Create it with `./bootstrap.sh` (idempotent, safe to re-run)
+- Only backends join `labf-net`; databases and frontends stay on private networks
+- Backends use `OIDC_INTERNAL_ISSUER=http://hub-backend:3009` for internal OIDC calls
+- Browser-facing URLs still use the public domain (`https://hub.labf.app`)

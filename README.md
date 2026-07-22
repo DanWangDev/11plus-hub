@@ -94,7 +94,12 @@ npm run dev
 
 ### Docker
 
+The hub joins the shared `labf-net` Docker network so other app backends (vocab-master, writing-buddy, story-sleuth) can reach it by container name. Hub owns the network bootstrap. Run once per host before starting any app:
+
 ```bash
+# First time: create the shared network (idempotent — safe to re-run)
+./bootstrap.sh
+
 # Full stack (app + database)
 docker compose up
 

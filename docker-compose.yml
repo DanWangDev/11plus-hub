@@ -28,6 +28,9 @@ services:
       sh -c "node dist/db/migrate.js up && node dist/db/seed.js && node dist/server.js"
     ports:
       - '3009:3009'
+    networks:
+      - default
+      - labf-net
     environment:
       NODE_ENV: development
       PORT: 3009
@@ -73,3 +76,12 @@ services:
 volumes:
   pgdata:
   pgadmin_data:
+
+# Shared cross-app network. Other apps (story-sleuth, vocab-master,
+# writing-buddy) join this network to reach hub-backend for OIDC
+# discovery, JWKS, and back-channel logout. Create once per host with
+# the suite's bootstrap.sh (kept in story-sleuth).
+networks:
+  labf-net:
+    external: true
+    name: labf-net
