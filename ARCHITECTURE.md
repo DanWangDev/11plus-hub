@@ -255,7 +255,7 @@ The SDK stores tokens in encrypted httpOnly session cookies on the app's domain.
 - **Session cookie:** `Domain=.labf.app`, HttpOnly, Secure, SameSite=Lax. All apps must be on `*.labf.app` subdomains for SSO to work.
 - **Subscriptions:** Admin-assigned in Phase 1. Stripe self-service deferred until SSO is stable.
 - **Learning events:** Fire-and-forget from apps to hub. Acceptable event loss at current scale.
-- **Shared Docker network:** All app backends join `labf-net`, an external Docker bridge created once per host via `bootstrap.sh` (kept in story-sleuth). Backends reach each other by container name (e.g., `hub-backend:3009`) for OIDC discovery, JWKS, back-channel logout, and stats API calls. Only backends join — databases stay on app-private networks.
+- **Shared Docker network:** All app backends join `labf-net`, an external Docker bridge created once per host via `bootstrap.sh` (kept in this repo). Hub owns the network bootstrap; each consumer app also carries an idempotent copy for self-service setup. Backends reach each other by container name (e.g., `hub-backend:3009`) for OIDC discovery, JWKS, back-channel logout, and stats API calls. Only backends join — databases stay on app-private networks.
 
 ## Deployment Architecture
 
