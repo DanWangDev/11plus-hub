@@ -284,3 +284,45 @@ The SDK stores tokens in encrypted httpOnly session cookies on the app's domain.
 - Only backends join `labf-net`; databases and frontends stay on private networks
 - Backends use `OIDC_INTERNAL_ISSUER=http://hub-backend:3009` for internal OIDC calls
 - Browser-facing URLs still use the public domain (`https://hub.labf.app`)
+
+## Continuous Delivery
+
+The suite uses a self-hosted GitHub Actions runner in Docker on the NAS for CD.
+
+```
+┌─ GitHub ──────────────────────────────────────────┐
+│                                                    │
+│  CI workflow (push to main)                        │
+│  ├── lint → typecheck → test → build               │
+│  ├── docker-backend  ─┐                            │
+│  └── docker-frontend ─┘ (build + push to GHCR)     │
+│                         │                          │
+│  deploy job ◄──────────┘ (needs: [docker-*])       │
+│  runs-on: nas                                      │
+│  steps: cd repo && docker compose pull && up -d    │
+│                                                    │
+└──────────────────────┬─────────────────────────────┘
+                       │ outbound HTTPS (poll + job pickup)
+                       ▼
+┌─ Synology DS918+ ──────────────────────────────────┐
+│                                                    │
+│  actions-runner (Docker container)                 │
+│  - ghcr.io/actions/actions-runner:latest           │
+│  - Mounts: /var/run/docker.sock                    │
+│            /volume1/docker → /repos                │
+│  - Labels: nas, deploy                             │
+│  - Outbound only (polls GitHub for work)           │
+│                                                    │
+│  App containers (managed by runner)                │
+│  - hub-backend, hub-frontend, hub-db               │
+│  - writing-buddy-backend, writing-buddy-frontend   │
+│  - vocab-master-backend, vocab-master-frontend     │
+│  - story-sleuth-backend, story-sleuth-frontend     │
+│                                                    │
+└────────────────────────────────────────────────────┘
+```
+
+- **Runner:** `ghcr.io/actions/actions-runner` container, registered at org level (`DanWangDev`) with `nas` label
+- **Networking:** Runner makes outbound HTTPS only — no inbound ports, no SSH, no Tailscale
+- **Repository path:** `/volume1/docker/11plus-hub` on the NAS
+- **Deploy workflow:** `.github/workflows/deploy.yml` — triggers on CI completion, runs `docker compose pull && down && up -d`
