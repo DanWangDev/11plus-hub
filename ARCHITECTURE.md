@@ -290,27 +290,36 @@ The SDK stores tokens in encrypted httpOnly session cookies on the app's domain.
 The suite uses a self-hosted GitHub Actions runner in Docker on the NAS for CD.
 
 ```
-┌─ GitHub ────────────────────┐
-│ CI completes                │
-│ deploy workflow triggers    │
-│ runs-on: self-hosted        │
-└────────────┬────────────────┘
-             │ outbound HTTPS only
-             ▼
-┌─ Synology NAS ─────────────────────────┐
-│                                         │
-│  ┌─ Docker: actions-runner ──────────┐ │
-│  │  Ubuntu container (official)      │ │
-│  │  Connects outbound to GitHub      │ │
-│  │  Has Docker socket mounted        │ │
-│  │  Runs: docker compose pull &&     │ │
-│  │         docker compose up -d      │ │
-│  └───────────────────────────────────┘ │
-│                                         │
-│  ┌─ Docker: hub ─────────────────────┐ │
-│  │  db + backend + frontend          │ │
-│  └───────────────────────────────────┘ │
-└─────────────────────────────────────────┘
+┌─ GitHub ──────────────────────────────────────────┐
+│                                                    │
+│  CI workflow (push to main)                        │
+│  ├── lint → typecheck → test → build               │
+│  ├── docker-backend  ─┐                            │
+│  └── docker-frontend ─┘ (build + push to GHCR)     │
+│                         │                          │
+│  deploy job ◄──────────┘ (needs: [docker-*])       │
+│  runs-on: nas                                      │
+│  steps: cd repo && docker compose pull && up -d    │
+│                                                    │
+└──────────────────────┬─────────────────────────────┘
+                       │ outbound HTTPS (poll + job pickup)
+                       ▼
+┌─ Synology DS918+ ──────────────────────────────────┐
+│                                                    │
+│  actions-runner (Docker container)                 │
+│  - ghcr.io/actions/actions-runner:latest           │
+│  - Mounts: /var/run/docker.sock                    │
+│            /volume1/docker → /repos                │
+│  - Labels: nas, deploy                             │
+│  - Outbound only (polls GitHub for work)           │
+│                                                    │
+│  App containers (managed by runner)                │
+│  - hub-backend, hub-frontend, hub-db               │
+│  - writing-buddy-backend, writing-buddy-frontend   │
+│  - vocab-master-backend, vocab-master-frontend     │
+│  - story-sleuth-backend, story-sleuth-frontend     │
+│                                                    │
+└────────────────────────────────────────────────────┘
 ```
 
 - **Runner:** `ghcr.io/actions/actions-runner` container, registered at org level (`DanWangDev`) with `nas` label
