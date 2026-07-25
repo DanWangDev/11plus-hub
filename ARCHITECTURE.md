@@ -287,13 +287,33 @@ The SDK stores tokens in encrypted httpOnly session cookies on the app's domain.
 
 ## Continuous Delivery
 
-The suite uses a self-hosted GitHub Actions runner in Docker on the NAS for CD. When CI completes on `main` and pushes a new image to GHCR, a deploy workflow triggers on the runner, which pulls the latest image and restarts the container.
+The suite uses a self-hosted GitHub Actions runner in Docker on the NAS for CD.
 
 ```
-GitHub CI → push image to GHCR → deploy workflow → NAS runner → docker compose pull && up -d
+┌─ GitHub ────────────────────┐
+│ CI completes                │
+│ deploy workflow triggers    │
+│ runs-on: self-hosted        │
+└────────────┬────────────────┘
+             │ outbound HTTPS only
+             ▼
+┌─ Synology NAS ─────────────────────────┐
+│                                         │
+│  ┌─ Docker: actions-runner ──────────┐ │
+│  │  Ubuntu container (official)      │ │
+│  │  Connects outbound to GitHub      │ │
+│  │  Has Docker socket mounted        │ │
+│  │  Runs: docker compose pull &&     │ │
+│  │         docker compose up -d      │ │
+│  └───────────────────────────────────┘ │
+│                                         │
+│  ┌─ Docker: hub ─────────────────────┐ │
+│  │  db + backend + frontend          │ │
+│  └───────────────────────────────────┘ │
+└─────────────────────────────────────────┘
 ```
 
-- **Runner:** `ghcr.io/actions/actions-runner` container on the NAS, registered at org level (`DanWangDev`) with `nas` label
+- **Runner:** `ghcr.io/actions/actions-runner` container, registered at org level (`DanWangDev`) with `nas` label
 - **Networking:** Runner makes outbound HTTPS only — no inbound ports, no SSH, no Tailscale
 - **Repository path:** `/volume1/docker/11plus-hub` on the NAS
-- **Deploy workflow:** `.github/workflows/deploy.yml` — triggers on CI completion, runs `docker compose -f docker-compose.prod.yml pull && down && up -d`
+- **Deploy workflow:** `.github/workflows/deploy.yml` — triggers on CI completion, runs `docker compose pull && down && up -d`
