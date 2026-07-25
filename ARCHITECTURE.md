@@ -284,3 +284,16 @@ The SDK stores tokens in encrypted httpOnly session cookies on the app's domain.
 - Only backends join `labf-net`; databases and frontends stay on private networks
 - Backends use `OIDC_INTERNAL_ISSUER=http://hub-backend:3009` for internal OIDC calls
 - Browser-facing URLs still use the public domain (`https://hub.labf.app`)
+
+## Continuous Delivery
+
+The suite uses a self-hosted GitHub Actions runner in Docker on the NAS for CD. When CI completes on `main` and pushes a new image to GHCR, a deploy workflow triggers on the runner, which pulls the latest image and restarts the container.
+
+```
+GitHub CI → push image to GHCR → deploy workflow → NAS runner → docker compose pull && up -d
+```
+
+- **Runner:** `ghcr.io/actions/actions-runner` container on the NAS, registered at org level (`DanWangDev`) with `nas` label
+- **Networking:** Runner makes outbound HTTPS only — no inbound ports, no SSH, no Tailscale
+- **Repository path:** `/volume1/docker/11plus-hub` on the NAS
+- **Deploy workflow:** `.github/workflows/deploy.yml` — triggers on CI completion, runs `docker compose -f docker-compose.prod.yml pull && down && up -d`
