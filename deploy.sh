@@ -18,11 +18,11 @@ ok()   { echo -e "${GREEN}[✔]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 fail() { echo -e "${RED}[✘]${NC} $1"; exit 1; }
 
-# Detects docker compose (plugin, v2+) or docker-compose (standalone, e.g. Synology DSM)
-if docker compose version >/dev/null 2>&1; then
-  COMPOSE="docker compose"
-else
+# Prefer docker-compose (Synology DSM) over docker compose (Docker plugin)
+if command -v docker-compose >/dev/null 2>&1; then
   COMPOSE="docker-compose"
+else
+  COMPOSE="docker compose"
 fi
 
 USE_GHCR=false
