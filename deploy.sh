@@ -18,6 +18,13 @@ ok()   { echo -e "${GREEN}[✔]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 fail() { echo -e "${RED}[✘]${NC} $1"; exit 1; }
 
+# Detects docker compose (plugin, v2+) or docker-compose (standalone, e.g. Synology DSM)
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE="docker compose"
+else
+  COMPOSE="docker-compose"
+fi
+
 USE_GHCR=false
 if [ "$1" = "--ghcr" ]; then
   USE_GHCR=true
@@ -46,7 +53,7 @@ if [ "$USE_GHCR" = true ]; then
 
   # Pull latest images
   log "Pulling latest images..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull || fail "docker compose pull failed"
+  $COMPOSE -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull || fail "$COMPOSE pull failed"
   ok "Images pulled"
 else
   COMPOSE_FILE="docker-compose.yml"
@@ -55,23 +62,23 @@ fi
 
 # 2. Bring containers down
 log "Stopping containers..."
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down || fail "docker compose down failed"
+$COMPOSE -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down || fail "$COMPOSE down failed"
 ok "Containers stopped"
 
 # 3. Start (build if local, just up if GHCR)
 if [ "$USE_GHCR" = true ]; then
   log "Starting containers (backend runs migrate + seed on boot)..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d || fail "docker compose up failed"
+  $COMPOSE -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d || fail "$COMPOSE up failed"
 else
   log "Building and starting containers..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build || fail "docker compose up failed"
+  $COMPOSE -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build || fail "$COMPOSE up failed"
 fi
 ok "Containers started"
 
 # 4. Show running containers
 echo ""
 log "Running services:"
-docker compose -f "$COMPOSE_FILE" ps
+$COMPOSE -f "$COMPOSE_FILE" ps
 
 echo ""
 ok "Redeployment complete! Hub is live."
