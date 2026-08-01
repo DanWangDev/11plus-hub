@@ -35,11 +35,6 @@ fi
 
 log "Starting redeployment..."
 
-# 1. Pull latest code
-log "Pulling latest changes from git..."
-git pull || fail "git pull failed"
-ok "Git pull complete"
-
 if [ "$USE_GHCR" = true ]; then
   COMPOSE_FILE="docker-compose.prod.yml"
   log "Mode: pull from GitHub Container Registry"
