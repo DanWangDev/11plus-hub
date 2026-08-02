@@ -34,6 +34,7 @@ async function main(): Promise<void> {
     oidcProvider,
     hubAuth: {
       issuer: env.OIDC_ISSUER,
+      internalIssuer: env.OIDC_INTERNAL_ISSUER,
       clientId: env.HUB_CLIENT_ID,
       clientSecret: env.HUB_CLIENT_SECRET,
       sessionSecret: env.HUB_SESSION_SECRET,

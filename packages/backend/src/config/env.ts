@@ -16,6 +16,7 @@ export const envSchema = z.object({
   SESSION_SECRET: z.string().min(32).default('dev-session-secret-minimum-32-characters-long!!'),
 
   OIDC_ISSUER: z.string().url().default('http://localhost:3009'),
+  OIDC_INTERNAL_ISSUER: z.string().optional(),
   OIDC_SIGNING_KEY: z.string().optional(),
   OIDC_COOKIE_KEYS: z.string().default('dev-oidc-cookie-key-minimum-32-characters!!'),
 
