@@ -190,7 +190,10 @@ describe('subscription-service', () => {
 
       const result = await updateSubscription(mockSql as never, 1, { plan: 'bundle' })
 
-      expect(result).toMatchObject({ plan: 'bundle', features: ['writing', 'vocab', 'story-sleuth'] })
+      expect(result).toMatchObject({
+        plan: 'bundle',
+        features: ['writing', 'vocab', 'story-sleuth'],
+      })
       expect(mockSql).toHaveBeenCalledTimes(3)
     })
 

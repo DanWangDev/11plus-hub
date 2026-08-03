@@ -420,9 +420,13 @@ async function migrateUsers(options: MigrationOptions): Promise<void> {
         // Migrate subscription if present
         if (user.subscription_plan && user.subscription_plan !== 'free') {
           const mappedPlan =
-            { writing: 'writing', vocab: 'vocab', bundle: 'bundle', family: 'family', premium: 'bundle' }[
-              user.subscription_plan
-            ] ?? 'free'
+            {
+              writing: 'writing',
+              vocab: 'vocab',
+              bundle: 'bundle',
+              family: 'family',
+              premium: 'bundle',
+            }[user.subscription_plan] ?? 'free'
           await createSubscription(
             sql,
             hubId,
