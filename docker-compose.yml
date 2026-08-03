@@ -1,22 +1,4 @@
 services:
-  db:
-    image: postgres:17-alpine
-    container_name: hub-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: hub
-      POSTGRES_USER: hub
-      POSTGRES_PASSWORD: hub_dev_password
-    ports:
-      - '5432:5432'
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U hub -d hub']
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: .
@@ -34,7 +16,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3009
-      DB_HOST: db
+      DB_HOST: labf-db
       DB_PORT: 5432
       DB_NAME: hub
       DB_USER: hub
@@ -52,35 +34,9 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
-    depends_on:
-      db:
-        condition: service_healthy
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: hub-pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@labf.app
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_LISTEN_PORT: 5040
-    ports:
-      - '5040:5040'
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-      - ./pgadmin-servers.json:/pgadmin4/servers.json:ro
-    depends_on:
-      db:
-        condition: service_healthy
-
-volumes:
-  pgdata:
-  pgadmin_data:
-
-# Shared cross-app network. Other apps (story-sleuth, vocab-master,
-# writing-buddy) join this network to reach hub-backend for OIDC
-# discovery, JWKS, and back-channel logout. Create once per host with
-# the suite's bootstrap.sh (kept in story-sleuth).
+# Shared cross-app network. Backend joins to reach labf-db.
+# Created once via labf-infra/bootstrap.sh.
 networks:
   labf-net:
     external: true

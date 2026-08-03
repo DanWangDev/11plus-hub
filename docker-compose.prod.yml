@@ -1,22 +1,4 @@
 services:
-  db:
-    image: postgres:17-alpine
-    container_name: hub-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - hub
-
   backend:
     image: ghcr.io/danwangdev/11plus-hub-backend:latest
     container_name: hub-backend
@@ -26,15 +8,12 @@ services:
     env_file: .env
     environment:
       NODE_ENV: production
-      DB_HOST: db
+      DB_HOST: labf-db
       DB_PORT: 5432
     ports:
       - '3009:3009'
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
-      - hub
+      - default
       - labf-net
 
   frontend:
@@ -44,7 +23,7 @@ services:
     ports:
       - '3010:80'
     networks:
-      - hub
+      - default
 
   # One-time user migration from SQLite databases
   # Usage:
@@ -62,26 +41,16 @@ services:
       --writing-buddy /data/writing-buddy.db"
     env_file: .env
     environment:
-      DB_HOST: db
+      DB_HOST: labf-db
       DB_PORT: 5432
     volumes:
       - ${MIGRATION_DATA_DIR:-./data}:/data:ro
-    depends_on:
-      db:
-        condition: service_healthy
     profiles:
       - migration
     networks:
-      - hub
-
-volumes:
-  pgdata:
+      - default
 
 networks:
-  hub:
-  # Shared cross-app network. Other apps (story-sleuth, vocab-master,
-  # writing-buddy) attach their backends here to reach hub-backend.
-  # Create once per host via the suite's bootstrap.sh.
   labf-net:
     external: true
     name: labf-net
