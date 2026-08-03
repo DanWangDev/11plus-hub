@@ -11,16 +11,16 @@ const PLAN_FEATURES: Record<string, string[]> = {
   free: [],
   writing: ['writing'],
   vocab: ['vocab'],
-  bundle: ['writing', 'vocab'],
-  family: ['writing', 'vocab'],
+  bundle: ['writing', 'vocab', 'story-sleuth'],
+  family: ['writing', 'vocab', 'story-sleuth'],
 }
 
 export const PLAN_APP_SLUGS: Record<string, string[]> = {
   free: [],
   writing: ['writing-buddy'],
   vocab: ['vocab-master'],
-  bundle: ['writing-buddy', 'vocab-master', 'reading'],
-  family: ['writing-buddy', 'vocab-master', 'reading'],
+  bundle: ['writing-buddy', 'vocab-master', 'story-sleuth'],
+  family: ['writing-buddy', 'vocab-master', 'story-sleuth'],
 }
 
 // --- Schemas ---

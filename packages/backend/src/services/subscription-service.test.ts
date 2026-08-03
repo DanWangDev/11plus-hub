@@ -60,12 +60,12 @@ describe('subscription-service', () => {
       expect(getFeatures('vocab')).toEqual(['vocab'])
     })
 
-    it('returns both for bundle plan', () => {
-      expect(getFeatures('bundle')).toEqual(['writing', 'vocab'])
+    it('returns all features for bundle plan', () => {
+      expect(getFeatures('bundle')).toEqual(['writing', 'vocab', 'story-sleuth'])
     })
 
-    it('returns both for family plan', () => {
-      expect(getFeatures('family')).toEqual(['writing', 'vocab'])
+    it('returns all features for family plan', () => {
+      expect(getFeatures('family')).toEqual(['writing', 'vocab', 'story-sleuth'])
     })
 
     it('returns empty array for unknown plan', () => {
@@ -178,7 +178,7 @@ describe('subscription-service', () => {
       const existing = createMockSubscription({ plan: 'free', features: [] })
       const updated = createMockSubscription({
         plan: 'bundle',
-        features: ['writing', 'vocab'],
+        features: ['writing', 'vocab', 'story-sleuth'],
         user_id: 10,
       })
 
@@ -190,7 +190,10 @@ describe('subscription-service', () => {
 
       const result = await updateSubscription(mockSql as never, 1, { plan: 'bundle' })
 
-      expect(result).toMatchObject({ plan: 'bundle', features: ['writing', 'vocab'] })
+      expect(result).toMatchObject({
+        plan: 'bundle',
+        features: ['writing', 'vocab', 'story-sleuth'],
+      })
       expect(mockSql).toHaveBeenCalledTimes(3)
     })
 

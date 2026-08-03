@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import { createDb, closeDb } from './connection.js'
 import { createLogger } from '../lib/logger.js'
+import { syncAppAccessFromPlan } from '../services/subscription-service.js'
 import type postgres from 'postgres'
 
 const logger = createLogger({ service: 'user-migration' })
@@ -188,8 +189,8 @@ async function createSubscription(
     free: [],
     writing: ['writing'],
     vocab: ['vocab'],
-    bundle: ['writing', 'vocab'],
-    family: ['writing', 'vocab'],
+    bundle: ['writing', 'vocab', 'story-sleuth'],
+    family: ['writing', 'vocab', 'story-sleuth'],
   }
   const statusMap: Record<string, string> = {
     active: 'active',
@@ -413,17 +414,28 @@ async function migrateUsers(options: MigrationOptions): Promise<void> {
 
         wbParentMap.set(user.id, hubId)
 
-        // Grant writing-buddy app access
+        // Grant writing-buddy access (baseline for all WB users)
         await grantAppAccess(sql, hubId, 'writing-buddy')
 
         // Migrate subscription if present
         if (user.subscription_plan && user.subscription_plan !== 'free') {
+          const mappedPlan =
+            {
+              writing: 'writing',
+              vocab: 'vocab',
+              bundle: 'bundle',
+              family: 'family',
+              premium: 'bundle',
+            }[user.subscription_plan] ?? 'free'
           await createSubscription(
             sql,
             hubId,
             user.subscription_plan,
             user.subscription_status ?? 'active',
           )
+          // Sync app access from the plan so all plan-based apps are granted
+          // (e.g. bundle/family includes story-sleuth in addition to writing-buddy)
+          await syncAppAccessFromPlan(sql, hubId, mappedPlan)
         }
 
         results.push({
