@@ -314,7 +314,7 @@ The suite uses a self-hosted GitHub Actions runner in Docker on the NAS for CD.
 │  - Outbound only (polls GitHub for work)           │
 │                                                    │
 │  App containers (managed by runner)                │
-│  - hub-backend, hub-frontend, hub-db               │
+│  - hub-backend, hub-frontend, labf-db               │
 │  - writing-buddy-backend, writing-buddy-frontend   │
 │  - vocab-master-backend, vocab-master-frontend     │
 │  - story-sleuth-backend, story-sleuth-frontend     │
