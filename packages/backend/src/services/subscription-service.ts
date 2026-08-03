@@ -19,8 +19,8 @@ export const PLAN_APP_SLUGS: Record<string, string[]> = {
   free: [],
   writing: ['writing-buddy'],
   vocab: ['vocab-master'],
-  bundle: ['writing-buddy', 'vocab-master'],
-  family: ['writing-buddy', 'vocab-master'],
+  bundle: ['writing-buddy', 'vocab-master', 'reading'],
+  family: ['writing-buddy', 'vocab-master', 'reading'],
 }
 
 // --- Schemas ---
