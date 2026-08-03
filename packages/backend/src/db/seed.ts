@@ -54,6 +54,8 @@ async function main(): Promise<void> {
     const vocabSecretSha256 = hashSha256('vocab-dev-secret')
     const writingSecretHash = await bcrypt.hash('writing-dev-secret', BCRYPT_ROUNDS)
     const writingSecretSha256 = hashSha256('writing-dev-secret')
+    const storySleuthSecretHash = await bcrypt.hash('story-sleuth-dev-secret', BCRYPT_ROUNDS)
+    const storySleuthSecretSha256 = hashSha256('story-sleuth-dev-secret')
     const hubSecretHash = await bcrypt.hash('hub-dev-client-secret', BCRYPT_ROUNDS)
     const hubSecretSha256 = hashSha256('hub-dev-client-secret')
 
@@ -120,11 +122,24 @@ async function main(): Promise<void> {
         backchannel_logout_uri = EXCLUDED.backchannel_logout_uri
     `
 
+    await sql`
+      INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, backchannel_logout_uri)
+      VALUES (
+        'Story Sleuth', 'story-sleuth', 'https://story-sleuth.labf.app',
+        'story-sleuth-client', ${storySleuthSecretHash}, ${storySleuthSecretSha256},
+        ARRAY['https://story-sleuth.labf.app/api/auth/callback', 'http://localhost:5180/api/auth/callback'],
+        'http://localhost:5181/api/auth/backchannel-logout'
+      )
+      ON CONFLICT (slug) DO UPDATE SET
+        redirect_uris = EXCLUDED.redirect_uris,
+        backchannel_logout_uri = EXCLUDED.backchannel_logout_uri
+    `
+
     // Create free subscription for admin
     if (admin?.id) {
       await sql`
         INSERT INTO subscriptions (user_id, plan, status, features, assigned_by)
-        VALUES (${admin.id}, 'bundle', 'active', ARRAY['writing', 'vocab'], ${admin.id})
+        VALUES (${admin.id}, 'bundle', 'active', ARRAY['writing', 'vocab', 'story-sleuth'], ${admin.id})
         ON CONFLICT DO NOTHING
       `
 
