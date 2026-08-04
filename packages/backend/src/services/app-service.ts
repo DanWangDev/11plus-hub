@@ -17,6 +17,7 @@ export const createAppSchema = z.object({
   redirect_uris: z.array(z.string().url()).min(1),
   icon_url: z.string().url().optional(),
   stats_api_url: z.string().url().optional(),
+  backchannel_logout_uri: z.string().url().optional(),
 })
 
 export const updateAppSchema = z.object({
@@ -25,6 +26,7 @@ export const updateAppSchema = z.object({
   redirect_uris: z.array(z.string().url()).min(1).optional(),
   icon_url: z.string().url().nullable().optional(),
   stats_api_url: z.string().url().nullable().optional(),
+  backchannel_logout_uri: z.string().url().nullable().optional(),
   status: z.enum(['active', 'inactive', 'archived', 'deleted']).optional(),
 })
 
@@ -51,6 +53,7 @@ export interface Application {
   redirect_uris: string[]
   icon_url: string | null
   stats_api_url: string | null
+  backchannel_logout_uri: string | null
   status: string
   created_at: Date
 }
@@ -88,7 +91,7 @@ export async function createApplication(
   const clientSecretSha256 = hashSha256(clientSecret)
 
   const rows = await sql`
-    INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, icon_url, stats_api_url)
+    INSERT INTO applications (name, slug, url, client_id, client_secret_hash, client_secret_sha256, redirect_uris, icon_url, stats_api_url, backchannel_logout_uri)
     VALUES (
       ${validated.name},
       ${validated.slug},
@@ -98,7 +101,8 @@ export async function createApplication(
       ${clientSecretSha256},
       ${validated.redirect_uris},
       ${validated.icon_url ?? null},
-      ${validated.stats_api_url ?? null}
+      ${validated.stats_api_url ?? null},
+      ${validated.backchannel_logout_uri ?? null}
     )
     RETURNING *
   `
@@ -164,6 +168,10 @@ export async function updateApplication(
     icon_url: validated.icon_url !== undefined ? validated.icon_url : existing.icon_url,
     stats_api_url:
       validated.stats_api_url !== undefined ? validated.stats_api_url : existing.stats_api_url,
+    backchannel_logout_uri:
+      validated.backchannel_logout_uri !== undefined
+        ? validated.backchannel_logout_uri
+        : existing.backchannel_logout_uri,
     status: validated.status ?? existing.status,
   }
 
@@ -175,6 +183,7 @@ export async function updateApplication(
       redirect_uris = ${updated.redirect_uris},
       icon_url = ${updated.icon_url},
       stats_api_url = ${updated.stats_api_url},
+      backchannel_logout_uri = ${updated.backchannel_logout_uri},
       status = ${updated.status}
     WHERE id = ${id}
     RETURNING *

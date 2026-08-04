@@ -197,6 +197,24 @@ describe('application routes', () => {
       expect(res.status).toBe(404)
       expect(res.body.success).toBe(false)
     })
+
+    it('accepts backchannel_logout_uri in update', async () => {
+      const updatedApp = {
+        ...sampleApp,
+        backchannel_logout_uri: 'https://story-sleuth.labf.app/api/auth/backchannel-logout',
+      }
+      mockUpdateApplication.mockResolvedValue(updatedApp)
+
+      const res = await request(app)
+        .patch('/api/apps/1')
+        .send({ backchannel_logout_uri: 'https://story-sleuth.labf.app/api/auth/backchannel-logout' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.success).toBe(true)
+      expect(res.body.data.backchannel_logout_uri).toBe(
+        'https://story-sleuth.labf.app/api/auth/backchannel-logout',
+      )
+    })
   })
 
   describe('POST /api/apps/:id/rotate-secret', () => {
