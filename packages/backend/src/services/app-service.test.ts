@@ -59,9 +59,11 @@ const sampleApp = {
   url: 'https://test.example.com',
   client_id: 'some-uuid',
   client_secret_hash: '$2b$12$hashedvalue',
+  client_secret_sha256: null,
   redirect_uris: ['https://test.example.com/callback'],
   icon_url: null,
   stats_api_url: null,
+  backchannel_logout_uri: null,
   status: 'active',
   created_at: new Date('2025-01-01T00:00:00Z'),
 }
@@ -160,6 +162,35 @@ describe('app-service', () => {
         }),
       ).rejects.toThrow()
     })
+
+    it('accepts backchannel_logout_uri', async () => {
+      const appWithBcl = {
+        ...sampleApp,
+        backchannel_logout_uri: 'https://test.example.com/bcl',
+      }
+      const sql = mockSql([appWithBcl])
+      const result = await createApplication(sql, {
+        name: 'Test App',
+        slug: 'test-app',
+        url: 'https://test.example.com',
+        redirect_uris: ['https://test.example.com/callback'],
+        backchannel_logout_uri: 'https://test.example.com/bcl',
+      })
+
+      expect(result.application.backchannel_logout_uri).toBe('https://test.example.com/bcl')
+    })
+
+    it('defaults backchannel_logout_uri to null when omitted', async () => {
+      const sql = mockSql([sampleApp])
+      const result = await createApplication(sql, {
+        name: 'Test App',
+        slug: 'test-app',
+        url: 'https://test.example.com',
+        redirect_uris: ['https://test.example.com/callback'],
+      })
+
+      expect(result.application.backchannel_logout_uri).toBeNull()
+    })
   })
 
   describe('findApplicationById', () => {
@@ -233,6 +264,33 @@ describe('app-service', () => {
     it('throws on invalid update data', () => {
       const sql = mockSql([sampleApp])
       expect(updateApplication(sql, 1, { status: 'invalid-status' })).rejects.toThrow()
+    })
+
+    it('sets backchannel_logout_uri', async () => {
+      const updatedApp = {
+        ...sampleApp,
+        backchannel_logout_uri: 'https://test.example.com/bcl',
+      }
+      const sql = mockSqlSequence([[sampleApp], [updatedApp]])
+      const result = await updateApplication(sql, 1, {
+        backchannel_logout_uri: 'https://test.example.com/bcl',
+      })
+      expect(result).toMatchObject({
+        backchannel_logout_uri: 'https://test.example.com/bcl',
+      })
+    })
+
+    it('clears backchannel_logout_uri when set to null', async () => {
+      const appWithBcl = {
+        ...sampleApp,
+        backchannel_logout_uri: 'https://test.example.com/bcl',
+      }
+      const clearedApp = { ...appWithBcl, backchannel_logout_uri: null }
+      const sql = mockSqlSequence([[appWithBcl], [clearedApp]])
+      const result = await updateApplication(sql, 1, {
+        backchannel_logout_uri: null,
+      })
+      expect(result).toMatchObject({ backchannel_logout_uri: null })
     })
   })
 
