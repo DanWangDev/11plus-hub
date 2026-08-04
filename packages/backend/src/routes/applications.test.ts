@@ -205,11 +205,9 @@ describe('application routes', () => {
       }
       mockUpdateApplication.mockResolvedValue(updatedApp)
 
-      const res = await request(app)
-        .patch('/api/apps/1')
-        .send({
-          backchannel_logout_uri: 'https://story-sleuth.labf.app/api/auth/backchannel-logout',
-        })
+      const res = await request(app).patch('/api/apps/1').send({
+        backchannel_logout_uri: 'https://story-sleuth.labf.app/api/auth/backchannel-logout',
+      })
 
       expect(res.status).toBe(200)
       expect(res.body.success).toBe(true)
