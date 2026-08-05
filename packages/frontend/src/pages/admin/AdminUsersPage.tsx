@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { listUsers, createUser, updateUser, deleteUser } from '@/api/admin'
 import type { User } from '@/types/api'
 import { formatRelative, formatAbsolute } from '@/lib/format-date'
-import { Pencil, X, Check, Plus, Trash2 } from 'lucide-react'
+import { Pencil, X, Check, Plus, Trash2, Eye } from 'lucide-react'
 
 const ROLE_BADGES: Record<string, string> = {
   admin: 'bg-red-100 text-red-700',
@@ -142,6 +142,25 @@ export function AdminUsersPage() {
       setError(err instanceof Error ? err.message : 'Failed to delete user')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleImpersonate = async (user: User) => {
+    setError('')
+    try {
+      const res = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId: user.id }),
+      })
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: string }
+        throw new Error(body.error ?? 'Impersonation failed')
+      }
+      window.location.href = '/dashboard'
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to impersonate')
     }
   }
 
@@ -380,6 +399,14 @@ export function AdminUsersPage() {
                               title="Edit user"
                             >
                               <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleImpersonate(user)}
+                              disabled={saving}
+                              className="rounded p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+                              title="Impersonate user"
+                            >
+                              <Eye size={14} />
                             </button>
                             <button
                               onClick={() => handleDelete(user)}

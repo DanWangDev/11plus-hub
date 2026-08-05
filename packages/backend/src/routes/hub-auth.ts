@@ -33,6 +33,16 @@ export interface SessionData {
   }
   /** Profile overrides applied on top of id_token claims in GET /api/auth/me */
   profileOverrides?: Record<string, unknown>
+  /** Impersonation data set by POST /api/admin/impersonate */
+  impersonation?: {
+    targetUserId: number
+    claims: Record<string, unknown>
+    impersonatedBy: {
+      adminUserId: number
+      adminUsername: string
+      startedAt: string
+    }
+  }
 }
 
 interface OidcMetadata {
@@ -322,6 +332,19 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
   router.get('/api/auth/me', async (req: Request, res: Response) => {
     try {
       const session = await getSession(req, res, sessionSecret)
+
+      // During impersonation, return the target user's claims with the
+      // impersonation metadata so the frontend can show the amber banner.
+      if (session.impersonation) {
+        res.json({
+          success: true,
+          data: {
+            ...session.impersonation.claims,
+            impersonatedBy: session.impersonation.impersonatedBy,
+          },
+        })
+        return
+      }
 
       if (!session.tokens?.id_token) {
         res.status(401).json({ success: false, error: 'Not authenticated' })

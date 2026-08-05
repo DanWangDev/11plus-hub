@@ -15,6 +15,15 @@ interface SessionData {
     access_token?: string
     refresh_token?: string
   }
+  impersonation?: {
+    targetUserId: number
+    claims: Record<string, unknown>
+    impersonatedBy: {
+      adminUserId: number
+      adminUsername: string
+      startedAt: string
+    }
+  }
 }
 
 export interface AuthUser {
@@ -22,11 +31,21 @@ export interface AuthUser {
   username: string
   role: string
   email?: string
+  isImpersonating?: boolean
+  impersonatedBy?: {
+    adminUserId: number
+    adminUsername: string
+    startedAt: string
+  }
 }
 
 /**
  * Creates middleware that validates the hub session cookie and attaches
  * the authenticated user to `res.locals.user`.
+ *
+ * During impersonation, the impersonated user's identity is used instead
+ * of the original id_token claims. The admin's identity is preserved in
+ * `res.locals.user.impersonatedBy`.
  *
  * Returns 401 if no valid session exists.
  */
@@ -44,22 +63,35 @@ export function createRequireAuth(sessionSecret: string) {
         },
       })
 
-      if (!session.tokens?.id_token) {
+      let user: AuthUser
+
+      if (session.impersonation) {
+        // Use impersonated user's identity, but flag it
+        const claims = session.impersonation.claims
+        user = {
+          sub: String(claims.sub ?? ''),
+          username: String(claims.username ?? ''),
+          role: String(claims.role ?? 'student'),
+          email: claims.email as string | undefined,
+          isImpersonating: true,
+          impersonatedBy: session.impersonation.impersonatedBy,
+        }
+      } else if (session.tokens?.id_token) {
+        const claims = decodeJwt(session.tokens.id_token)
+
+        user = {
+          sub: String(claims.sub ?? ''),
+          username: String((claims as Record<string, unknown>).username ?? ''),
+          role: String((claims as Record<string, unknown>).role ?? 'student'),
+          email: (claims as Record<string, unknown>).email as string | undefined,
+        }
+      } else {
         logger.warn('auth middleware: no session token', {
           operation: 'requireAuth',
           path: req.path,
         })
         res.status(401).json({ success: false, error: 'Not authenticated' })
         return
-      }
-
-      const claims = decodeJwt(session.tokens.id_token)
-
-      const user: AuthUser = {
-        sub: String(claims.sub ?? ''),
-        username: String((claims as Record<string, unknown>).username ?? ''),
-        role: String((claims as Record<string, unknown>).role ?? 'student'),
-        email: (claims as Record<string, unknown>).email as string | undefined,
       }
 
       res.locals.user = user

@@ -8,6 +8,7 @@ import type Provider from 'oidc-provider'
 import { requestId } from './middleware/request-id.js'
 import { notFoundHandler, errorHandler } from './middleware/error-handler.js'
 import { createRequireAuth, requireAdmin } from './middleware/auth.js'
+import { createImpersonateRouter, blockWriteDuringImpersonation } from './routes/impersonate.js'
 import { createHealthRouter } from './routes/health.js'
 import { createAuthRouter } from './routes/auth.js'
 import { createUsersRouter } from './routes/users.js'
@@ -145,6 +146,20 @@ export function createApp(options: AppOptions = {}): express.Express {
   // Routes — admin-only (require authenticated admin session)
   if (options.hubAuth) {
     const requireAuth = createRequireAuth(options.hubAuth.sessionSecret)
+
+    // Impersonation — admin only for start, any authenticated user for end
+    if (options.sql) {
+      app.use(
+        createImpersonateRouter({
+          sql: options.sql,
+          sessionSecret: options.hubAuth.sessionSecret,
+        }),
+      )
+    }
+
+    // Block write operations during impersonation (applies to all routes below)
+    app.use('/api', requireAuth, blockWriteDuringImpersonation)
+
     app.use('/api/profile', requireAuth)
     app.use('/api/users', requireAuth, requireAdmin)
     // GET /api/apps is readable by any authenticated user (student dashboard needs it)
