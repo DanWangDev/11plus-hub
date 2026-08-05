@@ -85,6 +85,11 @@ export interface HubUser {
   apps: string[]
   has_password: boolean
   expires_at: string | null
+  impersonatedBy?: {
+    adminUserId: number
+    adminUsername: string
+    startedAt: string
+  }
 }
 
 export interface PasswordResetRequest {

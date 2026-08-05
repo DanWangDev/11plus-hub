@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { listAuditLog, type AuditEntry } from '@/api/admin'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 
 const ACTION_BADGES: Record<string, string> = {
   login: 'bg-green-100 text-green-700',
@@ -25,6 +26,9 @@ const ACTION_BADGES: Record<string, string> = {
   stripe_webhook_checkout: 'bg-emerald-100 text-emerald-700',
   stripe_webhook_updated: 'bg-purple-100 text-purple-700',
   stripe_webhook_cancelled: 'bg-red-100 text-red-700',
+  impersonate_start: 'bg-amber-100 text-amber-700',
+  impersonate_end: 'bg-amber-100 text-amber-700',
+  entitlement_denied: 'bg-red-100 text-red-700',
 }
 
 type PageState =
@@ -36,7 +40,20 @@ export function AdminAuditPage() {
   const [state, setState] = useState<PageState>({ kind: 'loading' })
   const [actionFilter, setActionFilter] = useState('')
   const [page, setPage] = useState(1)
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
   const limit = 30
+
+  const toggleRow = (id: number) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
 
   const fetchData = useCallback(async () => {
     setState({ kind: 'loading' })
@@ -113,6 +130,11 @@ export function AdminAuditPage() {
               <option value="app_access_grant">App Access Grant</option>
               <option value="app_access_revoke">App Access Revoke</option>
             </optgroup>
+            <optgroup label="Admin">
+              <option value="impersonate_start">Impersonate Start</option>
+              <option value="impersonate_end">Impersonate End</option>
+              <option value="entitlement_denied">Entitlement Denied</option>
+            </optgroup>
           </select>
         </div>
       </Card>
@@ -155,32 +177,64 @@ export function AdminAuditPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {state.entries.map((entry) => (
-                    <tr key={entry.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
-                        {new Date(entry.created_at).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${ACTION_BADGES[entry.action] ?? 'bg-slate-100 text-slate-700'}`}
-                        >
-                          {entry.action}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {entry.actor_username ?? (entry.actor_id ? `#${entry.actor_id}` : '—')}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">{entry.target_id ?? '—'}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                        {entry.ip_address ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-slate-500 max-w-xs truncate">
-                        {Object.keys(entry.details).length > 0
-                          ? JSON.stringify(entry.details)
-                          : '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {state.entries.map((entry) => {
+                    const hasDetails = Object.keys(entry.details).length > 0
+                    const isExpanded = expandedRows.has(entry.id)
+
+                    return (
+                      <tr key={entry.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+                          {new Date(entry.created_at).toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${ACTION_BADGES[entry.action] ?? 'bg-slate-100 text-slate-700'}`}
+                          >
+                            {entry.action}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {entry.actor_username ?? (entry.actor_id ? `#${entry.actor_id}` : '—')}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">{entry.target_id ?? '—'}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                          {entry.ip_address ?? '—'}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-500" style={{ maxWidth: '300px' }}>
+                          {hasDetails ? (
+                            <div>
+                              {isExpanded ? (
+                                <pre className="whitespace-pre-wrap break-all bg-slate-50 rounded p-2 text-xs text-slate-700 border border-slate-200 max-h-48 overflow-y-auto">
+                                  {JSON.stringify(entry.details, null, 2)}
+                                </pre>
+                              ) : (
+                                <span className="truncate block">
+                                  {JSON.stringify(entry.details)}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => toggleRow(entry.id)}
+                                className="mt-1 flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800"
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <ChevronDown className="h-3 w-3" /> Collapse
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronRight className="h-3 w-3" /> Expand
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

@@ -135,18 +135,23 @@ async function main(): Promise<void> {
         backchannel_logout_uri = EXCLUDED.backchannel_logout_uri
     `
 
-    // Create free subscription for admin
-    if (admin?.id) {
+    // Ensure admin exists and has full access (idempotent — safe to re-run)
+    const adminId = admin?.id ?? (
+      await sql`SELECT id FROM users WHERE username = ${adminUsername}`
+    )[0]?.id
+
+    if (adminId) {
       await sql`
         INSERT INTO subscriptions (user_id, plan, status, features, assigned_by)
-        VALUES (${admin.id}, 'bundle', 'active', ARRAY['writing', 'vocab', 'story-sleuth'], ${admin.id})
-        ON CONFLICT DO NOTHING
+        VALUES (${adminId}, 'bundle', 'active', ARRAY['writing', 'vocab', 'story-sleuth'], ${adminId})
+        ON CONFLICT (user_id) WHERE status IN ('active', 'trial')
+        DO UPDATE SET features = EXCLUDED.features
       `
 
-      // Grant app access for all registered apps
+      // Grant app access for all registered apps (including newly seeded ones)
       await sql`
         INSERT INTO user_app_access (user_id, app_id)
-        SELECT ${admin.id}, id FROM applications
+        SELECT ${adminId}, id FROM applications
         ON CONFLICT DO NOTHING
       `
     }
