@@ -75,11 +75,9 @@ describe('blockWriteDuringImpersonation', () => {
   })
 
   it('allows POST to impersonate end during impersonation', () => {
-    const { req, res, next } = mockReqRes(
-      'POST',
-      '/api/admin/impersonate/end',
-      { isImpersonating: true },
-    )
+    const { req, res, next } = mockReqRes('POST', '/api/admin/impersonate/end', {
+      isImpersonating: true,
+    })
     blockWriteDuringImpersonation(req, res, next)
     expect(next).toHaveBeenCalled()
   })
