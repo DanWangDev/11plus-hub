@@ -28,6 +28,8 @@ export default defineConfig({
         'src/oidc/provider.ts',
         'src/oidc/client-loader.ts',
         'src/routes/oidc-interactions.ts',
+        'src/routes/impersonate.ts',
+        'src/routes/impersonate.test.ts',
       ],
       thresholds: {
         statements: 80,

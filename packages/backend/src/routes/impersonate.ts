@@ -72,9 +72,7 @@ async function buildUserClaims(
     features: subscription?.features ?? [],
     apps: appSlugs,
     has_password: userHasPassword,
-    expires_at: subscription?.expires_at
-      ? new Date(subscription.expires_at).toISOString()
-      : null,
+    expires_at: subscription?.expires_at ? new Date(subscription.expires_at).toISOString() : null,
   }
 }
 

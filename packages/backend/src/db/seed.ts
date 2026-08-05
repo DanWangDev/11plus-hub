@@ -136,9 +136,8 @@ async function main(): Promise<void> {
     `
 
     // Ensure admin exists and has full access (idempotent — safe to re-run)
-    const adminId = admin?.id ?? (
-      await sql`SELECT id FROM users WHERE username = ${adminUsername}`
-    )[0]?.id
+    const adminId =
+      admin?.id ?? (await sql`SELECT id FROM users WHERE username = ${adminUsername}`)[0]?.id
 
     if (adminId) {
       await sql`

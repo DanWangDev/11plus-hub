@@ -54,11 +54,46 @@ function AppRoutes() {
           <Route path="/auth/interaction/:uid" element={<InteractionPage />} />
 
           {/* Admin routes — blocked during impersonation */}
-          <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-          <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
-          <Route path="/admin/apps" element={<AdminRoute><AdminAppsPage /></AdminRoute>} />
-          <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptionsPage /></AdminRoute>} />
-          <Route path="/admin/audit" element={<AdminRoute><AdminAuditPage /></AdminRoute>} />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminDashboardPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <AdminRoute>
+                <AdminUsersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/apps"
+            element={
+              <AdminRoute>
+                <AdminAppsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/subscriptions"
+            element={
+              <AdminRoute>
+                <AdminSubscriptionsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/audit"
+            element={
+              <AdminRoute>
+                <AdminAuditPage />
+              </AdminRoute>
+            }
+          />
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

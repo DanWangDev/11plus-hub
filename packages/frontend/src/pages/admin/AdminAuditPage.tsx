@@ -200,7 +200,10 @@ export function AdminAuditPage() {
                         <td className="px-4 py-3 font-mono text-xs text-slate-500">
                           {entry.ip_address ?? '—'}
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-500" style={{ maxWidth: '300px' }}>
+                        <td
+                          className="px-4 py-3 text-xs text-slate-500"
+                          style={{ maxWidth: '300px' }}
+                        >
                           {hasDetails ? (
                             <div>
                               {isExpanded ? (
