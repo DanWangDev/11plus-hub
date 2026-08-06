@@ -22,7 +22,7 @@ async function main(): Promise<void> {
     sql,
     signingKey,
     cookieKeys,
-    findAccount: createAccountFinder(sql),
+    findAccount: createAccountFinder(sql, env.HUB_SESSION_SECRET),
   })
 
   // Stripe billing (optional — disabled when env vars not set)
