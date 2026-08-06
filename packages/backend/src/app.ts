@@ -153,6 +153,8 @@ export function createApp(options: AppOptions = {}): express.Express {
         createImpersonateRouter({
           sql: options.sql,
           sessionSecret: options.hubAuth.sessionSecret,
+          requireAuth,
+          requireAdmin,
         }),
       )
     }

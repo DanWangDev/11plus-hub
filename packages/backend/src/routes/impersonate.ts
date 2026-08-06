@@ -11,7 +11,7 @@ import {
   PLAN_APP_SLUGS,
 } from '../services/subscription-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
-import { requireAdmin } from '../middleware/auth.js'
+import type { RequestHandler } from 'express'
 import { COOKIE_NAME, type SessionData } from './hub-auth.js'
 
 const logger = createLogger({ route: 'impersonate' })
@@ -19,6 +19,8 @@ const logger = createLogger({ route: 'impersonate' })
 interface ImpersonateRouterOptions {
   sql: postgres.Sql
   sessionSecret: string
+  requireAuth: RequestHandler
+  requireAdmin: RequestHandler
 }
 
 async function buildUserClaims(
@@ -77,12 +79,13 @@ async function buildUserClaims(
 }
 
 export function createImpersonateRouter(options: ImpersonateRouterOptions): Router {
-  const { sql, sessionSecret } = options
+  const { sql, sessionSecret, requireAuth, requireAdmin } = options
   const router = Router()
 
   // POST /api/admin/impersonate — start impersonating a user
   router.post(
     '/api/admin/impersonate',
+    requireAuth,
     requireAdmin,
     async (req: Request, res: Response, next: NextFunction) => {
       const start = Date.now()
@@ -168,6 +171,7 @@ export function createImpersonateRouter(options: ImpersonateRouterOptions): Rout
   // POST /api/admin/impersonate/end — stop impersonating
   router.post(
     '/api/admin/impersonate/end',
+    requireAuth,
     async (req: Request, res: Response, next: NextFunction) => {
       const start = Date.now()
       try {
