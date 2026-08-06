@@ -34,10 +34,7 @@ export interface OidcAccount {
 }
 
 export function createAccountFinder(sql: postgres.Sql, sessionSecret?: string) {
-  return async function findAccount(
-    ctx: unknown,
-    sub: string,
-  ): Promise<OidcAccount | undefined> {
+  return async function findAccount(ctx: unknown, sub: string): Promise<OidcAccount | undefined> {
     // During impersonation, swap to the target user's identity.
     // The hub's iron-session cookie is separate from the OIDC provider session.
     // When an admin impersonates and clicks an app link, the OIDC provider
