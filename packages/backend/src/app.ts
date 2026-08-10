@@ -163,7 +163,7 @@ export function createApp(options: AppOptions = {}): express.Express {
     // Block write operations during impersonation (applies to all routes below).
     // Skip public auth routes — the hub's own login/callback/logout are public.
     const authGuard: RequestHandler = (req, res, next) => {
-      if (req.path.startsWith('/api/auth/')) return next()
+      if (req.path.startsWith('/auth/')) return next()
       requireAuth(req, res, next)
     }
     app.use('/api', authGuard, blockWriteDuringImpersonation)
