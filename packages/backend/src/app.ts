@@ -1,4 +1,5 @@
 import express from 'express'
+import type { RequestHandler } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
@@ -159,8 +160,13 @@ export function createApp(options: AppOptions = {}): express.Express {
       )
     }
 
-    // Block write operations during impersonation (applies to all routes below)
-    app.use('/api', requireAuth, blockWriteDuringImpersonation)
+    // Block write operations during impersonation (applies to all routes below).
+    // Skip public auth routes — the hub's own login/callback/logout are public.
+    const authGuard: RequestHandler = (req, res, next) => {
+      if (req.path.startsWith('/api/auth/')) return next()
+      requireAuth(req, res, next)
+    }
+    app.use('/api', authGuard, blockWriteDuringImpersonation)
 
     app.use('/api/profile', requireAuth)
     app.use('/api/users', requireAuth, requireAdmin)
