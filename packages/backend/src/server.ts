@@ -7,6 +7,7 @@ import { generateDevSigningKey } from './oidc/dev-keys.js'
 import { startOidcPayloadCleanup } from './jobs/oidc-cleanup.js'
 import { startBclRetryJob } from './oidc/bcl-retry.js'
 import { createStripeClient } from './services/stripe-service.js'
+import { loadCorsOriginsFromRegistry } from './services/registry-cors.js'
 import { createLogger } from './lib/logger.js'
 
 const logger = createLogger({ service: 'server' })
@@ -29,9 +30,12 @@ async function main(): Promise<void> {
   const stripeEnabled = env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.STRIPE_PRICE_ID
   const stripe = stripeEnabled ? createStripeClient(env.STRIPE_SECRET_KEY!) : undefined
 
+  const corsAllowedOrigins = await loadCorsOriginsFromRegistry(sql)
+
   const app = createApp({
     sql,
     oidcProvider,
+    corsAllowedOrigins,
     hubAuth: {
       issuer: env.OIDC_ISSUER,
       internalIssuer: env.OIDC_INTERNAL_ISSUER,

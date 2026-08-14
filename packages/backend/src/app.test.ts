@@ -48,10 +48,30 @@ describe('createApp', () => {
     expect(res.headers).toHaveProperty('access-control-allow-origin')
   })
 
-  it('allows CORS from *.labf.app subdomains', async () => {
-    const res = await request(app).get('/health').set('Origin', 'https://writing-buddy.labf.app')
+  it('allows CORS from origins in the explicit allowlist', async () => {
+    const allowlistApp = createApp({
+      skipDbCheck: true,
+      corsAllowedOrigins: ['https://writing-buddy.labf.app'],
+    })
+
+    const res = await request(allowlistApp)
+      .get('/health')
+      .set('Origin', 'https://writing-buddy.labf.app')
 
     expect(res.headers['access-control-allow-origin']).toBe('https://writing-buddy.labf.app')
+  })
+
+  it('rejects *.labf.app origins that are not in the allowlist (no wildcard)', async () => {
+    const allowlistApp = createApp({
+      skipDbCheck: true,
+      corsAllowedOrigins: ['https://writing-buddy.labf.app'],
+    })
+
+    const res = await request(allowlistApp)
+      .get('/health')
+      .set('Origin', 'https://evil-app.labf.app')
+
+    expect(res.headers['access-control-allow-origin']).toBeUndefined()
   })
 
   it('rejects CORS from unknown origins', async () => {
