@@ -1,13 +1,11 @@
 import type { Request, Response, NextFunction } from 'express'
-import { getIronSession } from 'iron-session'
 import { decodeJwt } from 'jose'
 import { db } from '../db/connection.js'
 import { updateLastActive } from '../services/user-service.js'
+import { getHubSession } from '../lib/session.js'
 import { createLogger } from '../lib/logger.js'
 
 const logger = createLogger({ service: 'auth-middleware' })
-
-const COOKIE_NAME = '__hub_session'
 
 interface SessionData {
   tokens?: {
@@ -52,16 +50,7 @@ export interface AuthUser {
 export function createRequireAuth(sessionSecret: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const session = await getIronSession<SessionData>(req, res, {
-        password: sessionSecret,
-        cookieName: COOKIE_NAME,
-        cookieOptions: {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax' as const,
-          maxAge: 7 * 24 * 60 * 60,
-        },
-      })
+      const session = await getHubSession<SessionData>(req, res, sessionSecret)
 
       let user: AuthUser
 

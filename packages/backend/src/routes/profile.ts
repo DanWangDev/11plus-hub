@@ -3,7 +3,6 @@ import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { z } from 'zod'
 import type postgres from 'postgres'
-import { getIronSession } from 'iron-session'
 import { createLogger } from '../lib/logger.js'
 import {
   MIN_PASSWORD_LENGTH,
@@ -15,9 +14,9 @@ import {
 } from '../services/user-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
 import { profileUpdateLimiter } from '../middleware/rate-limit.js'
+import { getHubSession } from '../lib/session.js'
 import type { AuthUser } from '../middleware/auth.js'
 import type { SessionData } from './hub-auth.js'
-import { COOKIE_NAME } from './hub-auth.js'
 
 const logger = createLogger({ service: 'profile' })
 
@@ -101,17 +100,7 @@ export function createProfileRouter(options: ProfileRouterOptions): Router {
 
       // Store profileOverrides in session so /api/auth/me reflects the change
       // without requiring a full re-authentication
-      const session = await getIronSession<SessionData>(req, res, {
-        password: sessionSecret,
-        cookieName: COOKIE_NAME,
-        cookieOptions: {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax' as const,
-          path: '/',
-          maxAge: 7 * 24 * 60 * 60,
-        },
-      })
+      const session = await getHubSession<SessionData>(req, res, sessionSecret)
 
       session.profileOverrides = {
         ...(session.profileOverrides ?? {}),

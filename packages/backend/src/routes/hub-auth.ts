@@ -1,8 +1,8 @@
 import { randomBytes, createHash } from 'crypto'
 import { Router } from 'express'
 import type { Request, Response } from 'express'
-import { getIronSession } from 'iron-session'
 import * as jose from 'jose'
+import { getHubSession, HUB_SESSION_COOKIE } from '../lib/session.js'
 import { createLogger } from '../lib/logger.js'
 
 const logger = createLogger({ service: 'hub-auth' })
@@ -52,21 +52,11 @@ interface OidcMetadata {
   jwks_uri: string
 }
 
-export const COOKIE_NAME = '__hub_session'
+export const COOKIE_NAME = HUB_SESSION_COOKIE
 const SCOPES = 'openid profile email hub'
 
 export async function getSession(req: Request, res: Response, password: string) {
-  return getIronSession<SessionData>(req, res, {
-    password,
-    cookieName: COOKIE_NAME,
-    cookieOptions: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    },
-  })
+  return getHubSession<SessionData>(req, res, password)
 }
 
 function base64url(buffer: Buffer): string {
