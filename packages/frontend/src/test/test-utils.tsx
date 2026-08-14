@@ -1,13 +1,16 @@
 import { render, type RenderOptions } from '@testing-library/react'
 import { BrowserRouter } from 'react-router'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider } from '@/contexts/auth-context'
 import type { ReactElement, ReactNode } from 'react'
 
 function TestWrapper({ children }: { children: ReactNode }) {
   return (
-    <AuthProvider>
-      <BrowserRouter>{children}</BrowserRouter>
-    </AuthProvider>
+    <GoogleOAuthProvider clientId="test-client-id">
+      <AuthProvider>
+        <BrowserRouter>{children}</BrowserRouter>
+      </AuthProvider>
+    </GoogleOAuthProvider>
   )
 }
 

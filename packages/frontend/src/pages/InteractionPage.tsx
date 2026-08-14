@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
 import { GoogleSignInButton } from '@/components/GoogleSignInButton'
+import { TurnstileWidget, isTurnstileEnabled } from '@/components/TurnstileWidget'
 import { useForm } from '@/hooks/use-form'
 import { loginSchema, type LoginFormData } from '@/lib/validation'
 import type { InteractionDetails } from '@/types/api'
@@ -116,12 +117,16 @@ export function InteractionPage() {
 function InteractionLoginView({ uid, clientId }: { uid: string; clientId: string }) {
   const [googleError, setGoogleError] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   const form = useForm<LoginFormData>({
     schema: loginSchema,
     onSubmit: async (data) => {
       try {
-        const response = await submitInteractionLogin(uid, data)
+        const response = await submitInteractionLogin(uid, {
+          ...data,
+          turnstileToken: turnstileToken ?? undefined,
+        })
         if (response.redirectTo) {
           window.location.href = response.redirectTo
           return
@@ -144,6 +149,7 @@ function InteractionLoginView({ uid, clientId }: { uid: string; clientId: string
       const response = await submitInteractionGoogle(uid, {
         token: accessToken,
         tokenType: 'access_token',
+        turnstileToken: turnstileToken ?? undefined,
       })
       if (response.redirectTo) {
         window.location.href = response.redirectTo
@@ -195,10 +201,17 @@ function InteractionLoginView({ uid, clientId }: { uid: string; clientId: string
           error={form.errors.password}
         />
 
-        <Button type="submit" loading={form.isSubmitting} className="mt-2 w-full">
+        <Button
+          type="submit"
+          loading={form.isSubmitting}
+          disabled={isTurnstileEnabled && !turnstileToken}
+          className="mt-2 w-full"
+        >
           Sign in
         </Button>
       </form>
+
+      <TurnstileWidget onVerify={setTurnstileToken} onExpire={() => setTurnstileToken(null)} />
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">

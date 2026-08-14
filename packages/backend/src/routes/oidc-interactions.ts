@@ -12,8 +12,10 @@ import {
   verifyPassword,
 } from '../services/user-service.js'
 import { verifyGoogleToken, isGoogleConfigured } from '../services/google-auth-service.js'
+import { verifyTurnstileToken } from '../services/turnstile-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
 import { checkUserEntitlement } from '../oidc/entitlement-check.js'
+import { loginLimiter } from '../middleware/rate-limit.js'
 import { createLogger } from '../lib/logger.js'
 
 const logger = createLogger({ route: 'oidc-interactions' })
@@ -37,6 +39,30 @@ async function finishInteractionAsJson(
   const redirectTo = await provider.interactionResult(req, res, result, options)
 
   res.json({ success: true, redirectTo })
+}
+
+/**
+ * Verify a Turnstile token when Turnstile is configured (no-op otherwise —
+ * graceful degradation). The interaction login is the primary SSO login path
+ * for all child apps, so it needs the same bot protection as /api/auth/login.
+ * Returns false after sending the 403 response.
+ */
+async function verifyTurnstileOrReject(
+  req: Request,
+  res: Response,
+  logger: ReturnType<typeof createLogger>,
+): Promise<boolean> {
+  const { turnstileToken } = req.body as { turnstileToken?: string }
+  const ip = req.ip ?? req.socket.remoteAddress ?? ''
+  const ok = await verifyTurnstileToken(turnstileToken ?? '', ip)
+  if (!ok) {
+    logger.warn('interaction turnstile failed', {
+      operation: 'turnstile',
+    })
+    res.status(403).json({ success: false, error: 'Bot verification failed' })
+    return false
+  }
+  return true
 }
 
 interface InteractionRouterOptions {
@@ -96,6 +122,7 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
   // POST /api/auth/interaction/:uid/login — JSON API login for SPA
   router.post(
     '/api/auth/interaction/:uid/login',
+    loginLimiter,
     async (req: Request, res: Response, next: NextFunction) => {
       const start = Date.now()
       try {
@@ -103,6 +130,10 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           identifier?: string
           email?: string
           password?: string
+        }
+
+        if (!(await verifyTurnstileOrReject(req, res, logger))) {
+          return
         }
 
         const loginId = identifier ?? email
@@ -315,6 +346,7 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
   // POST /api/auth/interaction/:uid/google — Google OAuth during OIDC interaction
   router.post(
     '/api/auth/interaction/:uid/google',
+    loginLimiter,
     async (req: Request, res: Response, next: NextFunction) => {
       const start = Date.now()
 
@@ -331,6 +363,10 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
 
         if (!token) {
           res.status(400).json({ success: false, error: 'Google token is required' })
+          return
+        }
+
+        if (!(await verifyTurnstileOrReject(req, res, logger))) {
           return
         }
 
