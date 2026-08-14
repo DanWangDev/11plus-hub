@@ -10,10 +10,6 @@ interface TurnstileVerifyResponse {
   'error-codes'?: string[]
 }
 
-export function isTurnstileConfigured(): boolean {
-  return !!env.TURNSTILE_SECRET_KEY
-}
-
 export async function verifyTurnstileToken(token: string, remoteIp: string): Promise<boolean> {
   if (!env.TURNSTILE_SECRET_KEY) {
     return true

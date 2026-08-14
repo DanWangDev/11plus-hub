@@ -140,14 +140,6 @@ export async function findApplicationBySlug(sql: Sql, slug: string): Promise<App
   return (rows[0] as Application) ?? null
 }
 
-export async function verifyClientSecret(plaintext: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(plaintext, hash)
-}
-
-export function verifyClientSecretSha256(plaintext: string, storedHash: string): boolean {
-  return hashSha256(plaintext) === storedHash
-}
-
 export async function updateApplication(
   sql: Sql,
   id: number,

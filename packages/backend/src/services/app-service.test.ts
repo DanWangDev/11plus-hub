@@ -5,7 +5,6 @@ import {
   findApplicationById,
   findApplicationByClientId,
   findApplicationBySlug,
-  verifyClientSecret,
   updateApplication,
   listApplications,
   rotateClientSecret,
@@ -232,18 +231,6 @@ describe('app-service', () => {
       const sql = mockSql([])
       const result = await findApplicationBySlug(sql, 'nonexistent')
       expect(result).toBeNull()
-    })
-  })
-
-  describe('verifyClientSecret', () => {
-    it('returns true for correct secret', async () => {
-      const result = await verifyClientSecret('correct-secret', '$2b$12$hashedvalue')
-      expect(result).toBe(true)
-    })
-
-    it('returns false for incorrect secret', async () => {
-      const result = await verifyClientSecret('wrong-secret', '$2b$12$hashedvalue')
-      expect(result).toBe(false)
     })
   })
 
