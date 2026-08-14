@@ -14,7 +14,6 @@ import {
 import { verifyGoogleToken, isGoogleConfigured } from '../services/google-auth-service.js'
 import { verifyTurnstileToken } from '../services/turnstile-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
-import { checkUserEntitlement } from '../oidc/entitlement-check.js'
 import { loginLimiter } from '../middleware/rate-limit.js'
 import { createLogger } from '../lib/logger.js'
 
@@ -181,36 +180,10 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           return
         }
 
-        // Check entitlement before completing login
-        const interactionDetails = await provider.interactionDetails(req, res)
-        const clientId = String(
-          (interactionDetails.params as Record<string, unknown>).client_id ?? '',
-        )
-
-        const entitlement = await checkUserEntitlement(sql, user.id, clientId)
-        if (!entitlement.allowed) {
-          logger.warn('oidc api login denied - no entitlement', {
-            operation: 'login',
-            userId: user.id,
-            clientId,
-            reason: entitlement.reason,
-            duration: Date.now() - start,
-          })
-
-          await logAction(sql, {
-            actorId: user.id,
-            action: AuditActions.ENTITLEMENT_DENIED,
-            details: { clientId, appName: entitlement.appName, reason: entitlement.reason },
-            ipAddress: req.ip,
-          }).catch(() => {})
-
-          res.status(403).json({
-            success: false,
-            error: `Your plan does not include access to ${entitlement.appName ?? 'this application'}. Please upgrade your subscription.`,
-          })
-          return
-        }
-
+        // Entitlement is NOT enforced at login (product decision, P5):
+        // the hub issues claims (plan/features/apps) and each app gates
+        // access in-app, so free users can reach the paywall and trials can
+        // activate lazily on first visit.
         logger.info('oidc api login success', {
           operation: 'login',
           userId: user.id,
@@ -456,36 +429,6 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
 
         if (!user) {
           res.status(500).json({ success: false, error: 'Failed to authenticate with Google' })
-          return
-        }
-
-        // Check entitlement
-        const interactionDetails = await provider.interactionDetails(req, res)
-        const clientId = String(
-          (interactionDetails.params as Record<string, unknown>).client_id ?? '',
-        )
-
-        const entitlement = await checkUserEntitlement(sql, user.id, clientId)
-        if (!entitlement.allowed) {
-          logger.warn('google interaction login denied - no entitlement', {
-            operation: 'interactionGoogleLogin',
-            userId: user.id,
-            clientId,
-            reason: entitlement.reason,
-            duration: Date.now() - start,
-          })
-
-          await logAction(sql, {
-            actorId: user.id,
-            action: AuditActions.ENTITLEMENT_DENIED,
-            details: { clientId, appName: entitlement.appName, reason: entitlement.reason },
-            ipAddress: req.ip,
-          }).catch(() => {})
-
-          res.status(403).json({
-            success: false,
-            error: `Your plan does not include access to ${entitlement.appName ?? 'this application'}. Please upgrade your subscription.`,
-          })
           return
         }
 

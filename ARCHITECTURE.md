@@ -137,7 +137,7 @@ bcl_retry_queue
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/auth/interaction/:uid` | Interaction details (login/consent) |
-| POST | `/api/auth/interaction/:uid/login` | Password login (rate limited + Turnstile) |
+| POST | `/api/auth/interaction/:uid/login` | Password login (rate limited + Turnstile; entitlement NOT enforced here — apps gate in-app) |
 | POST | `/api/auth/interaction/:uid/google` | Google ID-token login (Turnstile; verified-email linking only) |
 | POST | `/api/auth/interaction/:uid/confirm` | Grant consent |
 | POST | `/api/auth/interaction/:uid/abort` | Deny interaction |
@@ -247,7 +247,6 @@ packages/
         secret-auth-middleware.ts -- Hashes incoming client_secret before oidc-provider sees it
         bcl-retry.ts         -- Backchannel logout retry queue with backoff
         dev-keys.ts          -- Development signing key generator (warns in production)
-        entitlement-check.ts -- Entitlement gate used by the interaction login
       routes/
         health.ts, auth.ts, users.ts, applications.ts, subscriptions.ts,
         password-reset.ts, profile.ts, audit.ts, oidc-interactions.ts,
