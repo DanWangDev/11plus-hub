@@ -42,6 +42,10 @@ export const envSchema = z.object({
   STRIPE_PRICE_ID: z.string().optional(),
 
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+
+  // Demo data seeding (demo users + dev app registrations). Off by default;
+  // the dev docker-compose sets it to true. Never enable in production.
+  SEED_ON_STARTUP: z.coerce.boolean().default(false),
 })
 
 export type Env = z.infer<typeof envSchema>
