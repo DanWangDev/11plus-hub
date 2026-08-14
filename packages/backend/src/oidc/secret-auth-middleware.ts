@@ -10,7 +10,7 @@ const logger = createLogger({ service: 'oidc-secret-auth' })
  *
  * This implements the IdentityServer pattern:
  * - DB stores SHA-256(secret) in client_secret_sha256
- * - client-loader.ts passes that hash as oidc-provider's client_secret
+ * - the pg-adapter's client model passes that hash as oidc-provider's client_secret
  * - This middleware hashes the incoming plaintext so oidc-provider's
  *   string comparison matches: SHA-256(incoming) === SHA-256(stored)
  *
