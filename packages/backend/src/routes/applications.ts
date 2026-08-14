@@ -12,6 +12,7 @@ import {
   rotateClientSecret,
   createServiceToken,
   revokeServiceToken,
+  serviceTokenSchema,
 } from '../services/app-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
 import { clearClientCache } from '../oidc/pg-adapter.js'
@@ -269,11 +270,11 @@ export function createApplicationsRouter(): Router {
           throw new AppError(400, 'Invalid application ID')
         }
 
-        const scopes = Array.isArray(req.body.scopes) ? (req.body.scopes as string[]) : []
+        const { scopes, expiresAt } = serviceTokenSchema.parse(req.body ?? {})
 
         logger.info('Creating service token', { operation: 'createServiceToken', appId: id })
 
-        const result = await createServiceToken(db, id, scopes)
+        const result = await createServiceToken(db, id, scopes, expiresAt ?? null)
 
         logger.info('Service token created', {
           operation: 'createServiceToken',

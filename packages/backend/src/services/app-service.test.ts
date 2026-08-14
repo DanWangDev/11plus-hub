@@ -338,6 +338,19 @@ describe('app-service', () => {
       await expect(createServiceToken(sql, 999)).rejects.toThrow('Application not found')
     })
 
+    it('stores an expiry when provided', async () => {
+      const sql = mockSqlSequence([[sampleApp], [sampleToken]])
+      const result = await createServiceToken(sql, 1, ['read'], '2026-12-31T23:59:59.000Z')
+      expect(result.serviceToken).toMatchObject({ app_id: 1 })
+    })
+
+    it('rejects an invalid expiresAt', async () => {
+      const sql = mockSqlSequence([[sampleApp]])
+      await expect(createServiceToken(sql, 1, ['read'], 'not-a-date')).rejects.toThrow(
+        'Invalid expiresAt',
+      )
+    })
+
     it('hashes token with SHA256', async () => {
       const sql = mockSqlSequence([[sampleApp], [sampleToken]])
       const result = await createServiceToken(sql, 1, ['read'])
