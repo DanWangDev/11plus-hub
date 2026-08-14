@@ -78,4 +78,36 @@ describe('createLogger', () => {
     expect(raw.endsWith('\n')).toBe(true)
     expect(() => JSON.parse(raw.trim())).not.toThrow()
   })
+
+  it('logs debug messages when LOG_LEVEL is debug', async () => {
+    vi.stubEnv('LOG_LEVEL', 'debug')
+    vi.resetModules()
+    const { createLogger: createDebugLogger } = await import('./logger.js')
+
+    const logger = createDebugLogger()
+    logger.debug('trace message')
+
+    expect(writeSpy).toHaveBeenCalledOnce()
+    const output = JSON.parse((writeSpy.mock.calls[0]![0] as string).trim())
+    expect(output.level).toBe('debug')
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('suppresses messages below the configured LOG_LEVEL', async () => {
+    vi.stubEnv('LOG_LEVEL', 'warn')
+    vi.resetModules()
+    const { createLogger: createWarnLogger } = await import('./logger.js')
+
+    const logger = createWarnLogger()
+    logger.debug('hidden debug')
+    logger.info('hidden info')
+    logger.warn('visible warn')
+
+    expect(writeSpy).toHaveBeenCalledOnce()
+    const output = JSON.parse((writeSpy.mock.calls[0]![0] as string).trim())
+    expect(output.level).toBe('warn')
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
 })

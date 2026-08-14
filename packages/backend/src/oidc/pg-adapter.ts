@@ -72,7 +72,7 @@ function createClientAdapter(sql: postgres.Sql): Adapter {
       clientCache.set(id, { payload, cachedAt: now })
 
       if (payload) {
-        logger.info('oidc client loaded dynamically', { operation: 'clientFind', clientId: id })
+        logger.debug('oidc client loaded dynamically', { operation: 'clientFind', clientId: id })
       }
 
       return payload
@@ -129,7 +129,7 @@ export function createPgAdapter(sql: postgres.Sql) {
             expires_at = ${expiresAt}
         `
 
-        logger.info('oidc payload upserted', { operation: 'upsert', type, id })
+        logger.debug('oidc payload upserted', { operation: 'upsert', type, id })
       },
 
       async find(id: string): Promise<AdapterPayload | undefined> {
@@ -196,7 +196,7 @@ export function createPgAdapter(sql: postgres.Sql) {
           WHERE id = ${id} AND type = ${type}
         `
 
-        logger.info('oidc payload consumed', { operation: 'consume', type, id })
+        logger.debug('oidc payload consumed', { operation: 'consume', type, id })
       },
 
       async destroy(id: string): Promise<void> {
@@ -205,7 +205,7 @@ export function createPgAdapter(sql: postgres.Sql) {
           WHERE id = ${id} AND type = ${type}
         `
 
-        logger.info('oidc payload destroyed', { operation: 'destroy', type, id })
+        logger.debug('oidc payload destroyed', { operation: 'destroy', type, id })
       },
 
       async revokeByGrantId(grantId: string): Promise<void> {
@@ -214,7 +214,7 @@ export function createPgAdapter(sql: postgres.Sql) {
           WHERE grant_id = ${grantId}
         `
 
-        logger.info('oidc payloads revoked by grant', {
+        logger.debug('oidc payloads revoked by grant', {
           operation: 'revokeByGrantId',
           type,
           grantId,

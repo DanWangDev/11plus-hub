@@ -11,6 +11,7 @@ import {
 
 vi.mock('../lib/logger.js', () => ({
   createLogger: () => ({
+    debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
