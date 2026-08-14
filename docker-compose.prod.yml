@@ -10,8 +10,12 @@ services:
       NODE_ENV: production
       DB_HOST: labf-db
       DB_PORT: 5432
+    # Bound to loopback only: the frontend nginx reaches the backend over
+    # the compose network (backend:3009). Exposing 3009 on the LAN let any
+    # device hit the API directly and spoof X-Forwarded-* headers to bypass
+    # IP-based rate limiting (trust proxy is on for the Cloudflare/nginx hop).
     ports:
-      - '3009:3009'
+      - '127.0.0.1:3009:3009'
     networks:
       - default
       - labf-net
