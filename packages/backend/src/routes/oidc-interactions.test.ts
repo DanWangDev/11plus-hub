@@ -69,16 +69,24 @@ function createFakeProvider() {
   }
 }
 
-function createTestApp(provider: ReturnType<typeof createFakeProvider>) {
+function createTestApp(
+  provider: ReturnType<typeof createFakeProvider>,
+  sql: postgres.Sql = {} as unknown as postgres.Sql,
+) {
   const app = express()
   app.use(express.json())
   app.use(
     createInteractionRouter({
       provider: provider as unknown as Provider,
-      sql: {} as unknown as postgres.Sql,
+      sql,
     }),
   )
   return app
+}
+
+/** Minimal callable sql stub for the Google account-linking UPDATE path. */
+function createSqlStub(rows: unknown[] = []) {
+  return vi.fn().mockResolvedValue(rows) as unknown as postgres.Sql
 }
 
 const PASSWORD_USER = {
@@ -247,6 +255,59 @@ describe('oidc interaction routes', () => {
       const res = await request(app).post('/api/auth/interaction/test-uid/google').send({})
 
       expect(res.status).toBe(400)
+    })
+
+    it('rejects access_token type with 400 (only ID tokens accepted)', async () => {
+      const res = await request(app)
+        .post('/api/auth/interaction/test-uid/google')
+        .send({ token: 'some-access-token', tokenType: 'access_token' })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toContain('Access tokens are not supported')
+    })
+
+    it('refuses account linking when the Google email is not verified', async () => {
+      const sql = createSqlStub()
+      const linkingApp = createTestApp(provider, sql)
+      const { verifyGoogleToken } = await import('../services/google-auth-service.js')
+      vi.mocked(verifyGoogleToken).mockResolvedValueOnce({
+        googleId: 'g-new',
+        email: 'kid@example.com',
+        name: 'Kid',
+        emailVerified: false,
+      })
+      mockFindUserByGoogleId.mockResolvedValue(null)
+      mockFindUserByEmail.mockResolvedValue(PASSWORD_USER)
+
+      const res = await request(linkingApp)
+        .post('/api/auth/interaction/test-uid/google')
+        .send({ token: 'id-token', tokenType: 'id_token' })
+
+      expect(res.status).toBe(403)
+      expect(res.body.error).toContain('not verified')
+      expect(sql).not.toHaveBeenCalled()
+    })
+
+    it('links the account when the Google email is verified', async () => {
+      const sql = createSqlStub([GOOGLE_USER])
+      const linkingApp = createTestApp(provider, sql)
+      const { verifyGoogleToken } = await import('../services/google-auth-service.js')
+      vi.mocked(verifyGoogleToken).mockResolvedValueOnce({
+        googleId: 'g-new',
+        email: 'kid@example.com',
+        name: 'Kid',
+        emailVerified: true,
+      })
+      mockFindUserByGoogleId.mockResolvedValue(null)
+      mockFindUserByEmail.mockResolvedValue(PASSWORD_USER)
+
+      const res = await request(linkingApp)
+        .post('/api/auth/interaction/test-uid/google')
+        .send({ token: 'id-token', tokenType: 'id_token' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.redirectTo).toBe('https://hub.labf.app/cb?code=abc')
+      expect(sql).toHaveBeenCalled()
     })
   })
 })

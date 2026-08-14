@@ -148,7 +148,7 @@ function InteractionLoginView({ uid, clientId }: { uid: string; clientId: string
     try {
       const response = await submitInteractionGoogle(uid, {
         token: accessToken,
-        tokenType: 'access_token',
+        tokenType: 'id_token',
         turnstileToken: turnstileToken ?? undefined,
       })
       if (response.redirectTo) {

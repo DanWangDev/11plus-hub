@@ -242,7 +242,7 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
     try {
       const { token, tokenType, turnstileToken } = req.body as {
         token?: string
-        tokenType?: 'id_token' | 'access_token'
+        tokenType?: string
         turnstileToken?: string
       }
 
@@ -264,15 +264,43 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
         return
       }
 
-      const googleUser = await verifyGoogleToken(token, tokenType ?? 'id_token')
+      if (tokenType === 'access_token') {
+        logger.warn('google auth: access token rejected (only ID tokens accepted)', {
+          operation: 'google-auth',
+          duration: Date.now() - start,
+        })
+        res.status(400).json({
+          success: false,
+          error: 'Access tokens are not supported — send a Google ID token',
+        })
+        return
+      }
+
+      const googleUser = await verifyGoogleToken(token)
 
       // Check if user exists by google_id
       let user = await findUserByGoogleId(sql, googleUser.googleId)
       let isNewUser = false
 
       if (!user) {
-        // Check if user exists by email — link accounts
+        // Check if user exists by email — link accounts, but ONLY when the
+        // Google account's email is verified. Linking on an unverified email
+        // would let anyone with a Google account claiming that address take
+        // over the existing hub account.
         const existingByEmail = await findUserByEmail(sql, googleUser.email)
+        if (existingByEmail && !googleUser.emailVerified) {
+          logger.warn('google auth: account linking refused, email not verified', {
+            operation: 'google-auth',
+            userId: existingByEmail.id,
+            duration: Date.now() - start,
+          })
+          res.status(403).json({
+            success: false,
+            error:
+              'A hub account with this email already exists and its email is not verified. Please sign in with your email and password.',
+          })
+          return
+        }
         if (existingByEmail) {
           const rows = await sql<
             {

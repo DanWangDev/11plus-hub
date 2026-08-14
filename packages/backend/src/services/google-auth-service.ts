@@ -42,42 +42,13 @@ export async function verifyGoogleIdToken(idToken: string): Promise<GoogleUserIn
   }
 }
 
-export async function verifyGoogleAccessToken(accessToken: string): Promise<GoogleUserInfo> {
-  const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
-
-  if (!response.ok) {
-    throw new Error('Invalid Google access token')
-  }
-
-  const payload = (await response.json()) as {
-    sub?: string
-    email?: string
-    name?: string
-    email_verified?: boolean
-  }
-
-  if (!payload.sub || !payload.email) {
-    throw new Error('Google account missing required fields')
-  }
-
-  logger.info('google access token verified', { googleId: payload.sub, email: payload.email })
-
-  return {
-    googleId: payload.sub,
-    email: payload.email,
-    name: payload.name ?? payload.email.split('@')[0] ?? payload.email,
-    emailVerified: payload.email_verified ?? false,
-  }
-}
-
-export async function verifyGoogleToken(
-  token: string,
-  tokenType: 'id_token' | 'access_token' = 'id_token',
-): Promise<GoogleUserInfo> {
-  if (tokenType === 'access_token') {
-    return verifyGoogleAccessToken(token)
-  }
+/**
+ * Verify a Google ID token. Only ID tokens (JWT credentials from Google
+ * Identity Services) are accepted — never raw OAuth access tokens. Accepting
+ * access tokens would let ANY leaked Google access token of a user
+ * authenticate as them (access-token confusion), since access tokens are not
+ * bound to this app's client.
+ */
+export async function verifyGoogleToken(token: string): Promise<GoogleUserInfo> {
   return verifyGoogleIdToken(token)
 }
