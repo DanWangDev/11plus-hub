@@ -252,6 +252,18 @@ describe('stripe-service', () => {
       expect(syncAppAccessFromPlan).not.toHaveBeenCalled()
     })
 
+    it('leaves the subscription untouched for unknown Stripe statuses', async () => {
+      const mockSql = createMockSql([{ id: 1, user_id: 42, plan: 'writing', status: 'active' }])
+      const event = createStripeEvent('customer.subscription.updated', {
+        id: 'sub_test_def',
+        status: 'paused',
+      })
+
+      await handleSubscriptionUpdated(mockSql as never, event as never)
+
+      expect(mockSql.begin).not.toHaveBeenCalled()
+    })
+
     it('skips when no matching subscription found', async () => {
       const mockSql = createMockSql([])
       const event = createStripeEvent('customer.subscription.updated', {
