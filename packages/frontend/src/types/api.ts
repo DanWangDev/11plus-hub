@@ -25,11 +25,6 @@ export interface User {
   last_active_at: string | null
 }
 
-export interface LoginResponse {
-  user: User
-  token: string
-}
-
 export interface Application {
   id: number
   name: string

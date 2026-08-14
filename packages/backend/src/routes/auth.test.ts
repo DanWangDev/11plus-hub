@@ -8,19 +8,12 @@ vi.mock('../db/connection.js', () => ({
   db: {},
 }))
 
-const { mockCreateUser, mockFindUserByEmail, mockVerifyPassword, mockUpdateLastActive } =
-  vi.hoisted(() => ({
-    mockCreateUser: vi.fn(),
-    mockFindUserByEmail: vi.fn(),
-    mockVerifyPassword: vi.fn(),
-    mockUpdateLastActive: vi.fn().mockResolvedValue(undefined),
-  }))
+const { mockCreateUser } = vi.hoisted(() => ({
+  mockCreateUser: vi.fn(),
+}))
 
 vi.mock('../services/user-service.js', () => ({
   createUser: (...args: unknown[]) => mockCreateUser(...args),
-  findUserByEmail: (...args: unknown[]) => mockFindUserByEmail(...args),
-  verifyPassword: (...args: unknown[]) => mockVerifyPassword(...args),
-  updateLastActive: (...args: unknown[]) => mockUpdateLastActive(...args),
   createUserSchema: z.object({
     username: z
       .string()
@@ -157,122 +150,6 @@ describe('auth routes', () => {
     })
   })
 
-  describe('POST /api/auth/login', () => {
-    it('returns user and token for correct credentials', async () => {
-      mockFindUserByEmail.mockResolvedValueOnce({
-        id: 1,
-        username: 'testuser',
-        email: 'test@example.com',
-        password_hash: '$2b$12$hash',
-        display_name: 'Test User',
-        role: 'student',
-        parent_id: null,
-        google_id: null,
-        email_verified: false,
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      mockVerifyPassword.mockResolvedValueOnce(true)
 
-      const res = await request(app)
-        .post('/api/auth/login')
-        .send({ email: 'test@example.com', password: 'securepass123' })
 
-      expect(res.status).toBe(200)
-      expect(res.body.success).toBe(true)
-      expect(res.body.data.user).toMatchObject({
-        id: 1,
-        email: 'test@example.com',
-      })
-      expect(res.body.data.user).not.toHaveProperty('password_hash')
-      expect(res.body.data.token).toBe('placeholder-jwt-token')
-      // Successful login must bump last_active_at for admin visibility
-      expect(mockUpdateLastActive).toHaveBeenCalledWith(expect.anything(), 1)
-    })
-
-    it('does not bump last_active_at on failed login', async () => {
-      mockUpdateLastActive.mockClear()
-      mockFindUserByEmail.mockResolvedValueOnce({
-        id: 1,
-        username: 'testuser',
-        email: 'test@example.com',
-        password_hash: '$2b$12$hash',
-        display_name: 'Test User',
-        role: 'student',
-        parent_id: null,
-        google_id: null,
-        email_verified: false,
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      mockVerifyPassword.mockResolvedValueOnce(false)
-
-      await request(app)
-        .post('/api/auth/login')
-        .send({ email: 'test@example.com', password: 'wrongpass' })
-
-      expect(mockUpdateLastActive).not.toHaveBeenCalled()
-    })
-
-    it('returns 401 for wrong password', async () => {
-      mockFindUserByEmail.mockResolvedValueOnce({
-        id: 1,
-        username: 'testuser',
-        email: 'test@example.com',
-        password_hash: '$2b$12$hash',
-        display_name: 'Test User',
-        role: 'student',
-        parent_id: null,
-        google_id: null,
-        email_verified: false,
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      mockVerifyPassword.mockResolvedValueOnce(false)
-
-      const res = await request(app)
-        .post('/api/auth/login')
-        .send({ email: 'test@example.com', password: 'wrongpass' })
-
-      expect(res.status).toBe(401)
-      expect(res.body).toMatchObject({
-        success: false,
-        error: 'Invalid credentials',
-      })
-    })
-
-    it('returns 401 for nonexistent user', async () => {
-      mockFindUserByEmail.mockResolvedValueOnce(null)
-
-      const res = await request(app)
-        .post('/api/auth/login')
-        .send({ email: 'nobody@example.com', password: 'somepass' })
-
-      expect(res.status).toBe(401)
-      expect(res.body).toMatchObject({
-        success: false,
-        error: 'Invalid credentials',
-      })
-    })
-
-    it('returns 400 when email is missing', async () => {
-      const res = await request(app).post('/api/auth/login').send({ password: 'somepass' })
-
-      expect(res.status).toBe(400)
-      expect(res.body).toMatchObject({
-        success: false,
-        error: 'Email or username, and password are required',
-      })
-    })
-
-    it('returns 400 when password is missing', async () => {
-      const res = await request(app).post('/api/auth/login').send({ email: 'test@example.com' })
-
-      expect(res.status).toBe(400)
-      expect(res.body).toMatchObject({
-        success: false,
-        error: 'Email or username, and password are required',
-      })
-    })
-  })
 })
