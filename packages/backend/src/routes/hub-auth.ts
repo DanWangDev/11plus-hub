@@ -487,27 +487,6 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     }
   })
 
-  // ── Backward-compat redirects (remove after 2 weeks) ──────────────
-  // Users with cached old frontend JS still reference the old paths.
-  // 302 for browser navigations, 307 to preserve HTTP method for fetch/POST.
-  router.get('/auth/login', (req: Request, res: Response) => {
-    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''
-    res.redirect(302, `/api/auth/hub-login${qs}`)
-  })
-  router.get('/auth/callback', (req: Request, res: Response) => {
-    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''
-    res.redirect(302, `/api/auth/hub-callback${qs}`)
-  })
-  router.all('/auth/logout', (_req: Request, res: Response) => {
-    res.redirect(307, '/api/auth/hub-logout')
-  })
-  router.get('/auth/me', (_req: Request, res: Response) => {
-    res.redirect(307, '/api/auth/me')
-  })
-  router.post('/auth/backchannel-logout', (_req: Request, res: Response) => {
-    res.redirect(307, '/api/auth/backchannel-logout')
-  })
-
   return router
 }
 

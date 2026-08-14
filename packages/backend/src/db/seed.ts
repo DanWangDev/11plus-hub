@@ -80,14 +80,12 @@ async function ensureHubClient(sql: postgres.Sql): Promise<void> {
   const hubIssuer = process.env.OIDC_ISSUER ?? 'http://localhost:3009'
   const hubRedirectUris = [
     `${hubIssuer}/api/auth/hub-callback`,
-    // Backward-compat: keep old redirect_uri for in-flight auth flows (remove after 2 weeks)
-    `${hubIssuer}/auth/callback`,
-    // Include both dev and prod so the same seed works everywhere
+    // Include both dev and prod so the same bootstrap works everywhere
     ...(hubIssuer !== 'http://localhost:3009'
-      ? ['http://localhost:3009/api/auth/hub-callback', 'http://localhost:3009/auth/callback']
+      ? ['http://localhost:3009/api/auth/hub-callback']
       : []),
     ...(hubIssuer !== 'https://hub.labf.app'
-      ? ['https://hub.labf.app/api/auth/hub-callback', 'https://hub.labf.app/auth/callback']
+      ? ['https://hub.labf.app/api/auth/hub-callback']
       : []),
   ]
 
