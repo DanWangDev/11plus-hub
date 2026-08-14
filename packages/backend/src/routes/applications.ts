@@ -18,9 +18,13 @@ import { clearClientCache } from '../oidc/pg-adapter.js'
 
 const logger = createLogger({ service: 'applications-route' })
 
-function getActorId(req: Request): number | null {
-  const header = req.headers['x-user-id']
-  const id = Number(header)
+// Actor ID comes from the verified session (res.locals.user), never from
+// client-supplied headers — a forgeable header would let callers misattribute
+// admin actions in the audit trail.
+function getActorId(res: Response): number | null {
+  const user = res.locals.user as { sub?: string } | undefined
+  if (!user?.sub) return null
+  const id = Number(user.sub)
   return Number.isFinite(id) && id > 0 ? id : null
 }
 
@@ -49,7 +53,7 @@ export function createApplicationsRouter(): Router {
       })
 
       await logAction(db, {
-        actorId: getActorId(req),
+        actorId: getActorId(res),
         action: AuditActions.APP_REGISTER,
         targetId: result.application.id,
         details: { name: result.application.name, slug: result.application.slug },
@@ -159,7 +163,7 @@ export function createApplicationsRouter(): Router {
       })
 
       await logAction(db, {
-        actorId: getActorId(req),
+        actorId: getActorId(res),
         action: AuditActions.APP_UPDATE,
         targetId: id,
         details: { fields: Object.keys(req.body) },
@@ -198,7 +202,7 @@ export function createApplicationsRouter(): Router {
       })
 
       await logAction(db, {
-        actorId: getActorId(req),
+        actorId: getActorId(res),
         action: AuditActions.APP_DELETE,
         targetId: id,
         details: { name: application.name, slug: application.slug },

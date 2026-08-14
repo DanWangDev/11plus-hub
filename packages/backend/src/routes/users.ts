@@ -17,9 +17,13 @@ import {
 import { logAction, AuditActions } from '../services/audit-service.js'
 import type postgres from 'postgres'
 
-function getActorId(req: Request): number | null {
-  const header = req.headers['x-user-id']
-  const id = Number(header)
+// Actor ID comes from the verified session (res.locals.user), never from
+// client-supplied headers — a forgeable header would let callers misattribute
+// admin actions in the audit trail.
+function getActorId(res: Response): number | null {
+  const user = res.locals.user as { sub?: string } | undefined
+  if (!user?.sub) return null
+  const id = Number(user.sub)
   return Number.isFinite(id) && id > 0 ? id : null
 }
 
@@ -46,7 +50,7 @@ export function createUsersRouter(options: UsersRouterOptions = {}): Router {
       })
 
       await logAction(sql, {
-        actorId: getActorId(req),
+        actorId: getActorId(res),
         action: AuditActions.REGISTER,
         targetId: user.id,
         details: { source: 'admin', username: user.username },
@@ -230,7 +234,7 @@ export function createUsersRouter(options: UsersRouterOptions = {}): Router {
       })
 
       await logAction(sql, {
-        actorId: getActorId(req),
+        actorId: getActorId(res),
         action: AuditActions.USER_UPDATE,
         targetId: id,
         details: { fields: Object.keys(data) },
@@ -302,7 +306,7 @@ export function createUsersRouter(options: UsersRouterOptions = {}): Router {
       })
 
       await logAction(sql, {
-        actorId: getActorId(req),
+        actorId: getActorId(res),
         action: AuditActions.USER_DELETE,
         targetId: id,
         details: { username: user.username },

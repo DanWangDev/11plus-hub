@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import { z } from 'zod'
 import { createApp } from '../app.js'
+import type postgres from 'postgres'
+import type * as AuditService from '../services/audit-service.js'
 
 vi.mock('../db/connection.js', () => ({
   checkDbConnection: vi.fn().mockResolvedValue(true),
@@ -29,6 +31,7 @@ vi.mock('../services/user-service.js', () => ({
   verifyPassword: vi.fn(),
   hasPassword: vi.fn(),
   updatePassword: vi.fn(),
+  updateLastActive: vi.fn().mockResolvedValue(undefined),
   listUsersSchema: z.object({
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().positive().max(100).default(20),
@@ -76,11 +79,44 @@ vi.mock('../lib/logger.js', () => ({
   }),
 }))
 
+vi.mock('../services/audit-service.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof AuditService>()
+  return { ...actual, logAction: vi.fn().mockResolvedValue(undefined) }
+})
+
+// Mock iron-session + jose so we can build an authenticated app instance
+const mockSession: Record<string, unknown> = {}
+vi.mock('iron-session', () => ({
+  getIronSession: vi.fn(async () => mockSession),
+}))
+
+vi.mock('jose', () => ({
+  decodeJwt: vi.fn((token: string) => JSON.parse(atob(token.split('.')[1]))),
+}))
+
+function fakeJwt(claims: Record<string, unknown>): string {
+  const header = btoa(JSON.stringify({ alg: 'none' }))
+  const payload = btoa(JSON.stringify(claims))
+  return `${header}.${payload}.sig`
+}
+
 describe('users routes', () => {
   const app = createApp({ skipDbCheck: true })
+  const authApp = createApp({
+    skipDbCheck: true,
+    sql: {} as unknown as postgres.Sql,
+    hubAuth: {
+      issuer: 'https://hub.labf.app',
+      clientId: 'hub',
+      clientSecret: 'test-client-secret',
+      sessionSecret: 'test-session-secret-at-least-32-chars-long!!',
+      redirectUri: 'https://hub.labf.app/api/auth/hub-callback',
+    },
+  })
 
   beforeEach(() => {
     vi.clearAllMocks()
+    Object.keys(mockSession).forEach((k) => delete mockSession[k])
   })
 
   describe('GET /api/users', () => {
@@ -247,6 +283,58 @@ describe('users routes', () => {
         success: false,
         error: 'Invalid user ID',
       })
+    })
+  })
+
+  describe('audit attribution (authenticated app)', () => {
+    it('attributes admin actions to the verified session user, ignoring x-user-id', async () => {
+      mockSession.tokens = {
+        id_token: fakeJwt({
+          sub: '42',
+          username: 'admin1',
+          role: 'admin',
+          email: 'admin@labf.app',
+        }),
+      }
+      mockUpdateUser.mockResolvedValueOnce({
+        id: 5,
+        username: 'target',
+        email: 'target@example.com',
+        display_name: 'New Name',
+        role: 'student',
+        parent_id: null,
+        google_id: null,
+        email_verified: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+
+      const res = await request(authApp)
+        .patch('/api/users/5')
+        .set('x-user-id', '999')
+        .send({ displayName: 'New Name' })
+
+      expect(res.status).toBe(200)
+
+      const audit = await import('../services/audit-service.js')
+      expect(vi.mocked(audit.logAction)).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ actorId: 42, action: 'user_update', targetId: 5 }),
+      )
+    })
+
+    it('rejects unauthenticated writes with 401', async () => {
+      const res = await request(authApp).patch('/api/users/5').send({ displayName: 'Nope' })
+
+      expect(res.status).toBe(401)
+    })
+
+    it('rejects non-admin writes with 403', async () => {
+      mockSession.tokens = { id_token: fakeJwt({ sub: '7', username: 'kid', role: 'student' }) }
+
+      const res = await request(authApp).patch('/api/users/5').send({ displayName: 'Nope' })
+
+      expect(res.status).toBe(403)
     })
   })
 })

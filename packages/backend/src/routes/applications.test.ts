@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import { createApp } from '../app.js'
+import type postgres from 'postgres'
+import type * as AuditService from '../services/audit-service.js'
 import { AppError } from '../middleware/error-handler.js'
 
 vi.mock('../db/connection.js', () => ({
@@ -48,11 +50,44 @@ const sampleServiceToken = {
   created_at: new Date('2025-01-01T00:00:00Z'),
 }
 
+vi.mock('../services/audit-service.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof AuditService>()
+  return { ...actual, logAction: vi.fn().mockResolvedValue(undefined) }
+})
+
+// Mock iron-session + jose so we can build an authenticated app instance
+const mockSession: Record<string, unknown> = {}
+vi.mock('iron-session', () => ({
+  getIronSession: vi.fn(async () => mockSession),
+}))
+
+vi.mock('jose', () => ({
+  decodeJwt: vi.fn((token: string) => JSON.parse(atob(token.split('.')[1]))),
+}))
+
+function fakeJwt(claims: Record<string, unknown>): string {
+  const header = btoa(JSON.stringify({ alg: 'none' }))
+  const payload = btoa(JSON.stringify(claims))
+  return `${header}.${payload}.sig`
+}
+
 describe('application routes', () => {
   const app = createApp({ skipDbCheck: true })
+  const authApp = createApp({
+    skipDbCheck: true,
+    sql: {} as unknown as postgres.Sql,
+    hubAuth: {
+      issuer: 'https://hub.labf.app',
+      clientId: 'hub',
+      clientSecret: 'test-client-secret',
+      sessionSecret: 'test-session-secret-at-least-32-chars-long!!',
+      redirectUri: 'https://hub.labf.app/api/auth/hub-callback',
+    },
+  })
 
   beforeEach(() => {
     vi.clearAllMocks()
+    Object.keys(mockSession).forEach((k) => delete mockSession[k])
   })
 
   describe('POST /api/apps', () => {
@@ -286,6 +321,69 @@ describe('application routes', () => {
 
       expect(res.status).toBe(404)
       expect(res.body.success).toBe(false)
+    })
+  })
+
+  describe('audit attribution (authenticated app)', () => {
+    it('attributes app registration to the verified session user, ignoring x-user-id', async () => {
+      mockSession.tokens = {
+        id_token: fakeJwt({
+          sub: '42',
+          username: 'admin1',
+          role: 'admin',
+          email: 'admin@labf.app',
+        }),
+      }
+      mockCreateApplication.mockResolvedValue({
+        application: { ...sampleApp, client_secret_hash: '$2b$12$hash' },
+        clientSecret: 'secret-123',
+      })
+
+      const res = await request(authApp)
+        .post('/api/apps')
+        .set('x-user-id', '999')
+        .send({
+          name: 'Test App',
+          slug: 'test-app',
+          url: 'https://test.example.com',
+          redirect_uris: ['https://test.example.com/callback'],
+        })
+
+      expect(res.status).toBe(201)
+
+      const audit = await import('../services/audit-service.js')
+      expect(vi.mocked(audit.logAction)).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ actorId: 42, action: 'app_register', targetId: 1 }),
+      )
+    })
+
+    it('rejects unauthenticated writes with 401', async () => {
+      const res = await request(authApp)
+        .post('/api/apps')
+        .send({
+          name: 'Test App',
+          slug: 'test-app',
+          url: 'https://test.example.com',
+          redirect_uris: ['https://test.example.com/callback'],
+        })
+
+      expect(res.status).toBe(401)
+    })
+
+    it('rejects non-admin writes with 403', async () => {
+      mockSession.tokens = { id_token: fakeJwt({ sub: '7', username: 'kid', role: 'student' }) }
+
+      const res = await request(authApp)
+        .post('/api/apps')
+        .send({
+          name: 'Test App',
+          slug: 'test-app',
+          url: 'https://test.example.com',
+          redirect_uris: ['https://test.example.com/callback'],
+        })
+
+      expect(res.status).toBe(403)
     })
   })
 })
