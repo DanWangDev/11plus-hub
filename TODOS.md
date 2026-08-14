@@ -280,7 +280,20 @@ Shipped as individual PRs (2026-08-14):
 - S7: Google auth accepts ID tokens only; linking requires a verified email; GIS credential flow on the frontend — #82
 - S8: CORS allowlist from the application registry (no more `*.labf.app` wildcard) — #83
 - A4: security-critical files under coverage (provider, oidc-interactions, impersonate, seed, client-loader); frontend tests now run in CI — #84
-- A1: ARCHITECTURE.md / README.md / TODOS.md synced with reality (this PR)
+- A1: ARCHITECTURE.md / README.md / TODOS.md synced with reality — #85
+- A11: legacy auth endpoints + backward-compat shims removed — #86
+- A5/A12/A13: session cookie config + user-claims consolidated; impersonation audit duration fixed — #87
+- A9: LOG_LEVEL filtering wired, unknown 500s logged, adapter noise quieted — #88
+- A7: dead code removed (bcrypt/SHA-256 verifiers, static client loader) — #89
+- S5: production backend port bound to loopback (no LAN IP-spoofing path) — #90
+- A2: migrations serialized with a transaction-scoped advisory lock — #91
+- P1: real password reset emails via Resend (feature-flagged) — #92
+- P5: entitlement decision — login is never blocked; apps gate in-app — #93
+- P3: labf-infra hardening (required passwords, loopback ports, nightly backups) — labf-infra#3
+- A15: production image slimmed (--omit=dev, migrate-users profile dropped) — #94
+- S13: service tokens can expire — #95
+- S10/S11/S14: refresh via POST, reset-password rate limited, Secure oidc cookies, nginx security headers — #96
+- P4: NAS deploy workflow restored with an ENABLE_NAS_DEPLOY variable gate + post-deploy health check — #97
 
 Still open (tracked below / in the review):
 - P1: password reset emails (Resend) — see Phase C
