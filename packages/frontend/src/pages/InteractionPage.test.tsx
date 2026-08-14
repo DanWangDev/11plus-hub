@@ -18,6 +18,16 @@ vi.mock('@/api/auth', () => ({
   abortInteraction: vi.fn(),
 }))
 
+// Simulate Turnstile being enabled: a button that emits a fake token.
+vi.mock('@/components/TurnstileWidget', () => ({
+  TurnstileWidget: ({ onVerify }: { onVerify: (token: string) => void }) => (
+    <button type="button" onClick={() => onVerify('tok-xyz')}>
+      verify-turnstile
+    </button>
+  ),
+  isTurnstileEnabled: true,
+}))
+
 import {
   getInteractionDetails,
   submitInteractionLogin,
@@ -85,7 +95,7 @@ describe('InteractionPage', () => {
     })
   })
 
-  it('submits login form during interaction', async () => {
+  it('submits login form during interaction with turnstile token', async () => {
     const user = userEvent.setup()
     mockGetDetails.mockResolvedValueOnce({
       prompt: { name: 'login' },
@@ -100,14 +110,19 @@ describe('InteractionPage', () => {
       expect(screen.getByLabelText('Email or Username')).toBeInTheDocument()
     })
 
+    // Sign in stays disabled until Turnstile verifies
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled()
+
     await user.type(screen.getByLabelText('Email or Username'), 'emma@test.com')
     await user.type(screen.getByLabelText('Password'), 'password123')
+    await user.click(screen.getByRole('button', { name: 'verify-turnstile' }))
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     await waitFor(() => {
       expect(mockSubmitLogin).toHaveBeenCalledWith('test-uid-123', {
         identifier: 'emma@test.com',
         password: 'password123',
+        turnstileToken: 'tok-xyz',
       })
     })
   })

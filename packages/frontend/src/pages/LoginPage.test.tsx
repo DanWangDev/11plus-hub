@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@/test/test-utils'
-import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen } from '@/test/test-utils'
 import { LoginPage } from './LoginPage'
+import type * as AuthContext from '@/contexts/auth-context'
 
 const mockNavigate = vi.fn()
 
@@ -13,105 +13,76 @@ vi.mock('react-router', async () => {
   }
 })
 
-vi.mock('@/api/auth', () => ({
-  login: vi.fn(),
-  googleAuth: vi.fn(),
+const { mockUseAuth } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(),
 }))
 
-vi.mock('@/components/GoogleSignInButton', () => ({
-  GoogleSignInButton: () => null,
-}))
+vi.mock('@/contexts/auth-context', async (importOriginal) => {
+  const actual = await importOriginal<typeof AuthContext>()
+  return { ...actual, useAuth: () => mockUseAuth() }
+})
 
-vi.mock('@/components/TurnstileWidget', () => ({
-  TurnstileWidget: () => null,
-  isTurnstileEnabled: false,
-}))
-
-import { login } from '@/api/auth'
-const mockLogin = vi.mocked(login)
+const locationMock = {
+  href: '',
+  search: '',
+} as unknown as Location
 
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    locationMock.href = ''
+    locationMock.search = ''
+    vi.stubGlobal('location', locationMock)
+    mockUseAuth.mockReturnValue({ user: null, loading: false })
   })
 
-  it('renders login form', () => {
-    render(<LoginPage />)
-    expect(screen.getByRole('heading', { name: 'Sign In' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Email or Username')).toBeInTheDocument()
-    expect(screen.getByLabelText('Password')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
-  it('shows links to forgot password and signup', () => {
-    render(<LoginPage />)
-    expect(screen.getByText('Forgot password?')).toBeInTheDocument()
-    expect(screen.getByText('Create account')).toBeInTheDocument()
-  })
+  it('shows a redirecting state while auth is loading', () => {
+    mockUseAuth.mockReturnValue({ user: null, loading: true })
 
-  it('shows validation errors for empty fields', async () => {
-    const user = userEvent.setup()
     render(<LoginPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
-
-    await waitFor(() => {
-      const alerts = screen.getAllByRole('alert')
-      expect(alerts.length).toBeGreaterThan(0)
-    })
+    expect(screen.getByRole('heading', { name: 'Redirecting...' })).toBeInTheDocument()
+    expect(locationMock.href).toBe('')
   })
 
-  it('calls login API and navigates on success', async () => {
-    const user = userEvent.setup()
-    mockLogin.mockResolvedValueOnce({
-      success: true,
-      data: {
-        user: {
-          id: 1,
-          username: 'emma',
-          email: 'emma@test.com',
-          display_name: 'Emma',
-          role: 'student',
-          parent_id: null,
-          google_id: null,
-          email_verified: false,
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01',
-          last_active_at: null,
-        },
-        token: 'jwt-token',
-      },
+  it('redirects unauthenticated users to the OIDC login flow', () => {
+    render(<LoginPage />)
+
+    expect(locationMock.href).toBe('/api/auth/hub-login?returnTo=%2Fdashboard')
+  })
+
+  it('preserves the returnTo query param', () => {
+    locationMock.search = '?returnTo=/pricing'
+
+    render(<LoginPage />)
+
+    expect(locationMock.href).toBe('/api/auth/hub-login?returnTo=%2Fpricing')
+  })
+
+  it('navigates authenticated students to the dashboard', () => {
+    mockUseAuth.mockReturnValue({
+      user: { role: 'student', username: 'emma' },
+      loading: false,
     })
 
     render(<LoginPage />)
 
-    await user.type(screen.getByLabelText('Email or Username'), 'emma@test.com')
-    await user.type(screen.getByLabelText('Password'), 'password123')
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
-
-    await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith({
-        identifier: 'emma@test.com',
-        password: 'password123',
-        turnstileToken: undefined,
-      })
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
-    })
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true })
+    expect(locationMock.href).toBe('')
   })
 
-  it('shows error message on login failure', async () => {
-    const user = userEvent.setup()
-    const { ApiError } = await import('@/lib/api-client')
-    mockLogin.mockRejectedValueOnce(new ApiError('Invalid credentials', 401))
+  it('navigates authenticated admins to the admin panel', () => {
+    mockUseAuth.mockReturnValue({
+      user: { role: 'admin', username: 'admin' },
+      loading: false,
+    })
 
     render(<LoginPage />)
 
-    await user.type(screen.getByLabelText('Email or Username'), 'emma@test.com')
-    await user.type(screen.getByLabelText('Password'), 'wrong')
-    await user.click(screen.getByRole('button', { name: 'Sign in' }))
-
-    await waitFor(() => {
-      expect(screen.getByText('Invalid credentials')).toBeInTheDocument()
-    })
+    expect(mockNavigate).toHaveBeenCalledWith('/admin', { replace: true })
   })
 })

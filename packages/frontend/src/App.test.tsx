@@ -40,12 +40,12 @@ function TestApp({ initialEntry }: { initialEntry: string }) {
 describe('App routing', () => {
   it('redirects / to /login', () => {
     render(<TestApp initialEntry="/" />)
-    expect(screen.getByRole('heading', { name: 'Sign In' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Redirecting...' })).toBeInTheDocument()
   })
 
   it('renders login page at /login', () => {
     render(<TestApp initialEntry="/login" />)
-    expect(screen.getByRole('heading', { name: 'Sign In' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Redirecting...' })).toBeInTheDocument()
   })
 
   it('renders signup page at /signup', () => {

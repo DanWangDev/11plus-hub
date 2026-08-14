@@ -51,7 +51,7 @@ export function submitInteractionLogin(uid: string, data: LoginInput): Promise<A
 
 export function submitInteractionGoogle(
   uid: string,
-  data: { token: string; tokenType: 'id_token' | 'access_token' },
+  data: { token: string; tokenType: 'id_token' | 'access_token'; turnstileToken?: string },
 ): Promise<ApiResponse> {
   return apiClient.post(`/api/auth/interaction/${uid}/google`, data)
 }
