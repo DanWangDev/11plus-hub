@@ -33,6 +33,8 @@ export interface AppOptions {
   hubAuth?: HubAuthOptions
   stripeWebhook?: StripeWebhookOptions
   stripeCheckout?: StripeCheckoutOptions
+  /** Explicit CORS origin allowlist (from the application registry). */
+  corsAllowedOrigins?: string[]
 }
 
 export function createApp(options: AppOptions = {}): express.Express {
@@ -84,7 +86,10 @@ export function createApp(options: AppOptions = {}): express.Express {
     }
     return helmetWithCsp(req, res, next)
   })
-  // Restrict CORS to the hub's own origin + registered client origins.
+  // Restrict CORS to the hub's own origin + an explicit allowlist of
+  // registered client origins (loaded from the application registry).
+  // No wildcard: with credentialed cookies scoped to .labf.app, any
+  // labf.app subdomain could otherwise make authenticated API calls.
   // oidc-provider handles /oidc/ CORS separately via clientBasedCORS.
   const hubOrigin = options.hubAuth ? new URL(options.hubAuth.issuer).origin : undefined
   const corsAllowedOrigins = new Set<string>([
@@ -93,26 +98,13 @@ export function createApp(options: AppOptions = {}): express.Express {
     ...(process.env.NODE_ENV !== 'production'
       ? ['http://localhost:3009', 'http://localhost:5173']
       : []),
+    ...(options.corsAllowedOrigins ?? []),
   ])
   app.use(
     cors({
       origin(origin, callback) {
         // Allow requests with no origin (same-origin, server-to-server, curl)
-        if (!origin || corsAllowedOrigins.has(origin)) {
-          callback(null, true)
-          return
-        }
-        // Allow *.labf.app subdomains (child apps on NAS or cloud)
-        try {
-          const hostname = new URL(origin).hostname
-          if (hostname.endsWith('.labf.app')) {
-            callback(null, true)
-            return
-          }
-        } catch {
-          // Invalid origin URL, fall through to reject
-        }
-        callback(null, false)
+        callback(null, !origin || corsAllowedOrigins.has(origin))
       },
       credentials: true,
     }),
