@@ -193,13 +193,22 @@ export async function updateSubscription(
   const subscription = rows[0] ?? null
 
   if (subscription) {
-    const planChanged = validated.plan && validated.plan !== existing.plan
+    const planChanged = validated.plan !== undefined && validated.plan !== existing.plan
+    const newStatus = validated.status
+    const statusChanged = newStatus !== undefined && newStatus !== existing.status
     const statusRevokedAccess =
-      validated.status &&
-      validated.status !== existing.status &&
-      ['cancelled', 'expired', 'incomplete'].includes(validated.status)
+      statusChanged &&
+      newStatus !== undefined &&
+      ['cancelled', 'expired', 'incomplete'].includes(newStatus)
+    // Re-grant access when a previously revoked subscription is reactivated
+    // (e.g. cancelled → active via the admin panel or the customer portal).
+    const statusGrantedAccess =
+      statusChanged &&
+      newStatus !== undefined &&
+      ['active', 'trial'].includes(newStatus) &&
+      ['cancelled', 'expired', 'incomplete'].includes(existing.status)
 
-    if (planChanged || statusRevokedAccess) {
+    if (planChanged || statusRevokedAccess || statusGrantedAccess) {
       const effectivePlan = statusRevokedAccess ? 'free' : subscription.plan
       await syncAppAccessFromPlan(sql, subscription.user_id, effectivePlan)
     }

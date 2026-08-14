@@ -225,6 +225,33 @@ describe('stripe-service', () => {
       expect(mockSql.begin).toHaveBeenCalledTimes(1)
     })
 
+    it('re-grants app access when a cancelled subscription is reactivated', async () => {
+      const mockSql = createMockSql([{ id: 1, user_id: 42, plan: 'writing', status: 'cancelled' }])
+      const event = createStripeEvent('customer.subscription.updated', {
+        id: 'sub_test_def',
+        status: 'active',
+      })
+
+      await handleSubscriptionUpdated(mockSql as never, event as never)
+
+      const { syncAppAccessFromPlan } = await import('./subscription-service.js')
+      expect(syncAppAccessFromPlan).toHaveBeenCalledWith(expect.anything(), 42, 'writing')
+      expect(mockSql.begin).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not re-grant access when a past_due subscription stays past_due', async () => {
+      const mockSql = createMockSql([{ id: 1, user_id: 42, plan: 'writing', status: 'past_due' }])
+      const event = createStripeEvent('customer.subscription.updated', {
+        id: 'sub_test_def',
+        status: 'past_due',
+      })
+
+      await handleSubscriptionUpdated(mockSql as never, event as never)
+
+      const { syncAppAccessFromPlan } = await import('./subscription-service.js')
+      expect(syncAppAccessFromPlan).not.toHaveBeenCalled()
+    })
+
     it('skips when no matching subscription found', async () => {
       const mockSql = createMockSql([])
       const event = createStripeEvent('customer.subscription.updated', {
