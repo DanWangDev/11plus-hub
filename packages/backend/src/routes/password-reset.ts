@@ -2,6 +2,7 @@ import { Router } from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import { ZodError } from 'zod'
 import { db } from '../db/connection.js'
+import { env } from '../config/env.js'
 import { createLogger } from '../lib/logger.js'
 import { findUserByEmail } from '../services/user-service.js'
 import {
@@ -10,6 +11,7 @@ import {
   requestResetSchema,
   resetPasswordSchema,
 } from '../services/password-reset-service.js'
+import { sendPasswordResetEmail } from '../services/email-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
 import type postgres from 'postgres'
 import { passwordResetLimiter } from '../middleware/rate-limit.js'
@@ -51,7 +53,16 @@ export function createPasswordResetRouter(options: PasswordResetRouterOptions = 
             ipAddress: req.ip,
           }).catch(() => {})
 
-          // TODO: Send email with reset link containing selector + validator
+          // Send the reset email (no-op with a warning when RESEND_API_KEY
+          // is not configured). The response stays generic either way —
+          // never reveal whether an account exists.
+          await sendPasswordResetEmail(
+            user.email,
+            token.selector,
+            token.validator,
+            `${env.OIDC_ISSUER}/reset-password`,
+          )
+
           // For now, return the token in dev mode for testing
           if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
             res.json({
