@@ -353,9 +353,10 @@ export function createHubAuthRouter(options: HubAuthOptions): Router {
     }
   })
 
-  // GET /api/auth/refresh — refresh id_token via refresh_token exchange
-  // Called client-side after Stripe payment to get fresh JWT claims (updated plan/apps)
-  router.get('/api/auth/refresh', async (req: Request, res: Response) => {
+  // POST /api/auth/refresh — refresh id_token via refresh_token exchange
+  // Called client-side after Stripe payment to get fresh JWT claims (updated plan/apps).
+  // POST (not GET): the endpoint mutates session state.
+  router.post('/api/auth/refresh', async (req: Request, res: Response) => {
     try {
       const session = await getSession(req, res, sessionSecret)
 
