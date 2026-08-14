@@ -358,7 +358,7 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
       try {
         const { token, tokenType } = req.body as {
           token?: string
-          tokenType?: 'id_token' | 'access_token'
+          tokenType?: string
         }
 
         if (!token) {
@@ -366,11 +366,23 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
           return
         }
 
+        if (tokenType === 'access_token') {
+          logger.warn('interaction google login: access token rejected (only ID tokens accepted)', {
+            operation: 'interactionGoogleLogin',
+            duration: Date.now() - start,
+          })
+          res.status(400).json({
+            success: false,
+            error: 'Access tokens are not supported — send a Google ID token',
+          })
+          return
+        }
+
         if (!(await verifyTurnstileOrReject(req, res, logger))) {
           return
         }
 
-        const googleUser = await verifyGoogleToken(token, tokenType ?? 'id_token')
+        const googleUser = await verifyGoogleToken(token)
 
         // Find or create user from Google profile
         let user = await findUserByGoogleId(sql, googleUser.googleId)
@@ -378,6 +390,19 @@ export function createInteractionRouter(options: InteractionRouterOptions): Rout
 
         if (!user) {
           const existingByEmail = await findUserByEmail(sql, googleUser.email)
+          if (existingByEmail && !googleUser.emailVerified) {
+            logger.warn('interaction google login: account linking refused, email not verified', {
+              operation: 'interactionGoogleLogin',
+              userId: existingByEmail.id,
+              duration: Date.now() - start,
+            })
+            res.status(403).json({
+              success: false,
+              error:
+                'A hub account with this email already exists and its email is not verified. Please sign in with your email and password.',
+            })
+            return
+          }
           if (existingByEmail) {
             // Link Google account to existing user
             const rows = await sql<
