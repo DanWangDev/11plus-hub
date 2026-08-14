@@ -4,6 +4,7 @@ import request from 'supertest'
 import type postgres from 'postgres'
 import type { Request, Response, NextFunction } from 'express'
 import { createImpersonateRouter, blockWriteDuringImpersonation } from './impersonate.js'
+import type * as AuditService from '../services/audit-service.js'
 
 vi.mock('../lib/logger.js', () => ({
   createLogger: () => ({
@@ -46,7 +47,7 @@ vi.mock('../services/subscription-service.js', () => ({
 }))
 
 vi.mock('../services/audit-service.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../services/audit-service.js')>()
+  const actual = await importOriginal<typeof AuditService>()
   return { ...actual, logAction: vi.fn().mockResolvedValue(undefined) }
 })
 
