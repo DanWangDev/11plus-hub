@@ -1,0 +1,52 @@
+name: Deploy to NAS
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy 11plus-hub
+    # Runs only when:
+    #   1. CI succeeded, and
+    #   2. The NAS self-hosted runner is registered (ENABLE_NAS_DEPLOY=true).
+    # Without the guard, a missing runner would leave jobs queued forever.
+    if: ${{ github.event.workflow_run.conclusion == 'success' && vars.ENABLE_NAS_DEPLOY == 'true' }}
+    runs-on: nas
+    steps:
+      - name: Pull and restart
+        run: |
+          set -e
+          cd /volume1/docker/11plus-hub
+          docker compose -f docker-compose.prod.yml pull
+          docker compose -f docker-compose.prod.yml down
+          docker compose -f docker-compose.prod.yml up -d
+
+      - name: Wait for the backend to become healthy
+        run: |
+          set -e
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3009/health > /dev/null; then
+              echo "backend healthy after ${i} attempts"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "backend failed to become healthy"
+          docker compose -f docker-compose.prod.yml logs --tail 50
+          exit 1
+
+      - name: Show running containers
+        run: |
+          cd /volume1/docker/11plus-hub
+          docker compose -f docker-compose.prod.yml ps
+
+# Setup instructions (one-time, on the NAS):
+#   1. Run the GitHub Actions self-hosted runner with the `nas` label
+#      (ghcr.io/actions/actions-runner), mounting /var/run/docker.sock and
+#      /volume1/docker.
+#   2. Set the GitHub variable ENABLE_NAS_DEPLOY=true in repo Settings.
+#   3. Ensure /volume1/docker/11plus-hub/.env has the production secrets
+#      (the backend fails fast without them).
