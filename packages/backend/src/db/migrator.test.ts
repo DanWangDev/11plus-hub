@@ -15,15 +15,13 @@ vi.mock('fs/promises', () => ({
 }))
 
 function createMockSql() {
-  const txMock = {
+  const txMock = Object.assign(vi.fn().mockResolvedValue([]), {
     unsafe: vi.fn().mockResolvedValue([]),
-  }
+  })
 
   const sql = Object.assign(vi.fn().mockResolvedValue([]), {
     unsafe: vi.fn().mockResolvedValue([]),
-    begin: vi.fn(async (cb: (tx: typeof txMock) => Promise<void>) => {
-      await cb(txMock)
-    }),
+    begin: vi.fn(async (cb: (tx: typeof txMock) => Promise<unknown>) => cb(txMock)),
   })
 
   return { sql: sql as unknown as postgres.Sql, txMock }
@@ -159,8 +157,9 @@ describe('migrateUp', () => {
 
     const { sql, txMock } = createMockSql()
 
-    // ensureMigrationsTable + getAppliedMigrations
-    vi.mocked(sql as unknown as ReturnType<typeof vi.fn>)
+    // advisory lock + ensureMigrationsTable + getAppliedMigrations
+    vi.mocked(txMock as unknown as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce([]) // advisory lock
       .mockResolvedValueOnce([]) // ensureMigrationsTable
       .mockResolvedValueOnce([]) // getAppliedMigrations (no applied)
 
@@ -178,8 +177,9 @@ describe('migrateUp', () => {
       '-- up\nCREATE TABLE users (id SERIAL);\n-- down\nDROP TABLE users;',
     )
 
-    const { sql } = createMockSql()
-    vi.mocked(sql as unknown as ReturnType<typeof vi.fn>)
+    const { sql, txMock } = createMockSql()
+    vi.mocked(txMock as unknown as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce([]) // advisory lock
       .mockResolvedValueOnce([]) // ensureMigrationsTable
       .mockResolvedValueOnce([{ version: '001', name: 'users', applied_at: new Date() }])
 
@@ -193,10 +193,11 @@ describe('migrateUp', () => {
     vi.mocked(readdir).mockResolvedValue(['001-broken.sql' as never])
     vi.mocked(readFile).mockResolvedValue('-- down\nDROP TABLE t;')
 
-    const { sql } = createMockSql()
-    vi.mocked(sql as unknown as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
+    const { sql, txMock } = createMockSql()
+    vi.mocked(txMock as unknown as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce([]) // advisory lock
+      .mockResolvedValueOnce([]) // ensureMigrationsTable
+      .mockResolvedValueOnce([]) // getAppliedMigrations
 
     await expect(migrateUp(sql, '/migrations')).rejects.toThrow('has no UP section')
   })
@@ -215,7 +216,8 @@ describe('migrateDown', () => {
     )
 
     const { sql, txMock } = createMockSql()
-    vi.mocked(sql as unknown as ReturnType<typeof vi.fn>)
+    vi.mocked(txMock as unknown as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce([]) // advisory lock
       .mockResolvedValueOnce([]) // ensureMigrationsTable
       .mockResolvedValueOnce([{ version: '001', name: 'users', applied_at: new Date() }])
 
@@ -229,10 +231,11 @@ describe('migrateDown', () => {
     const { readdir } = await import('fs/promises')
     vi.mocked(readdir).mockResolvedValue([])
 
-    const { sql } = createMockSql()
-    vi.mocked(sql as unknown as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
+    const { sql, txMock } = createMockSql()
+    vi.mocked(txMock as unknown as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce([]) // advisory lock
+      .mockResolvedValueOnce([]) // ensureMigrationsTable
+      .mockResolvedValueOnce([]) // getAppliedMigrations
 
     const result = await migrateDown(sql, '/migrations', 1)
     expect(result).toEqual([])
@@ -243,9 +246,10 @@ describe('migrateDown', () => {
     vi.mocked(readdir).mockResolvedValue(['001-init.sql' as never])
     vi.mocked(readFile).mockResolvedValue('-- up\nCREATE TABLE t (id INT);')
 
-    const { sql } = createMockSql()
-    vi.mocked(sql as unknown as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce([])
+    const { sql, txMock } = createMockSql()
+    vi.mocked(txMock as unknown as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce([]) // advisory lock
+      .mockResolvedValueOnce([]) // ensureMigrationsTable
       .mockResolvedValueOnce([{ version: '001', name: 'init', applied_at: new Date() }])
 
     await expect(migrateDown(sql, '/migrations', 1)).rejects.toThrow('has no DOWN section')

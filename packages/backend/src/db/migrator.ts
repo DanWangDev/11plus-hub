@@ -2,6 +2,9 @@ import { readdir, readFile } from 'fs/promises'
 import { join } from 'path'
 import type postgres from 'postgres'
 
+/** Arbitrary app-specific key for pg_advisory_xact_lock. */
+const MIGRATION_LOCK_KEY = 682015001
+
 export interface Migration {
   version: string
   name: string
@@ -68,31 +71,37 @@ export async function loadMigrations(migrationsDir: string): Promise<Migration[]
 }
 
 export async function migrateUp(sql: postgres.Sql, migrationsDir: string): Promise<string[]> {
-  await ensureMigrationsTable(sql)
-  const applied = await getAppliedMigrations(sql)
-  const appliedVersions = new Set(applied.map((m) => m.version))
-  const migrations = await loadMigrations(migrationsDir)
+  // Serialize concurrent migrators (e.g. two app containers booting at
+  // once) with a transaction-scoped advisory lock, and run the whole
+  // migration in a single transaction on one connection. The lock releases
+  // automatically at commit.
+  return sql.begin(async (tx) => {
+    await (tx as unknown as postgres.Sql)`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK_KEY})`
 
-  const pending = migrations.filter((m) => !appliedVersions.has(m.version))
-  const appliedNames: string[] = []
+    await ensureMigrationsTable(tx as unknown as postgres.Sql)
+    const applied = await getAppliedMigrations(tx as unknown as postgres.Sql)
+    const appliedVersions = new Set(applied.map((m) => m.version))
+    const migrations = await loadMigrations(migrationsDir)
 
-  for (const migration of pending) {
-    if (!migration.up) {
-      throw new Error(`Migration ${migration.version}-${migration.name} has no UP section`)
-    }
+    const pending = migrations.filter((m) => !appliedVersions.has(m.version))
+    const appliedNames: string[] = []
 
-    await sql.begin(async (tx) => {
+    for (const migration of pending) {
+      if (!migration.up) {
+        throw new Error(`Migration ${migration.version}-${migration.name} has no UP section`)
+      }
+
       await tx.unsafe(migration.up)
       await tx.unsafe('INSERT INTO schema_migrations (version, name) VALUES ($1, $2)', [
         migration.version,
         migration.name,
       ])
-    })
 
-    appliedNames.push(`${migration.version}-${migration.name}`)
-  }
+      appliedNames.push(`${migration.version}-${migration.name}`)
+    }
 
-  return appliedNames
+    return appliedNames
+  })
 }
 
 export async function migrateDown(
@@ -100,26 +109,28 @@ export async function migrateDown(
   migrationsDir: string,
   steps = 1,
 ): Promise<string[]> {
-  await ensureMigrationsTable(sql)
-  const applied = await getAppliedMigrations(sql)
-  const migrations = await loadMigrations(migrationsDir)
+  return sql.begin(async (tx) => {
+    await (tx as unknown as postgres.Sql)`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK_KEY})`
 
-  const toRollback = applied.slice(-steps).reverse()
-  const rolledBack: string[] = []
+    await ensureMigrationsTable(tx as unknown as postgres.Sql)
+    const applied = await getAppliedMigrations(tx as unknown as postgres.Sql)
+    const migrations = await loadMigrations(migrationsDir)
 
-  for (const record of toRollback) {
-    const migration = migrations.find((m) => m.version === record.version)
-    if (!migration?.down) {
-      throw new Error(`Migration ${record.version}-${record.name} has no DOWN section`)
-    }
+    const toRollback = applied.slice(-steps).reverse()
+    const rolledBack: string[] = []
 
-    await sql.begin(async (tx) => {
+    for (const record of toRollback) {
+      const migration = migrations.find((m) => m.version === record.version)
+      if (!migration?.down) {
+        throw new Error(`Migration ${record.version}-${record.name} has no DOWN section`)
+      }
+
       await tx.unsafe(migration.down)
       await tx.unsafe('DELETE FROM schema_migrations WHERE version = $1', [record.version])
-    })
 
-    rolledBack.push(`${record.version}-${record.name}`)
-  }
+      rolledBack.push(`${record.version}-${record.name}`)
+    }
 
-  return rolledBack
+    return rolledBack
+  })
 }
