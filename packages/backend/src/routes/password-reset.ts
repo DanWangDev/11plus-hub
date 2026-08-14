@@ -107,6 +107,7 @@ export function createPasswordResetRouter(options: PasswordResetRouterOptions = 
   // POST /api/auth/reset-password — complete password reset
   router.post(
     '/api/auth/reset-password',
+    passwordResetLimiter,
     async (req: Request, res: Response, next: NextFunction) => {
       const start = Date.now()
       try {

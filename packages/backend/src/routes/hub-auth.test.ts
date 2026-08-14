@@ -292,7 +292,7 @@ describe('hub-auth routes', () => {
     })
   })
 
-  describe('GET /api/auth/refresh', () => {
+  describe('POST /api/auth/refresh', () => {
     it('returns 401 when no refresh_token in session', async () => {
       const { getIronSession } = await import('iron-session')
       vi.mocked(getIronSession).mockResolvedValueOnce({
@@ -303,7 +303,7 @@ describe('hub-auth routes', () => {
       } as never)
 
       const app = createTestApp()
-      const res = await request(app).get('/api/auth/refresh')
+      const res = await request(app).post('/api/auth/refresh')
 
       expect(res.status).toBe(401)
       expect(res.body).toMatchObject({
@@ -356,7 +356,7 @@ describe('hub-auth routes', () => {
         })
 
       const app = createTestApp()
-      const res = await request(app).get('/api/auth/refresh')
+      const res = await request(app).post('/api/auth/refresh')
 
       expect(res.status).toBe(200)
       expect(res.body.success).toBe(true)
@@ -389,7 +389,7 @@ describe('hub-auth routes', () => {
         })
 
       const app = createTestApp()
-      const res = await request(app).get('/api/auth/refresh')
+      const res = await request(app).post('/api/auth/refresh')
 
       expect(res.status).toBe(502)
       expect(res.body).toMatchObject({

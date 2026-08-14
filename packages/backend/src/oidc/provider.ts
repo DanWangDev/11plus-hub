@@ -159,6 +159,7 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
       keys: cookieKeys,
       long: {
         httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax' as const,
         signed: true,
         path: '/',
@@ -166,6 +167,7 @@ export function createOidcProvider(options: OidcProviderOptions): Provider {
       },
       short: {
         httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax' as const,
         signed: true,
         path: '/',
