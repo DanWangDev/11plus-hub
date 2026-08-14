@@ -1,6 +1,6 @@
 # 11plus Hub
 
-Platform Identity Provider for the 11+ learning suite. Provides OIDC-based SSO, application registry, subscription management, cross-app learning profiles, and a parent dashboard — all from a single hub.
+Platform Identity Provider for the 11+ learning suite. Provides OIDC-based SSO, application registry, subscription management, Stripe billing, and an admin panel — all from a single hub. (Learning profiles, parent dashboard, and email are planned — see [ARCHITECTURE.md](./ARCHITECTURE.md) and [TODOS.md](./TODOS.md).)
 
 ## Architecture
 
@@ -15,34 +15,33 @@ Platform Identity Provider for the 11+ learning suite. Provides OIDC-based SSO, 
 │  ├── Identity: users, passwords, Google OAuth, Turnstile  │
 │  ├── OIDC Provider: authorize, token, userinfo, jwks      │
 │  ├── Application Registry: client_id/secret, redirects    │
-│  ├── Subscriptions: plans, entitlements, feature gates     │
-│  ├── Learning Profiles: cross-app events + metadata       │
-│  ├── Email: Resend (welcome, reset, subscription)         │
+│  ├── Subscriptions: plans, entitlements, Stripe billing   │
 │  ├── Admin Panel: user mgmt, audit logs, impersonation    │
-│  ├── Parent Dashboard: cross-app progress aggregation     │
 │  └── App Dashboard: launcher for user's apps              │
 │                                                           │
-│  PostgreSQL (own container)                               │
+│  PostgreSQL (shared labf-db instance)                     │
 │  Cloudflare Tunnel → HTTPS                                │
 └──────────────────────────────────────────────────────────┘
                           │ OIDC
        ┌──────────────────┼──────────────────┐
        ▼                  ▼                  ▼
- vocab-master       writing-buddy        future apps
- @labf/auth-client  @labf/auth-client    @labf/auth-client
+ vocab-master       writing-buddy        story-sleuth
+ @danwangdev/       @danwangdev/        @danwangdev/
+ auth-client        auth-client         auth-client
 ```
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Runtime | Node.js 20 (Alpine) |
+| Runtime | Node.js 24 (Alpine) |
 | Server | Express 5 |
 | Language | TypeScript 5.8 (strict mode) |
-| Database | PostgreSQL 17 via postgres.js |
+| Database | PostgreSQL 17 via postgres.js (shared `labf-db`) |
 | Auth | oidc-provider (panva) |
+| Billing | Stripe (checkout, portal, webhooks) |
 | Validation | Zod |
-| Testing | Vitest + Supertest |
+| Testing | Vitest + Supertest (+ Testing Library, frontend) |
 | Linting | ESLint 9 (flat config) + Prettier |
 | Container | Docker (multi-stage) |
 | CI/CD | GitHub Actions → GHCR |
@@ -54,6 +53,7 @@ Platform Identity Provider for the 11+ learning suite. Provides OIDC-based SSO, 
 - Node.js >= 20
 - Docker & Docker Compose
 - Git
+- The shared labf-net / labf-db infrastructure (see the [labf-infra](https://github.com/DanWangDev/labf-infra) repo — run its `bootstrap.sh` once per host)
 
 ### Setup
 
@@ -68,11 +68,11 @@ npm install
 # Copy environment config
 cp .env.example .env
 
-# Start PostgreSQL
-docker compose up db -d
+# Start the shared database (labf-db) and the hub backend
+docker compose up -d
 
-# Run in development mode
-npm run dev
+# Frontend dev server (proxies /api and /oidc to the backend)
+cd packages/frontend && npx vite
 ```
 
 ### Available Scripts
