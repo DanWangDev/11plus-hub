@@ -7,7 +7,7 @@ RUN apk add --no-cache dumb-init
 FROM base AS deps
 COPY package.json package-lock.json* ./
 COPY packages/backend/package.json packages/backend/
-RUN npm ci -w packages/backend --ignore-scripts
+RUN npm ci -w packages/backend --ignore-scripts --omit=dev
 
 # ── Build ────────────────────────────────────────────
 FROM base AS build
