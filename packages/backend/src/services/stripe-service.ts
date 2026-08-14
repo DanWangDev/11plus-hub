@@ -24,8 +24,14 @@ const STRIPE_STATUS_MAP: Record<string, string> = {
   unpaid: 'past_due',
 }
 
-function mapStripeStatus(stripeStatus: string): string {
-  return STRIPE_STATUS_MAP[stripeStatus] ?? 'active'
+/**
+ * Map a Stripe subscription status to the hub's status enum.
+ * Returns null for unknown statuses — callers must fail safe (never grant
+ * entitlements on a status we don't understand, e.g. a newly introduced
+ * Stripe status).
+ */
+function mapStripeStatus(stripeStatus: string): string | null {
+  return STRIPE_STATUS_MAP[stripeStatus] ?? null
 }
 
 // --- Stripe client ---
@@ -190,6 +196,18 @@ export async function handleSubscriptionUpdated(sql: Sql, event: Stripe.Event): 
     logger.warn('subscription.updated: no matching subscription', {
       operation: 'handleSubscriptionUpdated',
       stripeSubscriptionId,
+    })
+    return
+  }
+
+  if (!hubStatus) {
+    // Unknown Stripe status (e.g. a newly introduced one). Fail safe:
+    // leave the subscription and entitlements untouched, and don't mark the
+    // event as processed so it can be replayed once the status is supported.
+    logger.warn('subscription.updated: unknown Stripe status, skipping', {
+      operation: 'handleSubscriptionUpdated',
+      stripeSubscriptionId,
+      stripeStatus: subscription.status,
     })
     return
   }
