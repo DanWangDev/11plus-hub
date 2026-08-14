@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { envSchema, loadEnv } from './env.js'
 
+const VALID_PROD_SECRETS = {
+  HUB_SESSION_SECRET: 'prod-hub-session-secret-at-least-32-chars!!',
+  OIDC_COOKIE_KEYS: 'prod-oidc-cookie-key-at-least-32-chars!!',
+  HUB_CLIENT_SECRET: 'prod-hub-client-secret',
+  DB_PASSWORD: 'prod-db-password',
+  OIDC_SIGNING_KEY: '{"kid":"prod","use":"sig","alg":"RS256"}',
+}
+
 describe('envSchema', () => {
   it('uses defaults when no env vars are set', () => {
     const result = envSchema.parse({})
@@ -18,7 +26,7 @@ describe('envSchema', () => {
       PORT: '8080',
       DB_HOST: 'db.example.com',
       DB_PORT: '5433',
-      SESSION_SECRET: 'a-very-long-production-secret-that-is-32-chars',
+      HUB_SESSION_SECRET: 'a-very-long-production-secret-that-is-32-chars',
     })
     expect(result.NODE_ENV).toBe('production')
     expect(result.PORT).toBe(8080)
@@ -41,8 +49,8 @@ describe('envSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('rejects short session secret', () => {
-    const result = envSchema.safeParse({ SESSION_SECRET: 'too-short' })
+  it('rejects short hub session secret', () => {
+    const result = envSchema.safeParse({ HUB_SESSION_SECRET: 'too-short' })
     expect(result.success).toBe(false)
   })
 
@@ -67,16 +75,62 @@ describe('loadEnv', () => {
   })
 
   it('throws on invalid env with formatted message', () => {
-    expect(() => loadEnv({ SESSION_SECRET: 'x', LOG_LEVEL: 'verbose' as 'debug' })).toThrow(
+    expect(() => loadEnv({ HUB_SESSION_SECRET: 'x', LOG_LEVEL: 'verbose' as 'debug' })).toThrow(
       'Invalid environment variables',
     )
   })
 
   it('includes field names in error message', () => {
     try {
-      loadEnv({ SESSION_SECRET: 'x' })
+      loadEnv({ HUB_SESSION_SECRET: 'x' })
     } catch (err) {
-      expect((err as Error).message).toContain('SESSION_SECRET')
+      expect((err as Error).message).toContain('HUB_SESSION_SECRET')
     }
+  })
+
+  it('allows development environments to run with defaults', () => {
+    expect(() => loadEnv({ NODE_ENV: 'development' })).not.toThrow()
+  })
+})
+
+describe('loadEnv production fail-fast', () => {
+  it('throws in production when required secrets are missing', () => {
+    try {
+      loadEnv({ NODE_ENV: 'production' })
+      expect.unreachable('expected loadEnv to throw')
+    } catch (err) {
+      const message = (err as Error).message
+      expect(message).toContain('HUB_SESSION_SECRET')
+      expect(message).toContain('OIDC_COOKIE_KEYS')
+      expect(message).toContain('HUB_CLIENT_SECRET')
+      expect(message).toContain('DB_PASSWORD')
+      expect(message).toContain('OIDC_SIGNING_KEY')
+    }
+  })
+
+  it('throws in production when a secret equals its development default', () => {
+    expect(() =>
+      loadEnv({
+        NODE_ENV: 'production',
+        ...VALID_PROD_SECRETS,
+        HUB_SESSION_SECRET: 'hub-session-secret-minimum-32-characters-long!!',
+      }),
+    ).toThrow(/HUB_SESSION_SECRET.*development default/)
+  })
+
+  it('accepts production config with all secrets explicitly set', () => {
+    const result = loadEnv({ NODE_ENV: 'production', ...VALID_PROD_SECRETS })
+    expect(result.NODE_ENV).toBe('production')
+    expect(result.HUB_SESSION_SECRET).toBe(VALID_PROD_SECRETS.HUB_SESSION_SECRET)
+  })
+
+  it('rejects empty-string secrets in production', () => {
+    expect(() =>
+      loadEnv({
+        NODE_ENV: 'production',
+        ...VALID_PROD_SECRETS,
+        OIDC_SIGNING_KEY: '',
+      }),
+    ).toThrow(/OIDC_SIGNING_KEY.*must be set explicitly/)
   })
 })
