@@ -202,9 +202,16 @@ export async function handleSubscriptionUpdated(sql: Sql, event: Stripe.Event): 
       WHERE id = ${existing.id}
     `
 
-    // Revoke access if status indicates non-entitlement
+    // Revoke access if the new status indicates non-entitlement, or re-grant
+    // when a previously revoked subscription is reactivated (e.g. resumed
+    // via the customer portal).
     if (['cancelled', 'expired', 'incomplete'].includes(hubStatus)) {
       await syncAppAccessFromPlan(tx, existing.user_id, 'free')
+    } else if (
+      ['active', 'trial'].includes(hubStatus) &&
+      ['cancelled', 'expired', 'incomplete'].includes(existing.status)
+    ) {
+      await syncAppAccessFromPlan(tx, existing.user_id, existing.plan)
     }
 
     await markEventProcessed(tx, event.id)

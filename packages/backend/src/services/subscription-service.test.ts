@@ -246,6 +246,39 @@ describe('subscription-service', () => {
       expect(mockSql).toHaveBeenCalledTimes(3)
     })
 
+    it('re-grants app access when status changes from cancelled to active', async () => {
+      const existing = createMockSubscription({ status: 'cancelled', plan: 'writing' })
+      const updated = createMockSubscription({ status: 'active', plan: 'writing' })
+
+      const mockSql = vi.fn() as unknown as ReturnType<typeof vi.fn>
+      ;(mockSql as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([existing]) // findSubscriptionById
+        .mockResolvedValueOnce([updated]) // UPDATE subscription
+        .mockResolvedValueOnce([]) // syncAppAccessFromPlan (writing plan)
+
+      const result = await updateSubscription(mockSql as never, 1, { status: 'active' })
+
+      expect(result).toMatchObject({ status: 'active' })
+      // findById + UPDATE + syncAppAccessFromPlan = 3 calls
+      expect(mockSql).toHaveBeenCalledTimes(3)
+    })
+
+    it('re-grants app access when status changes from expired to trial', async () => {
+      const existing = createMockSubscription({ status: 'expired', plan: 'vocab' })
+      const updated = createMockSubscription({ status: 'trial', plan: 'vocab' })
+
+      const mockSql = vi.fn() as unknown as ReturnType<typeof vi.fn>
+      ;(mockSql as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([existing]) // findSubscriptionById
+        .mockResolvedValueOnce([updated]) // UPDATE subscription
+        .mockResolvedValueOnce([]) // syncAppAccessFromPlan (vocab plan)
+
+      const result = await updateSubscription(mockSql as never, 1, { status: 'trial' })
+
+      expect(result).toMatchObject({ status: 'trial' })
+      expect(mockSql).toHaveBeenCalledTimes(3)
+    })
+
     it('returns null when subscription not found', async () => {
       const mockSql = createMockSql([])
 
