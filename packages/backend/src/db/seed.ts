@@ -1,4 +1,5 @@
 import { createHash } from 'crypto'
+import { pathToFileURL } from 'url'
 import { createDb, closeDb } from './connection.js'
 import { env } from '../config/env.js'
 import bcrypt from 'bcrypt'
@@ -205,7 +206,13 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  process.stderr.write(`Seed failed: ${err instanceof Error ? err.message : String(err)}\n`)
-  process.exit(1)
-})
+// Run only when executed as a CLI entry point (`node dist/db/seed.js`),
+// never when imported (tests).
+const isMain =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href
+if (isMain) {
+  main().catch((err) => {
+    process.stderr.write(`Seed failed: ${err instanceof Error ? err.message : String(err)}\n`)
+    process.exit(1)
+  })
+}
