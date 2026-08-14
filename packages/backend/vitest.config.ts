@@ -19,17 +19,12 @@ export default defineConfig({
         'src/**/*.test.ts',
         'src/**/*.spec.ts',
         'src/test/**',
+        // CLI entry points — executed, not unit-tested
         'src/db/migrate.ts',
         'src/db/migrate-users.ts',
         'src/db/migrate-writing-buddy.ts',
-        'src/db/seed.ts',
         'src/server.ts',
         'src/types/**',
-        'src/oidc/provider.ts',
-        'src/oidc/client-loader.ts',
-        'src/routes/oidc-interactions.ts',
-        'src/routes/impersonate.ts',
-        'src/routes/impersonate.test.ts',
       ],
       thresholds: {
         statements: 80,
