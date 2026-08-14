@@ -1,18 +1,13 @@
 import { Router } from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import type postgres from 'postgres'
-import { getIronSession } from 'iron-session'
 import { createLogger } from '../lib/logger.js'
-import { findUserById, hasPassword } from '../services/user-service.js'
-import {
-  findSubscriptionByUserId,
-  getUserAppAccess,
-  syncAppAccessFromPlan,
-  PLAN_APP_SLUGS,
-} from '../services/subscription-service.js'
+import { findUserById } from '../services/user-service.js'
 import { logAction, AuditActions } from '../services/audit-service.js'
+import { buildUserClaims } from '../oidc/user-claims.js'
+import { getHubSession } from '../lib/session.js'
 import type { RequestHandler } from 'express'
-import { COOKIE_NAME, type SessionData } from './hub-auth.js'
+import { type SessionData } from './hub-auth.js'
 
 const logger = createLogger({ route: 'impersonate' })
 
@@ -21,61 +16,6 @@ interface ImpersonateRouterOptions {
   sessionSecret: string
   requireAuth: RequestHandler
   requireAdmin: RequestHandler
-}
-
-async function buildUserClaims(
-  sql: postgres.Sql,
-  userId: number,
-): Promise<Record<string, unknown>> {
-  const user = await findUserById(sql, userId)
-  if (!user) {
-    throw new Error('User not found')
-  }
-
-  const subscription = await findSubscriptionByUserId(sql, user.id)
-  const plan = subscription?.plan ?? 'free'
-  const expectedApps = PLAN_APP_SLUGS[plan] ?? []
-
-  const appAccess = await getUserAppAccess(sql, user.id)
-  const appIds = appAccess.map((a) => a.app_id)
-  let appSlugs: string[] = []
-  if (appIds.length > 0) {
-    const apps = await sql<{ slug: string }[]>`
-      SELECT slug FROM applications WHERE id = ANY(${appIds})
-    `
-    appSlugs = apps.map((a) => a.slug)
-  }
-
-  // Auto-sync stale access
-  const missing = expectedApps.filter((slug) => !appSlugs.includes(slug))
-  const extra = appSlugs.filter((slug) => !expectedApps.includes(slug))
-  if (missing.length > 0 || extra.length > 0) {
-    logger.info('auto-syncing stale user_app_access during impersonation', {
-      operation: 'impersonate',
-      userId: user.id,
-      plan,
-      missing,
-      extra,
-    })
-    await syncAppAccessFromPlan(sql, user.id, plan)
-    appSlugs = expectedApps
-  }
-
-  const userHasPassword = await hasPassword(sql, user.id)
-
-  return {
-    sub: String(user.id),
-    username: user.username,
-    display_name: user.display_name,
-    email: user.email,
-    email_verified: user.email_verified,
-    role: user.role,
-    plan,
-    features: subscription?.features ?? [],
-    apps: appSlugs,
-    has_password: userHasPassword,
-    expires_at: subscription?.expires_at ? new Date(subscription.expires_at).toISOString() : null,
-  }
 }
 
 export function createImpersonateRouter(options: ImpersonateRouterOptions): Router {
@@ -109,19 +49,11 @@ export function createImpersonateRouter(options: ImpersonateRouterOptions): Rout
           return
         }
 
-        const claims = await buildUserClaims(sql, targetUser.id)
+        const claims = await buildUserClaims(sql, targetUser.id, 'impersonate')
 
-        const session = await getIronSession<SessionData>(req, res, {
-          password: sessionSecret,
-          cookieName: COOKIE_NAME,
-          cookieOptions: {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax' as const,
-            path: '/',
-            maxAge: 30 * 60, // 30 minutes for impersonation
-          },
-        })
+        // 30-minute cookie while impersonating (expires even if the admin
+        // walks away without ending the impersonation)
+        const session = await getHubSession<SessionData>(req, res, sessionSecret, 30 * 60)
 
         session.impersonation = {
           targetUserId: targetUser.id,
@@ -173,27 +105,20 @@ export function createImpersonateRouter(options: ImpersonateRouterOptions): Rout
     '/api/admin/impersonate/end',
     requireAuth,
     async (req: Request, res: Response, next: NextFunction) => {
-      const start = Date.now()
       try {
-        const session = await getIronSession<SessionData>(req, res, {
-          password: sessionSecret,
-          cookieName: COOKIE_NAME,
-          cookieOptions: {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax' as const,
-            path: '/',
-            maxAge: 7 * 24 * 60 * 60,
-          },
-        })
+        const session = await getHubSession<SessionData>(req, res, sessionSecret)
 
         if (!session.impersonation) {
           res.status(400).json({ success: false, error: 'Not currently impersonating' })
           return
         }
 
-        const { adminUserId, adminUsername } = session.impersonation.impersonatedBy
+        const { adminUserId, adminUsername, startedAt } = session.impersonation.impersonatedBy
         const targetUserId = session.impersonation.targetUserId
+
+        // Real impersonation span (startedAt is set when impersonation began),
+        // not the duration of this request
+        const durationMs = Math.max(0, Date.now() - new Date(startedAt).getTime())
 
         // Clear impersonation data but keep admin's original tokens
         delete session.impersonation
@@ -205,7 +130,8 @@ export function createImpersonateRouter(options: ImpersonateRouterOptions): Rout
           targetId: targetUserId,
           details: {
             adminUsername,
-            duration: Date.now() - start,
+            startedAt,
+            durationSeconds: Math.round(durationMs / 1000),
           },
           ipAddress: req.ip,
         }).catch((err) => {
@@ -219,7 +145,7 @@ export function createImpersonateRouter(options: ImpersonateRouterOptions): Rout
           operation: 'impersonateEnd',
           adminUserId,
           targetUserId,
-          duration: Date.now() - start,
+          durationSeconds: Math.round(durationMs / 1000),
         })
 
         res.json({ success: true })
