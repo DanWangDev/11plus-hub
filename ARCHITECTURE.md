@@ -320,6 +320,7 @@ packages/
 
 **Network rules:**
 - `labf-net` is `external: true` in every compose file — create it via `labf-infra/bootstrap.sh` (idempotent)
+- The hub backend's host port is bound to `127.0.0.1` in production — the frontend nginx reaches it over the compose network; LAN devices cannot hit the API directly (which would let them spoof `X-Forwarded-*` and bypass IP-based rate limits)
 - Only backends join `labf-net`; databases and frontends stay on private networks
 - Backends use `OIDC_INTERNAL_ISSUER=http://hub-backend:3009` for internal OIDC calls
 - Browser-facing URLs still use the public domain (`https://hub.labf.app`)
