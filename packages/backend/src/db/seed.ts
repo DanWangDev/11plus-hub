@@ -84,9 +84,7 @@ async function ensureHubClient(sql: postgres.Sql): Promise<void> {
     ...(hubIssuer !== 'http://localhost:3009'
       ? ['http://localhost:3009/api/auth/hub-callback']
       : []),
-    ...(hubIssuer !== 'https://hub.labf.app'
-      ? ['https://hub.labf.app/api/auth/hub-callback']
-      : []),
+    ...(hubIssuer !== 'https://hub.labf.app' ? ['https://hub.labf.app/api/auth/hub-callback'] : []),
   ]
 
   await sql`

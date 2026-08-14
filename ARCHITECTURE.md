@@ -124,8 +124,8 @@ bcl_retry_queue
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/auth/register` | Create account (rate limited + Turnstile) |
-| POST | `/api/auth/login` | Legacy email/password login (deprecated; frontend uses OIDC) |
-| POST | `/api/auth/google` | Legacy Google login (deprecated; ID tokens only) |
+
+
 | GET | `/api/auth/hub-login` | Hub's own OIDC login redirect (PKCE + state) |
 | GET | `/api/auth/hub-callback` | OIDC callback → iron-session |
 | GET/POST | `/api/auth/hub-logout` | Clear session + OIDC end_session redirect |

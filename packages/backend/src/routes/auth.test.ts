@@ -149,7 +149,4 @@ describe('auth routes', () => {
       expect(res.body.success).toBe(false)
     })
   })
-
-
-
 })
