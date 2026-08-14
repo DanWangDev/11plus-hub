@@ -40,6 +40,7 @@ export default tseslint.config(
     files: [
       'packages/backend/src/services/google-auth-service.ts',
       'packages/backend/src/services/turnstile-service.ts',
+      'packages/backend/src/services/email-service.ts',
       'packages/backend/src/routes/hub-auth.ts',
       'packages/backend/src/oidc/bcl-retry.ts',
     ],

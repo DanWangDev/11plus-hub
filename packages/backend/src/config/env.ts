@@ -41,6 +41,10 @@ export const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRICE_ID: z.string().optional(),
 
+  // Email (optional — password reset emails disabled when not configured)
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default('11+ Hub <no-reply@labf.app>'),
+
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 
   // Demo data seeding (demo users + dev app registrations). Off by default;

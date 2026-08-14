@@ -11,6 +11,17 @@ vi.mock('../db/connection.js', () => ({
 const mockFindUserByEmail = vi.fn()
 const mockCreateResetToken = vi.fn()
 const mockResetPassword = vi.fn()
+const { mockSendPasswordResetEmail } = vi.hoisted(() => ({
+  mockSendPasswordResetEmail: vi.fn().mockResolvedValue(true),
+}))
+
+vi.mock('../config/env.js', () => ({
+  env: { OIDC_ISSUER: 'https://hub.labf.app', TURNSTILE_SECRET_KEY: undefined },
+}))
+
+vi.mock('../services/email-service.js', () => ({
+  sendPasswordResetEmail: (...args: unknown[]) => mockSendPasswordResetEmail(...args),
+}))
 
 vi.mock('../services/user-service.js', () => ({
   MIN_PASSWORD_LENGTH: 8,
@@ -151,9 +162,10 @@ describe('password reset routes', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.success).toBe(true)
+      expect(mockSendPasswordResetEmail).not.toHaveBeenCalled()
     })
 
-    it('creates reset token for known user', async () => {
+    it('creates reset token and sends the reset email for a known user', async () => {
       mockFindUserByEmail.mockResolvedValue({
         id: 42,
         email: 'user@example.com',
@@ -171,6 +183,12 @@ describe('password reset routes', () => {
       expect(res.status).toBe(200)
       expect(res.body.success).toBe(true)
       expect(mockCreateResetToken).toHaveBeenCalledWith(expect.anything(), 42)
+      expect(mockSendPasswordResetEmail).toHaveBeenCalledWith(
+        'user@example.com',
+        'sel123',
+        'val456',
+        'https://hub.labf.app/reset-password',
+      )
     })
 
     it('returns 400 for invalid email', async () => {
