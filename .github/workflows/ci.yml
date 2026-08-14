@@ -63,15 +63,20 @@ jobs:
 
       - run: npm ci
 
-      - name: Run tests with coverage
+      - name: Run backend tests with coverage
         run: npm run test:coverage
+
+      - name: Run frontend tests with coverage
+        run: npm -w packages/frontend run test:coverage
 
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report
-          path: packages/backend/coverage/
+          path: |
+            packages/backend/coverage/
+            packages/frontend/coverage/
 
   build:
     name: Build
