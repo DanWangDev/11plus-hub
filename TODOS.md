@@ -83,13 +83,13 @@
 - **What:** Dashboard profile card + edit modal for self-service display name and password changes. Separate endpoints: `PATCH /api/profile` (display name) and `PATCH /api/profile/password` (password change). `has_password` OIDC claim for conditional password UI. Session overrides for stale token fix. UserMenu dropdown in header with edit profile, dashboard link, and sign out.
 - **Completed:** PRs #39, #41, #42 (2026-03-29)
 
-## Phase 1: Revenue Pipeline (planned)
+## Phase 1: Revenue Pipeline (mostly shipped 2026-08; see Tech-Debt Remediation below)
 
 > Source of truth: [Staged Revenue Pipeline design](~/.gstack/projects/DanWangDev-11plus-hub/danwa-main-design-20260408-094737.md)
 > CEO review: [2026-04-08](~/.gstack/projects/DanWangDev-11plus-hub/ceo-plans/2026-04-08-staged-revenue-pipeline.md)
 > Design review: [2026-04-08](~/.gstack/projects/DanWangDev-11plus-hub/danwa-main-design-review-20260408-120000.md)
 
-### P0: Stripe Billing Integration [planned]
+### P0: Stripe Billing Integration [done]
 
 - **What:** Stripe Checkout Sessions for new subscriptions. Webhook handler for `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`. Stripe Customer Portal for self-service cancel/update.
 - **Effort:** S (human: ~3 days / CC: ~30 min)
@@ -100,7 +100,7 @@
 - **Webhook idempotency:** Check `stripe_processed_events` by event_id, skip duplicates. Record written AFTER subscription update in same transaction.
 - **UPSERT constraint:** Partial unique index extended to `ON (user_id) WHERE status IN ('active', 'trial', 'past_due')` — webhook must UPDATE existing row, not INSERT.
 
-### P0: Hub Cloud Deployment [planned]
+### P0: Hub Cloud Deployment [planned — still on NAS]
 
 - **What:** Deploy hub to Fly.io or Railway with managed PostgreSQL. Migrate hub data via `pg_dump`/`pg_restore` (or fresh seed if no real users).
 - **Effort:** S (human: ~1 day / CC: ~15 min)
@@ -117,7 +117,7 @@
 - **Trial activation:** Lazy — starts on first Writing Buddy visit, NOT at signup. `trial_start` claim set on first app access.
 - **Paywall screen:** Full-page block with trial stats recap (essays completed, score improvement). Falls back to generic value prop if no learning_events data. Links to `/pricing` or direct Stripe Checkout.
 
-### P0: Pricing Page [planned]
+### P0: Pricing Page [done]
 
 - **What:** Branded landing page at `/pricing` with full-width hero section. One plan, one price, one CTA. Stripe Tax enabled from day one.
 - **Effort:** XS (human: ~2 hours / CC: ~10 min)
@@ -125,7 +125,7 @@
 - **Subscribed users:** If JWT shows active plan, show plan status + "Manage Billing" link instead of subscribe button.
 - **Copy direction:** Speak to parent anxiety ("Will my child pass the 11+ creative writing section?"), not generic AI features.
 
-### P0: Bug Fixes (must-fix before billing goes live) [planned]
+### P0: Bug Fixes (must-fix before billing goes live) [done]
 
 - `cancelSubscription()` must call `syncAppAccessFromPlan(sql, userId, 'free')` after setting status to cancelled
 - `syncAppAccessFromPlan()` refactored to single CTE (DELETE + INSERT in one atomic statement)
@@ -135,33 +135,33 @@
 - Migration 014 must also update the partial unique index to cover `active/trial/past_due` (not just active/trial)
 - Zod status enums must accept `past_due` and `incomplete`
 
-### P0: Hub Auth Refresh Endpoint [planned]
+### P0: Hub Auth Refresh Endpoint [done]
 
 - **What:** Add `GET /auth/refresh` route to hub-auth.ts. Re-fetches claims from OIDC provider, gets fresh id_token via refresh_token exchange, updates iron-session. Called client-side after Stripe payment redirect.
 - **Why:** Hub stores id_token once in iron-session and never refreshes it. After payment, the parent's session still has `plan: 'free'` until they fully re-login. This endpoint allows a silent refresh.
 - **Effort:** XS (human: ~1 hour / CC: ~10 min)
 - **Context:** The ?payment=success redirect param triggers a client-side fetch to this endpoint. Also useful for any future claim staleness scenario.
 
-### P0: Post-Payment Success Overlay [planned]
+### P0: Post-Payment Success Overlay [done]
 
 - **What:** Full-screen success overlay shown when `?payment=success` is in URL. Triggers `GET /auth/refresh`, shows checkmark animation + "Open Writing Buddy" CTA. Auto-dismisses to dashboard after 10s.
 - **Effort:** XS (human: ~1 hour / CC: ~10 min)
 - **Graceful degradation:** Spinner during JWT refresh. If refresh fails: "Payment confirmed! Access may take a few minutes to activate." URL param consumed on first render (prevents duplicate overlay on page refresh).
 - **Accessibility:** Focus trap (Modal pattern), Escape to dismiss, auto-dismiss pauses on keyboard focus.
 
-### P0: Subscription Card (Parent Dashboard) [planned]
+### P0: Subscription Card (Parent Dashboard) [done]
 
 - **What:** SubscriptionCard component on parent dashboard showing plan status, price, renewal date, and CTAs. 5 state variants: free (upgrade CTA), trial (days remaining + subscribe), active (plan details + manage billing), past_due (warning + update payment), cancelled (end date + resubscribe).
 - **Effort:** XS (human: ~1 hour / CC: ~10 min)
 - **Manage Billing** link opens Stripe Customer Portal. Status conveyed via text labels (not color alone) for accessibility.
 
-### P0: CORS Update for Child App Origins [planned]
+### P0: CORS Update for Child App Origins [done]
 
 - **What:** Allow *.labf.app subdomains as CORS origins in app.ts. Currently only hub origin + localhost.
 - **Why:** Child apps on NAS have different origins. Browser-based calls to hub APIs will fail CORS. Future-proofs for browser-based child app integrations.
 - **Effort:** XS (human: ~15 min / CC: ~5 min)
 
-### P1: Trial Expiry Banner [planned]
+### P1: Trial Expiry Banner [done]
 
 - **What:** Top-of-layout sticky strip with countdown. Shows on days 5-7 of trial. Escalating copy: "3 days left to keep the streak going" -> "Last day!" CTA links to `/pricing`.
 - **Effort:** XS (human: ~1 hour / CC: ~10 min)
@@ -174,13 +174,13 @@
 - **Effort:** XS (human: ~2 hours / CC: ~10 min)
 - **Context:** `learning_events` table already exists. Only 12% of AI ed-tech has efficacy data.
 
-### P1: NAS Downtime Page [planned]
+### P1: NAS Downtime Page [done]
 
 - **What:** Branded static HTML maintenance page for Writing Buddy subdomain when NAS is down. Lab F branding (inline SVG logo), message: "Writing Buddy is temporarily unavailable. We're working to restore access. Your subscription is not affected." Link back to hub dashboard.
 - **Effort:** XS (human: ~15 min / CC: ~5 min)
 - **Hosting:** Cloudflare custom error page (recommended, works even if hub is also down). No JavaScript, no interactive elements. Semantic HTML, accessible without JS.
 
-### P1: Subscription Audit Trail [planned]
+### P1: Subscription Audit Trail [done]
 
 - **What:** New AuditActions: `STRIPE_WEBHOOK_CHECKOUT`, `STRIPE_WEBHOOK_UPDATED`, `STRIPE_WEBHOOK_CANCELLED`. Logged in webhook handler.
 - **Effort:** XS (human: ~20 min / CC: ~5 min)
@@ -262,3 +262,28 @@
 - **What:** Automated weekly email summarizing child's progress across all apps.
 - **Depends on:** Phase C (Resend) + Phase D (parent dashboard)
 - **Context:** Resend scheduled send or cron. Unsubscribe link required. Only send if child had activity.
+
+---
+
+## Tech-Debt Remediation (2026-08)
+
+Full review: `docs/tech-debt-review-2026-08-14.md` (architect / security / engineering / product perspectives).
+
+Shipped as individual PRs (2026-08-14):
+- S4: audit actorId from verified session (no more forgeable `x-user-id`) — #76
+- S2: production fail-fast on missing/default secrets; dead `SESSION_SECRET` removed — #77
+- S1: demo data seeding gated behind `SEED_ON_STARTUP` (off in prod); seed is now bootstrap-only — #78
+- S3: login rate limiting + Turnstile on the OIDC interaction login (the real SSO path) — #79
+- Frontend test suite repaired (was silently red — CI never ran it) + `GoogleOAuthProvider` crash fix — #79
+- A6: subscription reactivation (cancelled/expired → active/trial) re-grants app access — #80
+- S6: unknown Stripe statuses fail safe (no-change) instead of defaulting to 'active' — #81
+- S7: Google auth accepts ID tokens only; linking requires a verified email; GIS credential flow on the frontend — #82
+- S8: CORS allowlist from the application registry (no more `*.labf.app` wildcard) — #83
+- A4: security-critical files under coverage (provider, oidc-interactions, impersonate, seed, client-loader); frontend tests now run in CI — #84
+- A1: ARCHITECTURE.md / README.md / TODOS.md synced with reality (this PR)
+
+Still open (tracked below / in the review):
+- P1: password reset emails (Resend) — see Phase C
+- P5: paywall vs deny-at-login product decision
+- P2/P3: monitoring, DB backups (labf-infra), CD re-enable
+- P4: cloud deployment
