@@ -263,22 +263,33 @@ export async function rotateClientSecret(
   return { application, clientSecret }
 }
 
+export const serviceTokenSchema = z.object({
+  scopes: z.array(z.string()).default([]),
+  expiresAt: z.string().datetime().nullable().optional(),
+})
+
 export async function createServiceToken(
   sql: Sql,
   appId: number,
   scopes: string[] = [],
+  expiresAt: string | null = null,
 ): Promise<{ serviceToken: ServiceToken; token: string }> {
   const app = await findApplicationById(sql, appId)
   if (!app) {
     throw new AppError(404, 'Application not found')
   }
 
+  const parsedExpiry = expiresAt !== null && expiresAt !== undefined ? new Date(expiresAt) : null
+  if (parsedExpiry && Number.isNaN(parsedExpiry.getTime())) {
+    throw new AppError(400, 'Invalid expiresAt')
+  }
+
   const token = randomBytes(48).toString('hex')
   const tokenHash = hashSha256(token)
 
   const rows = await sql`
-    INSERT INTO service_tokens (app_id, token_hash, scopes)
-    VALUES (${appId}, ${tokenHash}, ${scopes})
+    INSERT INTO service_tokens (app_id, token_hash, scopes, expires_at)
+    VALUES (${appId}, ${tokenHash}, ${scopes}, ${parsedExpiry})
     RETURNING *
   `
 

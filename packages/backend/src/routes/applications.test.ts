@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
+import { z } from 'zod'
 import { createApp } from '../app.js'
 import type postgres from 'postgres'
 import type * as AuditService from '../services/audit-service.js'
@@ -26,6 +27,10 @@ vi.mock('../services/app-service.js', () => ({
   rotateClientSecret: (...args: unknown[]) => mockRotateClientSecret(...args),
   createServiceToken: (...args: unknown[]) => mockCreateServiceToken(...args),
   revokeServiceToken: (...args: unknown[]) => mockRevokeServiceToken(...args),
+  serviceTokenSchema: z.object({
+    scopes: z.array(z.string()).default([]),
+    expiresAt: z.string().datetime().nullable().optional(),
+  }),
 }))
 
 const sampleApp = {
@@ -291,6 +296,24 @@ describe('application routes', () => {
       expect(res.status).toBe(201)
       expect(res.body.success).toBe(true)
       expect(res.body.data.token).toBe('plain-token-789')
+    })
+
+    it('passes expiresAt through to the service', async () => {
+      mockCreateServiceToken.mockResolvedValue({
+        serviceToken: { ...sampleServiceToken, expires_at: new Date('2026-12-31T23:59:59Z') },
+        token: 'tok-123',
+      })
+
+      await request(app)
+        .post('/api/apps/1/service-tokens')
+        .send({ scopes: ['read'], expiresAt: '2026-12-31T23:59:59.000Z' })
+
+      expect(mockCreateServiceToken).toHaveBeenCalledWith(
+        expect.anything(),
+        1,
+        ['read'],
+        '2026-12-31T23:59:59.000Z',
+      )
     })
 
     it('returns 404 when application not found', async () => {
