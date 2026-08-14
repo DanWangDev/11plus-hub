@@ -46,10 +46,6 @@ vi.mock('../services/audit-service.js', async (importOriginal) => {
   return { ...actual, logAction: vi.fn().mockResolvedValue(undefined) }
 })
 
-vi.mock('../oidc/entitlement-check.js', () => ({
-  checkUserEntitlement: vi.fn().mockResolvedValue({ allowed: true, appName: 'Hub' }),
-}))
-
 vi.mock('../services/turnstile-service.js', () => ({
   verifyTurnstileToken: vi.fn().mockResolvedValue(true),
 }))
@@ -196,22 +192,16 @@ describe('oidc interaction routes', () => {
       expect(res.status).toBe(400)
     })
 
-    it('denies login with 403 when the user has no entitlement', async () => {
+    it('allows login without an entitlement (apps gate in-app)', async () => {
       mockFindUserByEmail.mockResolvedValue(PASSWORD_USER)
       mockVerifyPassword.mockResolvedValue(true)
-      const { checkUserEntitlement } = await import('../oidc/entitlement-check.js')
-      vi.mocked(checkUserEntitlement).mockResolvedValueOnce({
-        allowed: false,
-        appName: 'Vocab Master',
-        reason: 'no_entitlement',
-      })
 
       const res = await request(app)
         .post('/api/auth/interaction/test-uid/login')
         .send({ identifier: 'kid@example.com', password: 'hunter22', turnstileToken: 'tok' })
 
-      expect(res.status).toBe(403)
-      expect(res.body.error).toContain('Vocab Master')
+      expect(res.status).toBe(200)
+      expect(res.body.redirectTo).toBe('https://hub.labf.app/cb?code=abc')
     })
   })
 

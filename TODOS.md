@@ -284,6 +284,6 @@ Shipped as individual PRs (2026-08-14):
 
 Still open (tracked below / in the review):
 - P1: password reset emails (Resend) — see Phase C
-- P5: paywall vs deny-at-login product decision
+- P5: paywall vs deny-at-login product decision — DECIDED 2026-08: login is never blocked; the hub issues claims and each app gates in-app (see the PR that shipped this change). App-side paywalls are the remaining work.
 - P2/P3: monitoring, DB backups (labf-infra), CD re-enable
 - P4: cloud deployment
