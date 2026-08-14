@@ -97,7 +97,5 @@ export function createAuthRouter(options: AuthRouterOptions = {}): Router {
     }
   })
 
-
-
   return router
 }
