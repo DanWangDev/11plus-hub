@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Request, Response, NextFunction } from 'express'
 import { AppError, notFoundHandler, errorHandler } from './error-handler.js'
 
+const mockErrorLog = vi.fn()
+vi.mock('../lib/logger.js', () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockErrorLog(...args),
+  }),
+}))
+
 function createMockRes(): Response {
   const res = {
     status: vi.fn().mockReturnThis(),
@@ -112,5 +122,23 @@ describe('errorHandler', () => {
       success: false,
       error: 'some debug info',
     })
+  })
+
+  it('logs unknown errors with request context', () => {
+    const err = new Error('unexpected failure')
+    const req = createMockReq({ id: 'req-123', method: 'GET', path: '/api/x' })
+    const res = createMockRes()
+
+    errorHandler(err, req, res, next)
+
+    expect(mockErrorLog).toHaveBeenCalledWith(
+      'unhandled request error',
+      expect.objectContaining({
+        requestId: 'req-123',
+        method: 'GET',
+        path: '/api/x',
+        error: 'unexpected failure',
+      }),
+    )
   })
 })
