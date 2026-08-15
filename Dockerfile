@@ -3,8 +3,14 @@ FROM node:24-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache dumb-init
 
-# ── Dependencies ─────────────────────────────────────
+# ── Build dependencies (full install — tsc lives here) ──
 FROM base AS deps
+COPY package.json package-lock.json* ./
+COPY packages/backend/package.json packages/backend/
+RUN npm ci -w packages/backend --ignore-scripts
+
+# ── Production dependencies only (no devDeps in the image) ──
+FROM base AS prod-deps
 COPY package.json package-lock.json* ./
 COPY packages/backend/package.json packages/backend/
 RUN npm ci -w packages/backend --ignore-scripts --omit=dev
@@ -22,7 +28,7 @@ ENV NODE_ENV=production
 RUN addgroup -g 1001 -S nodejs && adduser -S hub -u 1001
 COPY --from=build /app/packages/backend/dist ./dist
 COPY --from=build /app/packages/backend/src/db/migrations ./dist/db/migrations
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY packages/backend/package.json ./package.json
 USER hub
 EXPOSE 3009
