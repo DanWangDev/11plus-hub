@@ -117,8 +117,8 @@ bcl_retry_queue
 ### Health
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Status, version, uptime |
-| GET | `/ready` | Database connectivity check |
+| GET | `/api/health` | Status, version, uptime |
+| GET | `/api/ready` | Database connectivity check |
 
 ### Auth
 | Method | Path | Description |
@@ -327,7 +327,7 @@ packages/
 ## Continuous Delivery
 
 - **CI** (`.github/workflows/ci.yml`, push + PR): lint, format check, typecheck, backend tests with 80% coverage thresholds, **frontend tests with coverage**, build; docker images for backend + frontend built and pushed to GHCR on main.
-- **CD** (`.github/workflows/deploy.yml.disabled`): deploy-on-CI-success via the NAS self-hosted runner is currently **disabled** (runner not yet set up). Deploys are manual via `deploy.sh` (pull → down → up). Re-enable once the `nas` runner is registered; add a post-deploy health check at the same time.
+- **CD** (`.github/workflows/deploy.yml`): deploy-on-CI-success via the NAS self-hosted runner, gated by the `ENABLE_NAS_DEPLOY` GitHub variable (set it once the runner is registered). The deploy pulls images, restarts the stack, and waits for `docker exec hub-backend wget http://127.0.0.1:3009/api/health` to report healthy. Runner setup: [docs/nas-runner-setup.md](docs/nas-runner-setup.md).
 - **Production boot:** `migrate` (no advisory lock yet — single container) → `seed` (admin + hub self-client bootstrap only; demo data gated behind `SEED_ON_STARTUP`) → server.
 - **Deploy prerequisite:** `.env` must contain real `HUB_SESSION_SECRET`, `OIDC_COOKIE_KEYS`, `OIDC_SIGNING_KEY`, `HUB_CLIENT_SECRET`, `DB_PASSWORD` — the app fails fast otherwise.
 

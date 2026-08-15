@@ -27,8 +27,11 @@ jobs:
       - name: Wait for the backend to become healthy
         run: |
           set -e
+          # Runs inside the runner container, so health is checked by exec'ing
+          # INTO the backend container (no networking assumptions). The health
+          # endpoints live at /api/health + /api/ready.
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:3009/health > /dev/null; then
+            if docker exec hub-backend wget -qO- http://127.0.0.1:3009/api/health | grep -q '"healthy"'; then
               echo "backend healthy after ${i} attempts"
               exit 0
             fi
