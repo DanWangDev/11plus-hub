@@ -12,7 +12,9 @@ set -euo pipefail
 
 RUNNER_NAME="${RUNNER_NAME:-nas-01}"
 RUNNER_LABELS="${RUNNER_LABELS:-nas,deploy}"
-RUNNER_WORKDIR="${RUNNER_WORKDIR:-/volume1/docker/actions-runner-work}"
+# Container-local work dir (lives on the runner-home volume) — the runner
+# has no need to see the wider /volume1/docker tree.
+RUNNER_WORKDIR="${RUNNER_WORKDIR:-/actions-runner/_work}"
 
 # First boot (or wiped volume): restore binaries from the image copy.
 if [ ! -f /actions-runner/run.sh ]; then
