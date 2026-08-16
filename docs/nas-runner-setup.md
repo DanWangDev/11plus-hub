@@ -18,11 +18,16 @@ NAS Docker daemon
 hub-backend / hub-frontend containers
 ```
 
-The runner container needs:
-- **Outbound HTTPS** to github.com (polling) — nothing inbound, no ports opened.
-- **The Docker socket** of the NAS daemon (it deploys the hub stack).
-- **Path parity** for `/volume1/docker` (so `cd /volume1/docker/11plus-hub` inside
-  the container is the real directory the daemon uses).
+The runner is **dedicated to the 11plus-hub repository**:
+- It registers at **repo level** (https://github.com/DanWangDev/11plus-hub), so
+  only this repo's workflows can dispatch jobs to it.
+- It mounts **only** `/volume1/docker/11plus-hub` — not the wider
+  `/volume1/docker` tree where the other apps' repos and data live.
+- It needs **outbound HTTPS** to github.com (polling) — nothing inbound, no
+  ports opened.
+- It mounts **the Docker socket** of the NAS daemon (it deploys the hub stack).
+  The socket still reaches every container on the daemon — that's inherent to
+  deploying via Docker; repo-level registration is what limits *who* can use it.
 
 Everything needed to build the runner lives in [`nas-runner/`](../nas-runner):
 `Dockerfile` (official `actions/runner` release tarball — no third-party runner
@@ -70,8 +75,9 @@ cd 11plus-hub
 
 ## 3. One-time: create the runner registration token on GitHub
 
-1. GitHub → **Settings → Actions → Runners** (repo-level is fine; org-level
-   `DanWangDev` also works if you prefer one runner for the org).
+1. Open the **11plus-hub repository** → **Settings → Actions → Runners**
+   (repo-level, NOT org-level — that's what keeps the runner dedicated to
+   this repo).
 2. **New self-hosted runner** → Linux → x64.
 3. Copy the **registration token** from the `./config.sh --token ...` line
    (it expires after ~1 hour — you must complete step 4 within that window).
@@ -88,7 +94,7 @@ cp -r /volume1/docker/11plus-hub/nas-runner/* .
 
 # Create the local .env with the token from step 3 (gitignored in the repo):
 echo 'RUNNER_TOKEN=<paste-the-token>' > .env
-echo 'RUNNER_ORG_URL=https://github.com/DanWangDev' >> .env
+echo 'RUNNER_ORG_URL=https://github.com/DanWangDev/11plus-hub' >> .env
 echo 'RUNNER_NAME=nas-01' >> .env
 # RUNNER_LABELS defaults to "nas,deploy" — matches the deploy workflow's runs-on: nas
 
@@ -151,6 +157,9 @@ start there.
   workflows without review.
 - **Fork PRs cannot reach it.** The deploy job fires on
   `workflow_run` of CI on `main` only; fork PR CI runs are never on `main`.
+- **Dedicated to this repo.** The runner registers at repo level, so only
+  `DanWangDev/11plus-hub` workflows can dispatch jobs to it — other repos
+  cannot, and the only workflow using the `nas` label is the gated deploy job.
 - **Docker socket = root on the NAS.** The runner container mounts
   `/var/run/docker.sock` and runs as root *inside the container*; anyone who
   can push to `main` (or compromise the runner) effectively controls the NAS

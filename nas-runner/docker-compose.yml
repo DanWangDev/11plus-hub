@@ -14,7 +14,9 @@ services:
     container_name: actions-runner
     restart: unless-stopped
     environment:
-      RUNNER_ORG_URL: ${RUNNER_ORG_URL:-https://github.com/DanWangDev}
+      # Repo-level registration: the runner is dedicated to 11plus-hub and
+      # only this repo's workflows can dispatch jobs to it.
+      RUNNER_ORG_URL: ${RUNNER_ORG_URL:-https://github.com/DanWangDev/11plus-hub}
       RUNNER_NAME: ${RUNNER_NAME:-nas-01}
       RUNNER_LABELS: ${RUNNER_LABELS:-nas,deploy}
       RUNNER_TOKEN: ${RUNNER_TOKEN:?RUNNER_TOKEN must be set — see docs/nas-runner-setup.md}
@@ -23,9 +25,10 @@ services:
       - runner-home:/actions-runner
       # Drive the host Docker daemon (pull images, restart the hub stack)
       - /var/run/docker.sock:/var/run/docker.sock
-      # Path parity with the host so `cd /volume1/docker/11plus-hub` inside
-      # the runner container IS the host directory the daemon sees.
-      - /volume1/docker:/volume1/docker
+      # ONLY the hub checkout is mounted (path parity for
+      # `cd /volume1/docker/11plus-hub`), not the whole /volume1/docker tree
+      # where the other apps' repos and data live.
+      - /volume1/docker/11plus-hub:/volume1/docker/11plus-hub
     # Outbound HTTPS only (polls GitHub for jobs) — no published ports.
 
 volumes:
